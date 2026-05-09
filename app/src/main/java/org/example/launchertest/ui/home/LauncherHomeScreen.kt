@@ -12,6 +12,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -20,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import org.example.launchertest.domain.LauncherInteractor
 
 @Composable
@@ -65,8 +67,26 @@ private fun LauncherHomeScreen(
     onLetterSelected: (Char) -> Unit,
 ) {
     var scrubbingLetter by remember { mutableStateOf<Char?>(null) }
+    var selectedRailItem by remember { mutableStateOf(FavoritesRailItem) }
+    var showFavoritesOnly by remember { mutableStateOf(true) }
+    val coroutineScope = rememberCoroutineScope()
     val railLetters = remember(state.listLayout.letterJumpTargets) {
-        state.listLayout.letterJumpTargets.keys.toList()
+        listOf(FavoritesRailItem) + state.listLayout.letterJumpTargets.keys.toList()
+    }
+
+    fun selectRailItem(item: Char) {
+        selectedRailItem = item
+        if (item == FavoritesRailItem) {
+            showFavoritesOnly = true
+            scrubbingLetter = null
+            if (state.listLayout.favorites.isNotEmpty()) {
+                coroutineScope.launch { listState.scrollToItem(0) }
+            }
+        } else {
+            showFavoritesOnly = false
+            scrubbingLetter = item
+            onLetterSelected(item)
+        }
     }
 
     if (state.isSearchActive) BackHandler(onBack = onSearchDismissed)
@@ -77,6 +97,7 @@ private fun LauncherHomeScreen(
             AppListPanel(
                 listLayout = state.listLayout,
                 scrubbingLetter = scrubbingLetter,
+                showFavoritesOnly = showFavoritesOnly,
                 isSearchActive = state.isSearchActive,
                 listState = listState,
                 onSearchActivated = onSearchActivated,
@@ -96,10 +117,14 @@ private fun LauncherHomeScreen(
 
             AzRail(
                 letters = railLetters,
-                onLetterSelected = onLetterSelected,
-                onScrubStart = { letter -> scrubbingLetter = letter },
-                onScrubMove  = { letter -> scrubbingLetter = letter },
-                onScrubEnd   = { scrubbingLetter = null },
+                onLetterSelected = {},
+                onScrubStart = ::selectRailItem,
+                onScrubMove  = ::selectRailItem,
+                onScrubEnd   = {
+                    if (selectedRailItem != FavoritesRailItem) {
+                        scrubbingLetter = null
+                    }
+                },
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
                     .fillMaxHeight(0.5f)

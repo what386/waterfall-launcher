@@ -39,6 +39,7 @@ import org.example.launchertest.ui.model.LauncherApp
 fun AppListPanel(
     listLayout: AppListLayout,
     scrubbingLetter: Char?,
+    showFavoritesOnly: Boolean,
     isSearchActive: Boolean,
     listState: LazyListState,
     onSearchActivated: () -> Unit,
@@ -52,7 +53,7 @@ fun AppListPanel(
     // Single animated float for the whole panel — not per-item.
     // Drives favorites fade; app rows read scrubbingLetter directly via graphicsLayer skip.
     val favAlpha by animateFloatAsState(
-        targetValue = if (scrubbingLetter != null) 0f else 1f,
+        targetValue = if (scrubbingLetter != null && !showFavoritesOnly) 0f else 1f,
         animationSpec = spring(stiffness = 300f, dampingRatio = 1f),
         label = "favAlpha",
     )
@@ -97,35 +98,37 @@ fun AppListPanel(
         }
 
         // ── A–Z list ───────────────────────────────────────────────────────
-        itemsIndexed(
-            items = apps,
-            key = { _, app -> app.packageName + app.activityName },
-        ) { index, app ->
-            val bucket = bucketFor(app.label)
-            // graphicsLayer lambda reads scrubbingLetter at draw time — no recomposition needed.
-            val rowModifier = Modifier.graphicsLayer {
-                alpha = if (scrubbingLetter == null || scrubbingLetter == bucket) 1f else 0f
-            }
+        if (!showFavoritesOnly) {
+            itemsIndexed(
+                items = apps,
+                key = { _, app -> app.packageName + app.activityName },
+            ) { index, app ->
+                val bucket = bucketFor(app.label)
+                // graphicsLayer lambda reads scrubbingLetter at draw time — no recomposition needed.
+                val rowModifier = Modifier.graphicsLayer {
+                    alpha = if (scrubbingLetter == null || scrubbingLetter == bucket) 1f else 0f
+                }
 
-            val prevBucket = if (index > 0) bucketFor(apps[index - 1].label) else null
-            if (prevBucket == null || bucket != prevBucket) {
-                if (index > 0) Spacer(modifier = Modifier.height(8.dp))
-                Text(
-                    text = bucket.toString(),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                    modifier = Modifier
-                        .padding(start = 20.dp, top = 8.dp, bottom = 2.dp)
-                        .then(rowModifier),
+                val prevBucket = if (index > 0) bucketFor(apps[index - 1].label) else null
+                if (prevBucket == null || bucket != prevBucket) {
+                    if (index > 0) Spacer(modifier = Modifier.height(8.dp))
+                    Text(
+                        text = bucket.toString(),
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                        modifier = Modifier
+                            .padding(start = 20.dp, top = 8.dp, bottom = 2.dp)
+                            .then(rowModifier),
+                    )
+                }
+
+                AppRow(
+                    app = app,
+                    isFavorite = false,
+                    onToggleFavorite = onToggleFavorite,
+                    modifier = rowModifier,
                 )
             }
-
-            AppRow(
-                app = app,
-                isFavorite = false,
-                onToggleFavorite = onToggleFavorite,
-                modifier = rowModifier,
-            )
         }
     }
 }

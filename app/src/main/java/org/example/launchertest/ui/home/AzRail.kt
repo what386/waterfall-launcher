@@ -32,6 +32,8 @@ import androidx.compose.ui.unit.dp
 import kotlin.math.abs
 import kotlin.math.exp
 
+const val FavoritesRailItem = '★'
+
 @Composable
 fun AzRail(
     letters: List<Char>,
@@ -42,7 +44,7 @@ fun AzRail(
     modifier: Modifier = Modifier,
 ) {
     var selectedIndex by remember { mutableIntStateOf(-1) }
-    val itemTops = remember(letters) { FloatArray(letters.size) { Float.NaN } }
+    val itemCenters = remember(letters) { FloatArray(letters.size) { Float.NaN } }
     var spotlightTargetY by remember { mutableFloatStateOf(0f) }
 
     val spotlightY by animateFloatAsState(
@@ -59,15 +61,20 @@ fun AzRail(
     val primaryColor = MaterialTheme.colorScheme.primary
     val spotlightSizeDp = 56.dp
     val spotlightSizePx = with(LocalDensity.current) { spotlightSizeDp.toPx() }
-    val spotlightOffsetPx = with(LocalDensity.current) { (-90).dp.toPx() }
+    val spotlightOffsetPx = with(LocalDensity.current) { (-104).dp.toPx() }
 
     fun pickIndex(y: Float): Int {
         if (letters.isEmpty()) return -1
         var best = 0
-        for (idx in itemTops.indices) {
-            val top = itemTops[idx]
-            if (top.isNaN()) continue
-            if (top <= y && idx >= best) best = idx
+        var bestDistance = Float.MAX_VALUE
+        for (idx in itemCenters.indices) {
+            val center = itemCenters[idx]
+            if (center.isNaN()) continue
+            val distance = abs(center - y)
+            if (distance < bestDistance) {
+                best = idx
+                bestDistance = distance
+            }
         }
         return best.coerceIn(0, letters.lastIndex)
     }
@@ -86,7 +93,7 @@ fun AzRail(
                     var currentIdx = pickIndex(down.position.y)
                     if (currentIdx < 0) return@awaitEachGesture
                     selectedIndex = currentIdx
-                    spotlightTargetY = itemTops[currentIdx].takeUnless { it.isNaN() } ?: down.position.y
+                    spotlightTargetY = itemCenters[currentIdx].takeUnless { it.isNaN() } ?: down.position.y
                     onScrubStart(letters[currentIdx])
                     onLetterSelected(letters[currentIdx])
 
@@ -99,7 +106,7 @@ fun AzRail(
                         if (idx != currentIdx) {
                             currentIdx = idx
                             selectedIndex = idx
-                            spotlightTargetY = itemTops[idx].takeUnless { it.isNaN() } ?: change.position.y
+                            spotlightTargetY = itemCenters[idx].takeUnless { it.isNaN() } ?: change.position.y
                             onScrubMove(letters[idx])
                             onLetterSelected(letters[idx])
                         }
@@ -146,7 +153,7 @@ fun AzRail(
                 val influence = if (isActive) exp(-(d * d) / 8f) else 0f
 
                 val xOffset by animateFloatAsState(
-                    targetValue = -36f * influence,
+                    targetValue = -200f * influence,
                     animationSpec = spring(stiffness = 420f, dampingRatio = 0.82f),
                     label = "railOffset_$index",
                 )
@@ -166,7 +173,7 @@ fun AzRail(
                     style = MaterialTheme.typography.labelSmall,
                     modifier = Modifier
                         .onGloballyPositioned { coords ->
-                            itemTops[index] = coords.positionInParent().y
+                            itemCenters[index] = coords.positionInParent().y + coords.size.height / 2f
                         }
                         .graphicsLayer {
                             translationX = xOffset
