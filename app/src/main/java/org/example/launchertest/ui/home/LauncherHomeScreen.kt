@@ -4,6 +4,7 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Surface
@@ -127,6 +128,7 @@ private fun LauncherHomeScreen(
                 },
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
+                    .offset(y = 95.dp)
                     .fillMaxHeight(0.5f)
                     .padding(end = 4.dp),
             )

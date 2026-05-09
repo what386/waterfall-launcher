@@ -212,7 +212,7 @@ fun AzRail(
 
                     Text(
                         text = letter.toString(),
-                        style = MaterialTheme.typography.labelSmall,
+                        style = MaterialTheme.typography.labelMedium,
                         modifier = Modifier
                             .onGloballyPositioned { coords ->
                                 itemCenters[index] = coords.positionInParent().y + coords.size.height / 2f
