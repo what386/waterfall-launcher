@@ -9,8 +9,6 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -33,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import org.example.launchertest.ui.model.LauncherApp
 
@@ -47,7 +46,15 @@ fun AppListPanel(
     onToggleFavorite: (LauncherApp) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val dragThresholdPx = with(androidx.compose.ui.platform.LocalDensity.current) { 32.dp.toPx() }
+    val dragThresholdPx = with(LocalDensity.current) { 32.dp.toPx() }
+
+    // Single animated float for the whole panel — not per-item.
+    // Drives favorites fade; app rows read scrubbingLetter directly via graphicsLayer skip.
+    val favAlpha by animateFloatAsState(
+        targetValue = if (scrubbingLetter != null) 0f else 1f,
+        animationSpec = spring(stiffness = 300f, dampingRatio = 1f),
+        label = "favAlpha",
+    )
 
     LazyColumn(
         modifier = modifier
@@ -74,24 +81,17 @@ fun AppListPanel(
                 items = favorites,
                 key = { app -> app.packageName + app.activityName + "_fav" },
             ) { app ->
-                val alpha by animateFloatAsState(
-                    targetValue = if (scrubbingLetter != null) 0f else 1f,
-                    animationSpec = spring(stiffness = 300f, dampingRatio = 1f),
-                    label = "favAlpha",
+                AppRow(
+                    app = app,
+                    isFavorite = true,
+                    onToggleFavorite = onToggleFavorite,
+                    modifier = Modifier.graphicsLayer { alpha = favAlpha },
                 )
-                Box(modifier = Modifier.graphicsLayer { this.alpha = alpha }) {
-                    AppRow(app = app, isFavorite = true, onToggleFavorite = onToggleFavorite)
-                }
             }
             item {
-                val alpha by animateFloatAsState(
-                    targetValue = if (scrubbingLetter != null) 0f else 1f,
-                    animationSpec = spring(stiffness = 300f, dampingRatio = 1f),
-                    label = "favSpacerAlpha",
-                )
                 Spacer(modifier = Modifier
                     .height(24.dp)
-                    .graphicsLayer { this.alpha = alpha })
+                    .graphicsLayer { alpha = favAlpha })
             }
         }
 
@@ -101,12 +101,10 @@ fun AppListPanel(
             key = { _, app -> app.packageName + app.activityName },
         ) { index, app ->
             val bucket = bucketFor(app.label)
-            val isSelected = scrubbingLetter == null || scrubbingLetter == bucket
-            val itemAlpha by animateFloatAsState(
-                targetValue = if (isSelected) 1f else 0f,
-                animationSpec = spring(stiffness = 300f, dampingRatio = 1f),
-                label = "itemAlpha_$index",
-            )
+            // graphicsLayer lambda reads scrubbingLetter at draw time — no recomposition needed.
+            val rowModifier = Modifier.graphicsLayer {
+                alpha = if (scrubbingLetter == null || scrubbingLetter == bucket) 1f else 0f
+            }
 
             val prevBucket = if (index > 0) bucketFor(apps[index - 1].label) else null
             if (prevBucket == null || bucket != prevBucket) {
@@ -117,13 +115,16 @@ fun AppListPanel(
                     color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
                     modifier = Modifier
                         .padding(start = 20.dp, top = 8.dp, bottom = 2.dp)
-                        .graphicsLayer { alpha = itemAlpha },
+                        .then(rowModifier),
                 )
             }
 
-            Box(modifier = Modifier.graphicsLayer { alpha = itemAlpha }) {
-                AppRow(app = app, isFavorite = false, onToggleFavorite = onToggleFavorite)
-            }
+            AppRow(
+                app = app,
+                isFavorite = false,
+                onToggleFavorite = onToggleFavorite,
+                modifier = rowModifier,
+            )
         }
     }
 }
@@ -139,12 +140,13 @@ internal fun AppRow(
     app: LauncherApp,
     isFavorite: Boolean,
     onToggleFavorite: (LauncherApp) -> Unit,
+    modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     val icon = rememberAppIcon(app.packageName)
 
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .combinedClickable(
                 onClick = {
