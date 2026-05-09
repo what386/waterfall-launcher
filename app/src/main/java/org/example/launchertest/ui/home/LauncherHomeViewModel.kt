@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.MutableSharedFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.stateIn
@@ -16,13 +18,20 @@ class LauncherHomeViewModel(
     private val interactor: LauncherInteractor,
 ) : ViewModel() {
     private val query = MutableStateFlow("")
+    private val isSearchActive = MutableStateFlow(false)
     private val apps = interactor.launcherAppsFlow(query)
+    private val _jumpToIndex = MutableSharedFlow<Int>(extraBufferCapacity = 1)
+    val jumpToIndex: SharedFlow<Int> = _jumpToIndex
 
-    val uiState: StateFlow<LauncherHomeUiState> = combine(query, apps) { search, launcherApps ->
+    val uiState: StateFlow<LauncherHomeUiState> = combine(query, isSearchActive, apps) {
+            search, searchActive, launcherApps ->
+        val indexMap = buildLetterIndexMap(launcherApps)
         LauncherHomeUiState(
             query = search,
+            isSearchActive = searchActive,
             favorites = launcherApps.filter { app -> app.isFavorite },
             apps = launcherApps,
+            letterIndexMap = indexMap,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -34,6 +43,20 @@ class LauncherHomeViewModel(
         query.value = newQuery
     }
 
+    fun onSearchActivated() {
+        isSearchActive.value = true
+    }
+
+    fun onSearchDismissed() {
+        isSearchActive.value = false
+        query.value = ""
+    }
+
+    fun onLetterSelected(letter: Char) {
+        val idx = uiState.value.letterIndexMap[letter] ?: return
+        _jumpToIndex.tryEmit(idx)
+    }
+
     fun onToggleFavorite(app: LauncherApp) {
         viewModelScope.launch {
             interactor.toggleFavorite(app)
@@ -43,9 +66,28 @@ class LauncherHomeViewModel(
 
 data class LauncherHomeUiState(
     val query: String = "",
+    val isSearchActive: Boolean = false,
     val favorites: List<LauncherApp> = emptyList(),
     val apps: List<LauncherApp> = emptyList(),
+    val letterIndexMap: Map<Char, Int> = emptyMap(),
 )
+
+private fun buildLetterIndexMap(apps: List<LauncherApp>): Map<Char, Int> {
+    val indexMap = linkedMapOf<Char, Int>()
+    apps.forEachIndexed { index, app ->
+        if (app.isFavorite) return@forEachIndexed
+        val letter = bucketFor(app.label)
+        if (letter !in indexMap) {
+            indexMap[letter] = index
+        }
+    }
+    return indexMap
+}
+
+private fun bucketFor(label: String): Char {
+    val first = label.trim().firstOrNull()?.uppercaseChar() ?: return '#'
+    return if (first in 'A'..'Z') first else '#'
+}
 
 class LauncherHomeViewModelFactory(
     private val interactor: LauncherInteractor,
