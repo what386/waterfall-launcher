@@ -55,6 +55,10 @@ class LauncherHomeViewModel(
     fun onToggleFavorite(app: LauncherApp) {
         viewModelScope.launch { interactor.toggleFavorite(app) }
     }
+
+    fun onHideApp(app: LauncherApp) {
+        viewModelScope.launch { interactor.hideApp(app) }
+    }
 }
 
 data class LauncherHomeUiState(

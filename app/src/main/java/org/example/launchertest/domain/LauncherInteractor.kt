@@ -2,21 +2,22 @@ package org.example.launchertest.domain
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.flowOf
 import org.example.launchertest.data.AppRepository
-import org.example.launchertest.data.FavoritesRepository
+import org.example.launchertest.data.LauncherPreferencesRepository
 import org.example.launchertest.ui.model.LauncherApp
 
 class LauncherInteractor(
     private val appRepository: AppRepository,
-    private val favoritesRepository: FavoritesRepository,
+    private val preferencesRepository: LauncherPreferencesRepository,
 ) {
     fun launcherAppsFlow(query: Flow<String>): Flow<List<LauncherApp>> {
         val allApps = appRepository.loadLauncherApps()
-        return combine(favoritesRepository.favorites, query) { favorites, rawQuery ->
+        return combine(preferencesRepository.favorites, preferencesRepository.hiddenApps, query) {
+                favorites, hiddenApps, rawQuery ->
             val normalizedQuery = rawQuery.trim().lowercase()
             allApps
                 .asSequence()
+                .filter { app -> app.componentId() !in hiddenApps }
                 .map { app ->
                     val componentId = app.componentId()
                     app.copy(isFavorite = componentId in favorites)
@@ -33,7 +34,11 @@ class LauncherInteractor(
     }
 
     suspend fun toggleFavorite(app: LauncherApp) {
-        favoritesRepository.toggleFavorite(app.componentId())
+        preferencesRepository.toggleFavorite(app.componentId())
+    }
+
+    suspend fun hideApp(app: LauncherApp) {
+        preferencesRepository.hideApp(app.componentId())
     }
 }
 

@@ -2,6 +2,8 @@ package org.example.launchertest.ui.home
 
 import android.content.ComponentName
 import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
 import android.widget.Toast
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -9,6 +11,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -22,11 +25,16 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
@@ -47,6 +55,7 @@ fun AppListPanel(
     categoryPinOffsetPx: Int,
     onSearchActivated: () -> Unit,
     onToggleFavorite: (LauncherApp) -> Unit,
+    onHideApp: (LauncherApp) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val apps = listLayout.apps
@@ -103,6 +112,7 @@ fun AppListPanel(
                     app = app,
                     isFavorite = true,
                     onToggleFavorite = onToggleFavorite,
+                    onHideApp = onHideApp,
                     modifier = Modifier.graphicsLayer { alpha = favAlpha },
                 )
             }
@@ -140,6 +150,7 @@ fun AppListPanel(
                     app = app,
                     isFavorite = false,
                     onToggleFavorite = onToggleFavorite,
+                    onHideApp = onHideApp,
                     modifier = rowModifier,
                 )
             }
@@ -171,44 +182,83 @@ internal fun AppRow(
     app: LauncherApp,
     isFavorite: Boolean,
     onToggleFavorite: (LauncherApp) -> Unit,
+    onHideApp: (LauncherApp) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
     val icon = rememberAppIcon(app.packageName)
+    var showMenu by remember { mutableStateOf(false) }
 
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .combinedClickable(
+    Box(modifier = modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .combinedClickable(
+                    onClick = {
+                        val intent = Intent(Intent.ACTION_MAIN).apply {
+                            addCategory(Intent.CATEGORY_LAUNCHER)
+                            component = ComponentName(app.packageName, app.activityName)
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
+                        try {
+                            context.startActivity(intent)
+                        } catch (_: Exception) {
+                            Toast.makeText(context, "Unable to launch ${app.label}", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    onLongClick = { showMenu = true },
+                )
+                .padding(horizontal = 20.dp, vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (icon != null) {
+                Image(
+                    bitmap = icon,
+                    contentDescription = null,
+                    modifier = Modifier.size(if (isFavorite) 52.dp else 44.dp),
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+            }
+            Text(
+                text = app.label,
+                style = if (isFavorite) MaterialTheme.typography.headlineSmall
+                        else MaterialTheme.typography.titleLarge,
+            )
+        }
+
+        DropdownMenu(
+            expanded = showMenu,
+            onDismissRequest = { showMenu = false },
+        ) {
+            DropdownMenuItem(
+                text = { Text(if (app.isFavorite) "Unfavorite" else "Favorite") },
                 onClick = {
-                    val intent = Intent(Intent.ACTION_MAIN).apply {
-                        addCategory(Intent.CATEGORY_LAUNCHER)
-                        component = ComponentName(app.packageName, app.activityName)
+                    showMenu = false
+                    onToggleFavorite(app)
+                },
+            )
+            DropdownMenuItem(
+                text = { Text("App Info") },
+                onClick = {
+                    showMenu = false
+                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                        data = Uri.fromParts("package", app.packageName, null)
                         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     }
                     try {
                         context.startActivity(intent)
                     } catch (_: Exception) {
-                        Toast.makeText(context, "Unable to launch ${app.label}", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Unable to open settings for ${app.label}", Toast.LENGTH_SHORT).show()
                     }
                 },
-                onLongClick = { onToggleFavorite(app) },
             )
-            .padding(horizontal = 20.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        if (icon != null) {
-            Image(
-                bitmap = icon,
-                contentDescription = null,
-                modifier = Modifier.size(if (isFavorite) 52.dp else 44.dp),
+            DropdownMenuItem(
+                text = { Text("Hide") },
+                onClick = {
+                    showMenu = false
+                    onHideApp(app)
+                },
             )
-            Spacer(modifier = Modifier.width(16.dp))
         }
-        Text(
-            text = app.label,
-            style = if (isFavorite) MaterialTheme.typography.headlineSmall
-                    else MaterialTheme.typography.titleLarge,
-        )
     }
 }

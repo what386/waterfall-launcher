@@ -54,6 +54,7 @@ fun LauncherHomeRoute(interactor: LauncherInteractor) {
         onSearchActivated = vm::onSearchActivated,
         onSearchDismissed = vm::onSearchDismissed,
         onToggleFavorite = vm::onToggleFavorite,
+        onHideApp = vm::onHideApp,
         onLetterSelected = vm::onLetterSelected,
     )
 }
@@ -67,6 +68,7 @@ private fun LauncherHomeScreen(
     onSearchActivated: () -> Unit,
     onSearchDismissed: () -> Unit,
     onToggleFavorite: (org.example.launchertest.ui.model.LauncherApp) -> Unit,
+    onHideApp: (org.example.launchertest.ui.model.LauncherApp) -> Unit,
     onLetterSelected: (Char) -> Unit,
 ) {
     val scrubbingLetter = remember { mutableStateOf<Char?>(null) }
@@ -115,6 +117,7 @@ private fun LauncherHomeScreen(
                 categoryPinOffsetPx = categoryPinOffsetPx,
                 onSearchActivated = onSearchActivated,
                 onToggleFavorite = onToggleFavorite,
+                onHideApp = onHideApp,
                 modifier = Modifier.fillMaxSize(),
             )
 
