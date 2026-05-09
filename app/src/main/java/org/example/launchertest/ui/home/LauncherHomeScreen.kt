@@ -34,7 +34,7 @@ fun LauncherHomeRoute(interactor: LauncherInteractor) {
     val listState = rememberLazyListState()
 
     val density = LocalDensity.current
-    val categoryPinOffsetPx = with(density) { 96.dp.toPx() }.toInt()
+    val categoryPinOffsetPx = with(density) { 240.dp.toPx() }.toInt()
 
     LaunchedEffect(categoryPinOffsetPx, listState, vm) {
         vm.jumpToTarget.collectLatest { target ->
