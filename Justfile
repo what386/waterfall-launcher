@@ -38,4 +38,8 @@ build-debug:
 update:
     just uninstall
     just install
+
+run:
+    just uninstall
+    just install
     just start
