@@ -5,8 +5,11 @@ import android.content.Intent
 import android.graphics.drawable.Drawable
 import android.widget.Toast
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -20,14 +23,16 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
@@ -38,39 +43,39 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.spring
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.graphics.painter.Painter
-import androidx.compose.ui.graphics.asImageBitmap
-import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.drawable.toBitmap
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import kotlin.math.abs
 import kotlin.math.exp
 import org.example.launchertest.domain.LauncherInteractor
 import org.example.launchertest.ui.model.LauncherApp
 
-private val railLetters: List<Char> = ('A'..'Z').toList() + '#'
-
 @Composable
-fun LauncherHomeRoute(
-    interactor: LauncherInteractor,
-) {
+fun LauncherHomeRoute(interactor: LauncherInteractor) {
     val vm: LauncherHomeViewModel = viewModel(
         factory = LauncherHomeViewModelFactory(interactor),
     )
@@ -78,7 +83,7 @@ fun LauncherHomeRoute(
     val listState = rememberLazyListState()
     LaunchedEffect(Unit) {
         vm.jumpToIndex.collectLatest { index ->
-            listState.animateScrollToItem(index)
+            listState.scrollToItem(index) // instant jump, not animated
         }
     }
     LauncherHomeScreen(
@@ -95,7 +100,7 @@ fun LauncherHomeRoute(
 @Composable
 private fun LauncherHomeScreen(
     state: LauncherHomeUiState,
-    listState: androidx.compose.foundation.lazy.LazyListState,
+    listState: LazyListState,
     onQueryChanged: (String) -> Unit,
     onSearchActivated: () -> Unit,
     onSearchDismissed: () -> Unit,
@@ -104,26 +109,24 @@ private fun LauncherHomeScreen(
 ) {
     val dragThresholdPx = with(LocalDensity.current) { 32.dp.toPx() }
 
-    if (state.isSearchActive) {
-        BackHandler(onBack = onSearchDismissed)
-    }
+    // Which letter bucket is currently being scrubbed; null = not scrubbing
+    var scrubbingLetter by remember { mutableStateOf<Char?>(null) }
+
+    if (state.isSearchActive) BackHandler(onBack = onSearchDismissed)
 
     Surface(modifier = Modifier.fillMaxSize()) {
         Box(modifier = Modifier.fillMaxSize()) {
+
+            // ── App list ──────────────────────────────────────────────────────
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
                     .pointerInput(state.isSearchActive) {
                         if (!state.isSearchActive) {
-                            detectVerticalDragGestures(
-                                onVerticalDrag = { _, dragAmount ->
-                                    val isAtBottom =
-                                        !listState.canScrollForward
-                                    if (isAtBottom && dragAmount < -dragThresholdPx) {
-                                        onSearchActivated()
-                                    }
-                                },
-                            )
+                            detectVerticalDragGestures { _, dragAmount ->
+                                val isAtBottom = !listState.canScrollForward
+                                if (isAtBottom && dragAmount < -dragThresholdPx) onSearchActivated()
+                            }
                         }
                     },
                 state = listState,
@@ -132,50 +135,69 @@ private fun LauncherHomeScreen(
                     bottom = if (state.isSearchActive) 80.dp else 24.dp,
                     end = 40.dp,
                 ),
-                verticalArrangement = Arrangement.spacedBy(0.dp),
             ) {
-                // Favorites section
+                // Favorites — hidden while scrubbing
                 if (state.favorites.isNotEmpty()) {
                     items(
                         items = state.favorites,
                         key = { app -> app.packageName + app.activityName + "_fav" },
                     ) { app ->
-                        AppRow(
-                            app = app,
-                            isFavorite = true,
-                            onToggleFavorite = onToggleFavorite,
+                        val alpha by animateFloatAsState(
+                            targetValue = if (scrubbingLetter != null) 0f else 1f,
+                            animationSpec = spring(stiffness = 300f, dampingRatio = 1f),
+                            label = "favAlpha",
                         )
+                        Box(modifier = Modifier.graphicsLayer { this.alpha = alpha }) {
+                            AppRow(app = app, isFavorite = true, onToggleFavorite = onToggleFavorite)
+                        }
                     }
-                    item { Spacer(modifier = Modifier.height(24.dp)) }
+                    item {
+                        val alpha by animateFloatAsState(
+                            targetValue = if (scrubbingLetter != null) 0f else 1f,
+                            animationSpec = spring(stiffness = 300f, dampingRatio = 1f),
+                            label = "favSpacerAlpha",
+                        )
+                        Spacer(modifier = Modifier
+                            .height(24.dp)
+                            .graphicsLayer { this.alpha = alpha })
+                    }
                 }
 
-                // A–Z app list with bucket headers
+                // A–Z list
                 itemsIndexed(
                     items = state.apps,
                     key = { _, app -> app.packageName + app.activityName },
                 ) { index, app ->
-                    val currentBucket = bucketFor(app.label)
-                    val previousBucket = if (index > 0) bucketFor(state.apps[index - 1].label) else null
+                    val bucket = bucketFor(app.label)
+                    val isSelected = scrubbingLetter == null || scrubbingLetter == bucket
 
-                    if (previousBucket == null || currentBucket != previousBucket) {
+                    val itemAlpha by animateFloatAsState(
+                        targetValue = if (isSelected) 1f else 0f,
+                        animationSpec = spring(stiffness = 300f, dampingRatio = 1f),
+                        label = "itemAlpha_$index",
+                    )
+
+                    // Bucket header
+                    val prevBucket = if (index > 0) bucketFor(state.apps[index - 1].label) else null
+                    if (prevBucket == null || bucket != prevBucket) {
                         if (index > 0) Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = currentBucket.toString(),
+                            text = bucket.toString(),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-                            modifier = Modifier.padding(start = 20.dp, top = 8.dp, bottom = 2.dp),
+                            modifier = Modifier
+                                .padding(start = 20.dp, top = 8.dp, bottom = 2.dp)
+                                .graphicsLayer { alpha = itemAlpha },
                         )
                     }
 
-                    AppRow(
-                        app = app,
-                        isFavorite = false,
-                        onToggleFavorite = onToggleFavorite,
-                    )
+                    Box(modifier = Modifier.graphicsLayer { alpha = itemAlpha }) {
+                        AppRow(app = app, isFavorite = false, onToggleFavorite = onToggleFavorite)
+                    }
                 }
             }
 
-            // Search overlay anchored to bottom
+            // ── Search overlay ────────────────────────────────────────────────
             if (state.isSearchActive) {
                 SearchOverlay(
                     query = state.query,
@@ -186,11 +208,17 @@ private fun LauncherHomeScreen(
                 )
             }
 
+            // ── A–Z Rail (always on top, never scrolls) ────────────────────
             AzRail(
+                letters = state.letterIndexMap.keys.toList(),
                 onLetterSelected = onLetterSelected,
+                onScrubStart = { letter -> scrubbingLetter = letter },
+                onScrubMove  = { letter -> scrubbingLetter = letter },
+                onScrubEnd   = { scrubbingLetter = null },
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
-                    .padding(end = 4.dp, top = 12.dp, bottom = 12.dp),
+                    .fillMaxHeight(0.5f)
+                    .padding(end = 4.dp),
             )
         }
     }
@@ -201,6 +229,8 @@ private fun bucketFor(label: String): Char {
     return if (first in 'A'..'Z') first else '#'
 }
 
+// ── Search overlay ─────────────────────────────────────────────────────────────
+
 @Composable
 private fun SearchOverlay(
     query: String,
@@ -208,9 +238,7 @@ private fun SearchOverlay(
     modifier: Modifier = Modifier,
 ) {
     val focusRequester = remember { FocusRequester() }
-    LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
-    }
+    LaunchedEffect(Unit) { focusRequester.requestFocus() }
     Card(
         shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 8.dp),
@@ -229,91 +257,155 @@ private fun SearchOverlay(
     }
 }
 
+// ── A–Z Rail ──────────────────────────────────────────────────────────────────
+
 @Composable
 private fun AzRail(
+    letters: List<Char>,
     onLetterSelected: (Char) -> Unit,
+    onScrubStart: (Char) -> Unit,
+    onScrubMove:  (Char) -> Unit,
+    onScrubEnd:   () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var selectedIndex by remember { mutableIntStateOf(-1) }
+    val itemTops = remember { mutableMapOf<Int, Float>() }
+    var spotlightTargetY by remember { mutableFloatStateOf(0f) }
+
+    val spotlightY by animateFloatAsState(
+        targetValue = spotlightTargetY,
+        animationSpec = spring(stiffness = 600f, dampingRatio = 0.75f),
+        label = "spotlightY",
+    )
+    val spotlightAlpha by animateFloatAsState(
+        targetValue = if (selectedIndex >= 0) 1f else 0f,
+        animationSpec = spring(stiffness = 500f, dampingRatio = 1f),
+        label = "spotlightAlpha",
+    )
+
+    val primaryColor = MaterialTheme.colorScheme.primary
+    val spotlightSizeDp = 56.dp
+    val spotlightSizePx  = with(LocalDensity.current) { spotlightSizeDp.toPx() }
+    val spotlightOffsetPx = with(LocalDensity.current) { (-90).dp.toPx() }
+
+    fun pickIndex(y: Float): Int {
+        if (itemTops.isEmpty()) return 0
+        var best = 0
+        for ((idx, top) in itemTops) {
+            if (top <= y && idx >= best) best = idx
+        }
+        return best.coerceIn(0, letters.lastIndex)
+    }
+
     Box(
         modifier = modifier
             .width(28.dp)
             .fillMaxHeight()
-            .pointerInput(Unit) {
-                fun pickLetter(y: Float, height: Int): Char {
-                    if (height <= 0) return railLetters.first()
-                    val step = height.toFloat() / railLetters.size.toFloat()
-                    val raw = (y / step).toInt()
-                    val idx = raw.coerceIn(0, railLetters.lastIndex)
-                    return railLetters[idx]
-                }
+            .pointerInput(letters) {
                 awaitEachGesture {
-                    var down = awaitPointerEvent(PointerEventPass.Main).changes.firstOrNull()
-                    while (down == null || !down.pressed) {
-                        down = awaitPointerEvent(PointerEventPass.Main).changes.firstOrNull()
-                    }
-                    var currentLetter = pickLetter(down.position.y, size.height)
-                    selectedIndex = railLetters.indexOf(currentLetter)
-                    onLetterSelected(currentLetter)
+                    // Wait for initial finger down
+                    val down = awaitPointerEvent(PointerEventPass.Initial).changes.firstOrNull() ?: return@awaitEachGesture
+                    if (!down.pressed) return@awaitEachGesture
                     down.consume()
+
+                    var currentIdx = pickIndex(down.position.y)
+                    selectedIndex = currentIdx
+                    spotlightTargetY = itemTops[currentIdx] ?: down.position.y
+                    onScrubStart(letters[currentIdx])
+                    onLetterSelected(letters[currentIdx])
+
+                    // Track moves and release
                     while (true) {
-                        val event = awaitPointerEvent(PointerEventPass.Main)
-                        val change = event.changes.firstOrNull() ?: continue
-                        if (!change.pressed) break
-                        val letter = pickLetter(change.position.y, size.height)
-                        if (letter != currentLetter) {
-                            currentLetter = letter
-                            selectedIndex = railLetters.indexOf(letter)
-                            onLetterSelected(letter)
-                        }
+                        val event = awaitPointerEvent(PointerEventPass.Initial)
+                        val change = event.changes.firstOrNull() ?: break
                         change.consume()
+                        if (!change.pressed) break
+                        val idx = pickIndex(change.position.y)
+                        if (idx != currentIdx) {
+                            currentIdx = idx
+                            selectedIndex = idx
+                            spotlightTargetY = itemTops[idx] ?: change.position.y
+                            onScrubMove(letters[idx])
+                            onLetterSelected(letters[idx])
+                        }
                     }
-                    waitForUpOrCancellation(PointerEventPass.Main)?.consume()
+
                     selectedIndex = -1
+                    onScrubEnd()
                 }
             },
     ) {
+        // Spotlight bubble
+        if (spotlightAlpha > 0f) {
+            val letter = letters.getOrNull(selectedIndex.coerceAtLeast(0))?.toString() ?: ""
+            Box(
+                contentAlignment = Alignment.Center,
+                modifier = Modifier
+                    .graphicsLayer {
+                        translationX = spotlightOffsetPx
+                        translationY = spotlightY - spotlightSizePx / 2f
+                        alpha = spotlightAlpha
+                    }
+                    .size(spotlightSizeDp)
+                    .background(primaryColor, CircleShape),
+            ) {
+                Text(
+                    text = letter,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = Color.White,
+                )
+            }
+        }
+
+        // Letter column
         Column(
-            modifier = Modifier.align(Alignment.Center),
+            modifier = Modifier
+                .align(Alignment.Center)
+                .fillMaxHeight(),
             verticalArrangement = Arrangement.SpaceEvenly,
             horizontalAlignment = Alignment.CenterHorizontally,
         ) {
-            railLetters.forEachIndexed { index, letter ->
-                val influence = if (selectedIndex < 0) {
-                    0f
-                } else {
-                    val d = abs(index - selectedIndex).toFloat()
-                    exp(-(d * d) / 6f)
-                }
+            letters.forEachIndexed { index, letter ->
+                val isActive = selectedIndex >= 0
+                val d = if (!isActive) 0f else abs(index - selectedIndex).toFloat()
+                val influence = if (isActive) exp(-(d * d) / 8f) else 0f
+
                 val xOffset by animateFloatAsState(
-                    targetValue = -18f * influence,
+                    targetValue = -36f * influence,
                     animationSpec = spring(stiffness = 420f, dampingRatio = 0.82f),
-                    label = "railOffset",
-                )
-                val scale by animateFloatAsState(
-                    targetValue = 1f + (0.42f * influence),
-                    animationSpec = spring(stiffness = 420f, dampingRatio = 0.82f),
-                    label = "railScale",
+                    label = "railOffset_$index",
                 )
                 val alpha by animateFloatAsState(
-                    targetValue = 0.55f + (0.45f * influence),
-                    animationSpec = spring(stiffness = 420f, dampingRatio = 0.82f),
-                    label = "railAlpha",
+                    targetValue = if (influence > 0.85f) 1f else 0.55f,
+                    animationSpec = spring(stiffness = 380f, dampingRatio = 0.9f),
+                    label = "railAlpha_$index",
                 )
+                val scale by animateFloatAsState(
+                    targetValue = 1f + 0.5f * influence,
+                    animationSpec = spring(stiffness = 420f, dampingRatio = 0.82f),
+                    label = "railScale_$index",
+                )
+
                 Text(
                     text = letter.toString(),
                     style = MaterialTheme.typography.labelSmall,
-                    modifier = Modifier.graphicsLayer {
-                        translationX = xOffset
-                        scaleX = scale
-                        scaleY = scale
-                        this.alpha = alpha
-                    },
+                    modifier = Modifier
+                        .onGloballyPositioned { coords ->
+                            itemTops[index] = coords.positionInParent().y
+                        }
+                        .graphicsLayer {
+                            translationX = xOffset
+                            scaleX = scale
+                            scaleY = scale
+                            this.alpha = alpha
+                        },
                 )
             }
         }
     }
 }
+
+// ── App icon helper ────────────────────────────────────────────────────────────
 
 @Composable
 private fun rememberAppIcon(packageName: String): ImageBitmap? {
@@ -327,6 +419,8 @@ private fun rememberAppIcon(packageName: String): ImageBitmap? {
         }
     }
 }
+
+// ── App row ────────────────────────────────────────────────────────────────────
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -343,13 +437,13 @@ private fun AppRow(
             .fillMaxWidth()
             .combinedClickable(
                 onClick = {
-                    val launchIntent = Intent(Intent.ACTION_MAIN).apply {
+                    val intent = Intent(Intent.ACTION_MAIN).apply {
                         addCategory(Intent.CATEGORY_LAUNCHER)
                         component = ComponentName(app.packageName, app.activityName)
                         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     }
                     try {
-                        context.startActivity(launchIntent)
+                        context.startActivity(intent)
                     } catch (_: Exception) {
                         Toast.makeText(context, "Unable to launch ${app.label}", Toast.LENGTH_SHORT).show()
                     }
