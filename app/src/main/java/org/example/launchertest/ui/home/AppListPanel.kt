@@ -70,15 +70,17 @@ fun AppListPanel(
 ) {
     val apps = listLayout.apps
     val favorites = listLayout.favorites
+
     val density = LocalDensity.current
-    val dragThresholdPx = with(density) { 32.dp.toPx() }
+    val dragThresholdPx = with(density) { APP_LIST_SEARCH_DRAG_THRESHOLD_DP.dp.toPx() }
     val categoryPinOffsetDp = with(density) { categoryPinOffsetPx.toDp() }
 
-    // Single animated float for the whole panel — not per-item.
-    // Drives favorites fade; app rows read scrubbingLetter directly via graphicsLayer skip.
     val favAlpha by animateFloatAsState(
         targetValue = if (isScrubbing.value && !showFavoritesOnly) 0f else 1f,
-        animationSpec = spring(stiffness = 300f, dampingRatio = 1f),
+        animationSpec = spring(
+            stiffness = APP_LIST_FAVORITES_FADE_STIFFNESS,
+            dampingRatio = APP_LIST_FAVORITES_FADE_DAMPING,
+        ),
         label = "favAlpha",
     )
 
@@ -96,10 +98,14 @@ fun AppListPanel(
             },
         state = listState,
         contentPadding = PaddingValues(
-            start = 28.dp,
-            top = 16.dp,
-            bottom = if (isSearchActive) 80.dp else 24.dp,
-            end = 40.dp,
+            start = APP_LIST_CONTENT_START_PADDING_DP.dp,
+            top = APP_LIST_CONTENT_TOP_PADDING_DP.dp,
+            end = APP_LIST_CONTENT_END_PADDING_DP.dp,
+            bottom = if (isSearchActive) {
+                APP_LIST_SEARCH_BOTTOM_PADDING_DP.dp
+            } else {
+                APP_LIST_CONTENT_BOTTOM_PADDING_DP.dp
+            },
         ),
     ) {
         item(key = "category_pin_spacer") {
@@ -118,11 +124,16 @@ fun AppListPanel(
                     modifier = Modifier.graphicsLayer { alpha = favAlpha },
                 )
             }
+
             item(key = "add_widget") {
                 TextButton(
                     onClick = onAddWidget,
                     modifier = Modifier
-                        .padding(start = 12.dp, top = 4.dp, bottom = 8.dp)
+                        .padding(
+                            start = ADD_WIDGET_START_PADDING_DP.dp,
+                            top = ADD_WIDGET_TOP_PADDING_DP.dp,
+                            bottom = ADD_WIDGET_BOTTOM_PADDING_DP.dp,
+                        )
                         .graphicsLayer { alpha = favAlpha },
                 ) {
                     Text("Add widget")
@@ -130,7 +141,6 @@ fun AppListPanel(
             }
         }
 
-        // ── Favorites ──────────────────────────────────────────────────────
         if (favorites.isNotEmpty()) {
             item(key = "favorites_header") {
                 SectionHeader(
@@ -138,6 +148,7 @@ fun AppListPanel(
                     modifier = Modifier.graphicsLayer { alpha = favAlpha },
                 )
             }
+
             items(
                 items = favorites,
                 key = { app -> app.packageName + app.activityName + "_fav" },
@@ -150,33 +161,37 @@ fun AppListPanel(
                     modifier = Modifier.graphicsLayer { alpha = favAlpha },
                 )
             }
-            item {
-                Spacer(modifier = Modifier
-                    .height(24.dp)
-                    .graphicsLayer { alpha = favAlpha })
+
+            item(key = "favorites_bottom_spacer") {
+                Spacer(
+                    modifier = Modifier
+                        .height(APP_LIST_FAVORITES_BOTTOM_SPACER_DP.dp)
+                        .graphicsLayer { alpha = favAlpha },
+                )
             }
         }
 
-        // ── A–Z list ───────────────────────────────────────────────────────
         if (!showFavoritesOnly) {
             itemsIndexed(
                 items = apps,
                 key = { _, app -> app.packageName + app.activityName },
             ) { index, app ->
                 val bucket = bucketFor(app.label)
-                // graphicsLayer lambda reads scrubbingLetter at draw time — no recomposition needed.
+                val previousBucket = if (index > 0) bucketFor(apps[index - 1].label) else null
+
                 val rowModifier = Modifier.graphicsLayer {
                     val activeLetter = scrubbingLetter.value
                     alpha = if (activeLetter == null || activeLetter == bucket) 1f else 0f
                 }
 
-                val prevBucket = if (index > 0) bucketFor(apps[index - 1].label) else null
-                if (prevBucket == null || bucket != prevBucket) {
-                    if (index > 0) Spacer(modifier = Modifier.height(8.dp))
+                if (previousBucket == null || bucket != previousBucket) {
+                    if (index > 0) {
+                        Spacer(modifier = Modifier.height(APP_LIST_BUCKET_SPACER_HEIGHT_DP.dp))
+                    }
+
                     SectionHeader(
                         text = bucket.toString(),
-                        modifier = Modifier
-                            .then(rowModifier),
+                        modifier = rowModifier,
                     )
                 }
 
@@ -202,7 +217,12 @@ private fun WidgetRow(
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 12.dp),
+            .padding(
+                start = APP_WIDGET_ROW_START_PADDING_DP.dp,
+                end = APP_WIDGET_ROW_END_PADDING_DP.dp,
+                top = APP_WIDGET_ROW_TOP_PADDING_DP.dp,
+                bottom = APP_WIDGET_ROW_BOTTOM_PADDING_DP.dp,
+            ),
     ) {
         AndroidView(
             factory = { context ->
@@ -210,8 +230,9 @@ private fun WidgetRow(
             },
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(min = 120.dp),
+                .heightIn(min = APP_WIDGET_MIN_HEIGHT_DP.dp),
         )
+
         TextButton(
             onClick = { onRemoveWidget(appWidgetId) },
             modifier = Modifier.align(Alignment.End),
@@ -229,8 +250,14 @@ private fun SectionHeader(
     Text(
         text = text,
         style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
-        modifier = modifier.padding(start = 20.dp, top = 8.dp, bottom = 2.dp),
+        color = MaterialTheme.colorScheme.primary.copy(
+            alpha = APP_LIST_SECTION_HEADER_ALPHA,
+        ),
+        modifier = modifier.padding(
+            start = APP_LIST_SECTION_HEADER_START_PADDING_DP.dp,
+            top = APP_LIST_SECTION_HEADER_TOP_PADDING_DP.dp,
+            bottom = APP_LIST_SECTION_HEADER_BOTTOM_PADDING_DP.dp,
+        ),
     )
 }
 
@@ -263,29 +290,48 @@ internal fun AppRow(
                             component = ComponentName(app.packageName, app.activityName)
                             addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         }
+
                         try {
                             context.startActivity(intent)
                         } catch (_: Exception) {
-                            Toast.makeText(context, "Unable to launch ${app.label}", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(
+                                context,
+                                "Unable to launch ${app.label}",
+                                Toast.LENGTH_SHORT,
+                            ).show()
                         }
                     },
                     onLongClick = { showMenu = true },
                 )
-                .padding(horizontal = 20.dp, vertical = 12.dp),
+                .padding(
+                    horizontal = APP_ROW_HORIZONTAL_PADDING_DP.dp,
+                    vertical = APP_ROW_VERTICAL_PADDING_DP.dp,
+                ),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (icon != null) {
                 Image(
                     bitmap = icon,
                     contentDescription = null,
-                    modifier = Modifier.size(if (isFavorite) 52.dp else 44.dp),
+                    modifier = Modifier.size(
+                        if (isFavorite) {
+                            APP_ROW_FAVORITE_ICON_SIZE_DP.dp
+                        } else {
+                            APP_ROW_ICON_SIZE_DP.dp
+                        },
+                    ),
                 )
-                Spacer(modifier = Modifier.width(16.dp))
+
+                Spacer(modifier = Modifier.width(APP_ROW_ICON_SPACING_DP.dp))
             }
+
             Text(
                 text = app.label,
-                style = if (isFavorite) MaterialTheme.typography.headlineSmall
-                        else MaterialTheme.typography.titleLarge,
+                style = if (isFavorite) {
+                    MaterialTheme.typography.headlineSmall
+                } else {
+                    MaterialTheme.typography.titleLarge
+                },
             )
         }
 
@@ -300,21 +346,29 @@ internal fun AppRow(
                     onToggleFavorite(app)
                 },
             )
+
             DropdownMenuItem(
                 text = { Text("App Info") },
                 onClick = {
                     showMenu = false
+
                     val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
                         data = Uri.fromParts("package", app.packageName, null)
                         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     }
+
                     try {
                         context.startActivity(intent)
                     } catch (_: Exception) {
-                        Toast.makeText(context, "Unable to open settings for ${app.label}", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(
+                            context,
+                            "Unable to open settings for ${app.label}",
+                            Toast.LENGTH_SHORT,
+                        ).show()
                     }
                 },
             )
+
             DropdownMenuItem(
                 text = { Text("Hide") },
                 onClick = {
