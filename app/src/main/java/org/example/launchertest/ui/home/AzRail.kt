@@ -28,7 +28,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import kotlin.math.abs
@@ -46,7 +45,6 @@ fun AzRail(
     modifier: Modifier = Modifier,
 ) {
     var selectedIndex by remember { mutableIntStateOf(-1) }
-    val itemCenters = remember(letters) { FloatArray(letters.size) { Float.NaN } }
     var spotlightTargetY by remember { mutableFloatStateOf(0f) }
     var railHeightPx by remember { mutableFloatStateOf(0f) }
     var railDragY by remember { mutableFloatStateOf(0f) }
@@ -61,6 +59,16 @@ fun AzRail(
         targetValue = if (selectedIndex >= 0) 1f else 0f,
         animationSpec = spring(stiffness = 500f, dampingRatio = 1f),
         label = "spotlightAlpha",
+    )
+    val animatedSelectedIndex = animateFloatAsState(
+        targetValue = selectedIndex.coerceAtLeast(0).toFloat(),
+        animationSpec = spring(stiffness = 420f, dampingRatio = 0.82f),
+        label = "railSelectedIndex",
+    )
+    val railActiveFraction = animateFloatAsState(
+        targetValue = if (selectedIndex >= 0) 1f else 0f,
+        animationSpec = spring(stiffness = 380f, dampingRatio = 0.9f),
+        label = "railActiveFraction",
     )
     val renderedRailDragY by animateFloatAsState(
         targetValue = if (isRailDragging > 0) railDragY else 0f,
@@ -77,30 +85,8 @@ fun AzRail(
     val spotlightSizePx = with(LocalDensity.current) { spotlightSizeDp.toPx() }
     val spotlightOffsetPx = with(LocalDensity.current) { (-104).dp.toPx() }
 
-    fun shiftedRailOffsetFor(y: Float, currentOffset: Float): Float {
-        val yInShiftedRail = y - currentOffset
-        return when {
-            yInShiftedRail < 0f -> currentOffset + yInShiftedRail
-            railHeightPx > 0f && yInShiftedRail > railHeightPx ->
-                currentOffset + yInShiftedRail - railHeightPx
-            else -> currentOffset
-        }
-    }
-
     fun pickIndex(y: Float): Int {
-        if (letters.isEmpty()) return -1
-        var best = 0
-        var bestDistance = Float.MAX_VALUE
-        for (idx in itemCenters.indices) {
-            val center = itemCenters[idx]
-            if (center.isNaN()) continue
-            val distance = abs(center - y)
-            if (distance < bestDistance) {
-                best = idx
-                bestDistance = distance
-            }
-        }
-        return best.coerceIn(0, letters.lastIndex)
+        return pickRailIndex(y, letters.size, railHeightPx)
     }
 
     Box(
@@ -119,7 +105,7 @@ fun AzRail(
 
                     railDragY = renderedRailDragY
                     isRailDragging = 1
-                    railDragY = shiftedRailOffsetFor(down.position.y, railDragY)
+                    railDragY = shiftedRailOffsetFor(down.position.y, railDragY, railHeightPx)
 
                     var currentIdx = pickIndex(down.position.y - railDragY)
                     if (currentIdx < 0) {
@@ -127,7 +113,8 @@ fun AzRail(
                         return@awaitEachGesture
                     }
                     selectedIndex = currentIdx
-                    spotlightTargetY = itemCenters[currentIdx].takeUnless { it.isNaN() } ?: down.position.y
+                    spotlightTargetY = railItemCenter(currentIdx, letters.size, railHeightPx)
+                        .takeUnless { it.isNaN() } ?: down.position.y
                     onScrubStart(letters[currentIdx])
                     onLetterSelected(letters[currentIdx])
 
@@ -136,12 +123,13 @@ fun AzRail(
                         val change = event.changes.firstOrNull() ?: break
                         change.consume()
                         if (!change.pressed) break
-                        railDragY = shiftedRailOffsetFor(change.position.y, railDragY)
+                        railDragY = shiftedRailOffsetFor(change.position.y, railDragY, railHeightPx)
                         val idx = pickIndex(change.position.y - railDragY)
                         if (idx != currentIdx) {
                             currentIdx = idx
                             selectedIndex = idx
-                            spotlightTargetY = itemCenters[idx].takeUnless { it.isNaN() } ?: change.position.y
+                            spotlightTargetY = railItemCenter(idx, letters.size, railHeightPx)
+                                .takeUnless { it.isNaN() } ?: change.position.y
                             onScrubMove(letters[idx])
                             onLetterSelected(letters[idx])
                         }
@@ -190,39 +178,17 @@ fun AzRail(
                 horizontalAlignment = Alignment.CenterHorizontally,
             ) {
                 letters.forEachIndexed { index, letter ->
-                    val isActive = selectedIndex >= 0
-                    val d = if (!isActive) 0f else abs(index - selectedIndex).toFloat()
-                    val influence = if (isActive) exp(-(d * d) / 8f) else 0f
-
-                    val xOffset by animateFloatAsState(
-                        targetValue = -200f * influence,
-                        animationSpec = spring(stiffness = 420f, dampingRatio = 0.82f),
-                        label = "railOffset_$index",
-                    )
-                    val alpha by animateFloatAsState(
-                        targetValue = if (influence > 0.85f) 1f else 0.55f,
-                        animationSpec = spring(stiffness = 380f, dampingRatio = 0.9f),
-                        label = "railAlpha_$index",
-                    )
-                    val scale by animateFloatAsState(
-                        targetValue = 1f + 0.5f * influence,
-                        animationSpec = spring(stiffness = 420f, dampingRatio = 0.82f),
-                        label = "railScale_$index",
-                    )
-
                     Text(
                         text = letter.toString(),
                         style = MaterialTheme.typography.labelMedium,
-                        modifier = Modifier
-                            .onGloballyPositioned { coords ->
-                                itemCenters[index] = coords.positionInParent().y + coords.size.height / 2f
-                            }
-                            .graphicsLayer {
-                                translationX = xOffset
-                                scaleX = scale
-                                scaleY = scale
-                                this.alpha = alpha
-                            },
+                        modifier = Modifier.graphicsLayer {
+                            val d = abs(index - animatedSelectedIndex.value)
+                            val influence = railActiveFraction.value * exp(-(d * d) / 8f)
+                            translationX = -200f * influence
+                            scaleX = 1f + 0.5f * influence
+                            scaleY = 1f + 0.5f * influence
+                            this.alpha = if (influence > 0.85f) 1f else 0.55f
+                        },
                     )
                 }
             }

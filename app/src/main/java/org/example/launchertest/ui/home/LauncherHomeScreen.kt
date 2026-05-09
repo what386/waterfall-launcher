@@ -67,8 +67,9 @@ private fun LauncherHomeScreen(
     onToggleFavorite: (org.example.launchertest.ui.model.LauncherApp) -> Unit,
     onLetterSelected: (Char) -> Unit,
 ) {
-    var scrubbingLetter by remember { mutableStateOf<Char?>(null) }
-    var selectedRailItem by remember { mutableStateOf(FavoritesRailItem) }
+    val scrubbingLetter = remember { mutableStateOf<Char?>(null) }
+    val isScrubbing = remember { mutableStateOf(false) }
+    val selectedRailItem = remember { mutableStateOf(FavoritesRailItem) }
     var showFavoritesOnly by remember { mutableStateOf(true) }
     val coroutineScope = rememberCoroutineScope()
     val railLetters = remember(state.listLayout.letterJumpTargets) {
@@ -76,16 +77,18 @@ private fun LauncherHomeScreen(
     }
 
     fun selectRailItem(item: Char) {
-        selectedRailItem = item
+        selectedRailItem.value = item
         if (item == FavoritesRailItem) {
             showFavoritesOnly = true
-            scrubbingLetter = null
+            scrubbingLetter.value = null
+            isScrubbing.value = false
             if (state.listLayout.favorites.isNotEmpty()) {
                 coroutineScope.launch { listState.scrollToItem(0) }
             }
         } else {
             showFavoritesOnly = false
-            scrubbingLetter = item
+            scrubbingLetter.value = item
+            isScrubbing.value = true
             onLetterSelected(item)
         }
     }
@@ -98,6 +101,7 @@ private fun LauncherHomeScreen(
             AppListPanel(
                 listLayout = state.listLayout,
                 scrubbingLetter = scrubbingLetter,
+                isScrubbing = isScrubbing,
                 showFavoritesOnly = showFavoritesOnly,
                 isSearchActive = state.isSearchActive,
                 listState = listState,
@@ -122,8 +126,9 @@ private fun LauncherHomeScreen(
                 onScrubStart = ::selectRailItem,
                 onScrubMove  = ::selectRailItem,
                 onScrubEnd   = {
-                    if (selectedRailItem != FavoritesRailItem) {
-                        scrubbingLetter = null
+                    if (selectedRailItem.value != FavoritesRailItem) {
+                        scrubbingLetter.value = null
+                        isScrubbing.value = false
                     }
                 },
                 modifier = Modifier

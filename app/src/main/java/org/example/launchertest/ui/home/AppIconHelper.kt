@@ -1,6 +1,7 @@
 package org.example.launchertest.ui.home
 
 import android.graphics.drawable.Drawable
+import android.util.LruCache
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.produceState
 import androidx.compose.ui.graphics.ImageBitmap
@@ -8,31 +9,44 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.graphics.drawable.toBitmap
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.async
 import java.util.concurrent.ConcurrentHashMap
 
-private val appIconCache = ConcurrentHashMap<String, ImageBitmap>()
+private const val MaxCachedAppIcons = 128
+
+private val appIconCache = object : LruCache<String, ImageBitmap>(MaxCachedAppIcons) {}
+private val inFlightIconLoads = ConcurrentHashMap<String, Deferred<ImageBitmap?>>()
 
 @Composable
 fun rememberAppIcon(packageName: String): ImageBitmap? {
-    val context = LocalContext.current
+    val packageManager = LocalContext.current.applicationContext.packageManager
     // produceState launches a coroutine; Dispatchers.IO keeps decode off the main thread.
     // The null initial value means rows render immediately without blocking.
-    return produceState<ImageBitmap?>(initialValue = null, key1 = packageName) {
-        appIconCache[packageName]?.let { cachedIcon ->
-            value = cachedIcon
+    return produceState<ImageBitmap?>(initialValue = appIconCache.get(packageName), key1 = packageName) {
+        if (value != null) {
             return@produceState
         }
 
-        value = withContext(Dispatchers.IO) {
+        val newLoad = async(Dispatchers.IO) {
             try {
-                val drawable: Drawable = context.packageManager.getApplicationIcon(packageName)
+                val drawable: Drawable = packageManager.getApplicationIcon(packageName)
                 drawable.toBitmap().asImageBitmap().also { icon ->
-                    appIconCache[packageName] = icon
+                    appIconCache.put(packageName, icon)
                 }
             } catch (_: Exception) {
                 null
             }
+        }
+        val load = inFlightIconLoads.putIfAbsent(packageName, newLoad) ?: newLoad
+        if (load !== newLoad) {
+            newLoad.cancel()
+        }
+
+        value = try {
+            load.await()
+        } finally {
+            inFlightIconLoads.remove(packageName, load)
         }
     }.value
 }

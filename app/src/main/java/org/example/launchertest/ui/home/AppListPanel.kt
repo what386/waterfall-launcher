@@ -25,6 +25,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,7 +39,8 @@ import org.example.launchertest.ui.model.LauncherApp
 @Composable
 fun AppListPanel(
     listLayout: AppListLayout,
-    scrubbingLetter: Char?,
+    scrubbingLetter: State<Char?>,
+    isScrubbing: State<Boolean>,
     showFavoritesOnly: Boolean,
     isSearchActive: Boolean,
     listState: LazyListState,
@@ -53,7 +55,7 @@ fun AppListPanel(
     // Single animated float for the whole panel — not per-item.
     // Drives favorites fade; app rows read scrubbingLetter directly via graphicsLayer skip.
     val favAlpha by animateFloatAsState(
-        targetValue = if (scrubbingLetter != null && !showFavoritesOnly) 0f else 1f,
+        targetValue = if (isScrubbing.value && !showFavoritesOnly) 0f else 1f,
         animationSpec = spring(stiffness = 300f, dampingRatio = 1f),
         label = "favAlpha",
     )
@@ -107,7 +109,8 @@ fun AppListPanel(
                 val bucket = bucketFor(app.label)
                 // graphicsLayer lambda reads scrubbingLetter at draw time — no recomposition needed.
                 val rowModifier = Modifier.graphicsLayer {
-                    alpha = if (scrubbingLetter == null || scrubbingLetter == bucket) 1f else 0f
+                    val activeLetter = scrubbingLetter.value
+                    alpha = if (activeLetter == null || activeLetter == bucket) 1f else 0f
                 }
 
                 val prevBucket = if (index > 0) bucketFor(apps[index - 1].label) else null
