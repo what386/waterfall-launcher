@@ -44,13 +44,16 @@ fun AppListPanel(
     showFavoritesOnly: Boolean,
     isSearchActive: Boolean,
     listState: LazyListState,
+    categoryPinOffsetPx: Int,
     onSearchActivated: () -> Unit,
     onToggleFavorite: (LauncherApp) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val apps = listLayout.apps
     val favorites = listLayout.favorites
-    val dragThresholdPx = with(LocalDensity.current) { 32.dp.toPx() }
+    val density = LocalDensity.current
+    val dragThresholdPx = with(density) { 32.dp.toPx() }
+    val categoryPinOffsetDp = with(density) { categoryPinOffsetPx.toDp() }
 
     // Single animated float for the whole panel — not per-item.
     // Drives favorites fade; app rows read scrubbingLetter directly via graphicsLayer skip.
@@ -80,8 +83,18 @@ fun AppListPanel(
             end = 40.dp,
         ),
     ) {
+        item(key = "category_pin_spacer") {
+            Spacer(modifier = Modifier.height(categoryPinOffsetDp))
+        }
+
         // ── Favorites ──────────────────────────────────────────────────────
         if (favorites.isNotEmpty()) {
+            item(key = "favorites_header") {
+                SectionHeader(
+                    text = "FAVORITES",
+                    modifier = Modifier.graphicsLayer { alpha = favAlpha },
+                )
+            }
             items(
                 items = favorites,
                 key = { app -> app.packageName + app.activityName + "_fav" },
@@ -116,12 +129,9 @@ fun AppListPanel(
                 val prevBucket = if (index > 0) bucketFor(apps[index - 1].label) else null
                 if (prevBucket == null || bucket != prevBucket) {
                     if (index > 0) Spacer(modifier = Modifier.height(8.dp))
-                    Text(
+                    SectionHeader(
                         text = bucket.toString(),
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
                         modifier = Modifier
-                            .padding(start = 20.dp, top = 8.dp, bottom = 2.dp)
                             .then(rowModifier),
                     )
                 }
@@ -135,6 +145,19 @@ fun AppListPanel(
             }
         }
     }
+}
+
+@Composable
+private fun SectionHeader(
+    text: String,
+    modifier: Modifier = Modifier,
+) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+        modifier = modifier.padding(start = 20.dp, top = 8.dp, bottom = 2.dp),
+    )
 }
 
 internal fun bucketFor(label: String): Char {

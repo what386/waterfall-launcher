@@ -49,6 +49,7 @@ fun LauncherHomeRoute(interactor: LauncherInteractor) {
     LauncherHomeScreen(
         state = state,
         listState = listState,
+        categoryPinOffsetPx = categoryPinOffsetPx,
         onQueryChanged = vm::onQueryChanged,
         onSearchActivated = vm::onSearchActivated,
         onSearchDismissed = vm::onSearchDismissed,
@@ -61,6 +62,7 @@ fun LauncherHomeRoute(interactor: LauncherInteractor) {
 private fun LauncherHomeScreen(
     state: LauncherHomeUiState,
     listState: androidx.compose.foundation.lazy.LazyListState,
+    categoryPinOffsetPx: Int,
     onQueryChanged: (String) -> Unit,
     onSearchActivated: () -> Unit,
     onSearchDismissed: () -> Unit,
@@ -83,7 +85,12 @@ private fun LauncherHomeScreen(
             scrubbingLetter.value = null
             isScrubbing.value = false
             if (state.listLayout.favorites.isNotEmpty()) {
-                coroutineScope.launch { listState.scrollToItem(0) }
+                coroutineScope.launch {
+                    listState.scrollToItem(
+                        index = FavoritesHeaderIndex,
+                        scrollOffset = -categoryPinOffsetPx,
+                    )
+                }
             }
         } else {
             showFavoritesOnly = false
@@ -105,6 +112,7 @@ private fun LauncherHomeScreen(
                 showFavoritesOnly = showFavoritesOnly,
                 isSearchActive = state.isSearchActive,
                 listState = listState,
+                categoryPinOffsetPx = categoryPinOffsetPx,
                 onSearchActivated = onSearchActivated,
                 onToggleFavorite = onToggleFavorite,
                 modifier = Modifier.fillMaxSize(),

@@ -6,6 +6,9 @@ data class LetterJumpTarget(
     val lazyListIndex: Int,
 )
 
+const val CategoryPinSpacerIndex = 0
+const val FavoritesHeaderIndex = 1
+
 data class AppListLayout(
     val favorites: List<LauncherApp>,
     val apps: List<LauncherApp>,
@@ -14,7 +17,8 @@ data class AppListLayout(
 
 internal fun buildAppListLayout(apps: List<LauncherApp>): AppListLayout {
     val favorites = apps.filter { it.isFavorite }
-    val appListStartIndex = favorites.size + if (favorites.isNotEmpty()) 1 else 0
+    val favoritesSectionItemCount = if (favorites.isNotEmpty()) favorites.size + 2 else 0
+    val appListStartIndex = 1 + favoritesSectionItemCount
     val jumpTargets = linkedMapOf<Char, LetterJumpTarget>()
 
     apps.forEachIndexed { appIndex, app ->

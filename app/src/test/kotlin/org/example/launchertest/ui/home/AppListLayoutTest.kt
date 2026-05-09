@@ -18,13 +18,13 @@ class AppListLayoutTest {
         )
 
         assertEquals(emptyList<LauncherApp>(), layout.favorites)
-        assertEquals(LetterJumpTarget(lazyListIndex = 0), layout.letterJumpTargets['A'])
-        assertEquals(LetterJumpTarget(lazyListIndex = 2), layout.letterJumpTargets['B'])
-        assertEquals(LetterJumpTarget(lazyListIndex = 3), layout.letterJumpTargets['#'])
+        assertEquals(LetterJumpTarget(lazyListIndex = 1), layout.letterJumpTargets['A'])
+        assertEquals(LetterJumpTarget(lazyListIndex = 3), layout.letterJumpTargets['B'])
+        assertEquals(LetterJumpTarget(lazyListIndex = 4), layout.letterJumpTargets['#'])
     }
 
     @Test
-    fun accountsForFavoriteRowsAndSpacerInLazyListIndex() {
+    fun accountsForFavoriteHeaderRowsAndSpacerInLazyListIndex() {
         val layout = buildAppListLayout(
             listOf(
                 app("Alpha", favorite = true),
@@ -36,9 +36,9 @@ class AppListLayoutTest {
         )
 
         assertEquals(2, layout.favorites.size)
-        assertEquals(LetterJumpTarget(lazyListIndex = 5), layout.letterJumpTargets['B'])
-        assertEquals(LetterJumpTarget(lazyListIndex = 6), layout.letterJumpTargets['C'])
-        assertEquals(LetterJumpTarget(lazyListIndex = 7), layout.letterJumpTargets['D'])
+        assertEquals(LetterJumpTarget(lazyListIndex = 7), layout.letterJumpTargets['B'])
+        assertEquals(LetterJumpTarget(lazyListIndex = 8), layout.letterJumpTargets['C'])
+        assertEquals(LetterJumpTarget(lazyListIndex = 9), layout.letterJumpTargets['D'])
         assertFalse(layout.letterJumpTargets.containsKey('A'))
     }
 
@@ -51,7 +51,7 @@ class AppListLayoutTest {
             ),
         )
 
-        assertEquals(mapOf('M' to LetterJumpTarget(lazyListIndex = 0)), layout.letterJumpTargets)
+        assertEquals(mapOf('M' to LetterJumpTarget(lazyListIndex = 1)), layout.letterJumpTargets)
     }
 
     private fun app(label: String, favorite: Boolean = false): LauncherApp {
