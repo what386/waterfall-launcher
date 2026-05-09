@@ -17,9 +17,11 @@ import org.example.launchertest.ui.model.LauncherApp
 class LauncherHomeViewModel(
     private val interactor: LauncherInteractor,
 ) : ViewModel() {
+
     private val query = MutableStateFlow("")
     private val isSearchActive = MutableStateFlow(false)
     private val apps = interactor.launcherAppsFlow(query)
+
     private val _jumpToIndex = MutableSharedFlow<Int>(extraBufferCapacity = 1)
     val jumpToIndex: SharedFlow<Int> = _jumpToIndex
 
@@ -29,7 +31,7 @@ class LauncherHomeViewModel(
         LauncherHomeUiState(
             query = search,
             isSearchActive = searchActive,
-            favorites = launcherApps.filter { app -> app.isFavorite },
+            favorites = launcherApps.filter { it.isFavorite },
             apps = launcherApps,
             letterIndexMap = indexMap,
         )
@@ -39,18 +41,9 @@ class LauncherHomeViewModel(
         initialValue = LauncherHomeUiState(),
     )
 
-    fun onQueryChanged(newQuery: String) {
-        query.value = newQuery
-    }
-
-    fun onSearchActivated() {
-        isSearchActive.value = true
-    }
-
-    fun onSearchDismissed() {
-        isSearchActive.value = false
-        query.value = ""
-    }
+    fun onQueryChanged(newQuery: String) { query.value = newQuery }
+    fun onSearchActivated() { isSearchActive.value = true }
+    fun onSearchDismissed() { isSearchActive.value = false; query.value = "" }
 
     fun onLetterSelected(letter: Char) {
         val idx = uiState.value.letterIndexMap[letter] ?: return
@@ -58,9 +51,7 @@ class LauncherHomeViewModel(
     }
 
     fun onToggleFavorite(app: LauncherApp) {
-        viewModelScope.launch {
-            interactor.toggleFavorite(app)
-        }
+        viewModelScope.launch { interactor.toggleFavorite(app) }
     }
 }
 
@@ -76,17 +67,10 @@ private fun buildLetterIndexMap(apps: List<LauncherApp>): Map<Char, Int> {
     val indexMap = linkedMapOf<Char, Int>()
     apps.forEachIndexed { index, app ->
         if (app.isFavorite) return@forEachIndexed
-        val letter = bucketFor(app.label)
-        if (letter !in indexMap) {
-            indexMap[letter] = index
-        }
+        val letter = bucketFor(app.label) // uses AppListPanel.bucketFor (internal, same package)
+        if (letter !in indexMap) indexMap[letter] = index
     }
     return indexMap
-}
-
-private fun bucketFor(label: String): Char {
-    val first = label.trim().firstOrNull()?.uppercaseChar() ?: return '#'
-    return if (first in 'A'..'Z') first else '#'
 }
 
 class LauncherHomeViewModelFactory(
