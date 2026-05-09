@@ -25,10 +25,12 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
 import kotlin.math.abs
 import kotlin.math.exp
@@ -49,6 +51,7 @@ fun AzRail(
     var railHeightPx by remember { mutableFloatStateOf(0f) }
     var railDragY by remember { mutableFloatStateOf(0f) }
     var isRailDragging by remember { mutableIntStateOf(0) }
+    val hapticFeedback = LocalHapticFeedback.current
 
     val spotlightY by animateFloatAsState(
         targetValue = spotlightTargetY,
@@ -115,6 +118,7 @@ fun AzRail(
                     selectedIndex = currentIdx
                     spotlightTargetY = railItemCenter(currentIdx, letters.size, railHeightPx)
                         .takeUnless { it.isNaN() } ?: down.position.y
+                    hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                     onScrubStart(letters[currentIdx])
                     onLetterSelected(letters[currentIdx])
 
@@ -130,6 +134,7 @@ fun AzRail(
                             selectedIndex = idx
                             spotlightTargetY = railItemCenter(idx, letters.size, railHeightPx)
                                 .takeUnless { it.isNaN() } ?: change.position.y
+                            hapticFeedback.performHapticFeedback(HapticFeedbackType.TextHandleMove)
                             onScrubMove(letters[idx])
                             onLetterSelected(letters[idx])
                         }
