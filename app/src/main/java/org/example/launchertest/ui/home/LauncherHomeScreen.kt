@@ -2,8 +2,8 @@ package org.example.launchertest.ui.home
 
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Surface
@@ -15,6 +15,8 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -28,11 +30,37 @@ fun LauncherHomeRoute(interactor: LauncherInteractor) {
     )
     val state by vm.uiState.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
+
+    val configuration = LocalConfiguration.current
+    val density = LocalDensity.current
+    val screenHeightPx = with(density) { configuration.screenHeightDp.dp.toPx() }.toInt()
+
     LaunchedEffect(Unit) {
         vm.jumpToIndex.collectLatest { index ->
-            listState.scrollToItem(index)
+            // Count how many items belong to this bucket so we can estimate group height.
+            val apps = state.apps
+            val bucket = if (index < apps.size) bucketFor(apps[index].label) else null
+            var groupSize = 0
+            if (bucket != null) {
+                var i = index
+                while (i < apps.size && bucketFor(apps[i].label) == bucket) {
+                    groupSize++
+                    i++
+                }
+            }
+
+            // Approximate item height in px (icon 32dp + 16dp vertical padding).
+            val itemHeightPx = with(density) { 48.dp.toPx() }.toInt()
+            val groupHeightPx = groupSize * itemHeightPx
+
+            // Offset so the group sits in the middle of the screen.
+            // Negative offset scrolls the item down from the top edge.
+            val offset = -((screenHeightPx - groupHeightPx) / 2).coerceAtLeast(0)
+
+            listState.scrollToItem(index = index, scrollOffset = offset)
         }
     }
+
     LauncherHomeScreen(
         state = state,
         listState = listState,
