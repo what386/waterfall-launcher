@@ -1,8 +1,11 @@
 package org.example.launchertest.ui.home
 
+import androidx.compose.foundation.background
+import androidx.compose.ui.graphics.Brush
 import android.appwidget.AppWidgetHostView
 import android.content.ComponentName
 import android.content.Intent
+import androidx.compose.ui.graphics.Color
 import android.net.Uri
 import android.provider.Settings
 import android.widget.FrameLayout
@@ -83,9 +86,9 @@ fun AppListPanel(
         ),
         label = "favAlpha",
     )
-
+Box(modifier = modifier.fillMaxSize()) {
     LazyColumn(
-        modifier = modifier
+        modifier = Modifier
             .fillMaxSize()
             .pointerInput(isSearchActive) {
                 if (!isSearchActive) {
@@ -205,7 +208,22 @@ fun AppListPanel(
             }
         }
     }
-}
+
+    Box(
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(APP_LIST_TOP_FADE_HEIGHT_DP.dp)
+            .align(Alignment.TopCenter)
+            .background(
+                Brush.verticalGradient(
+                    colors = listOf(
+                        Color.Black.copy(alpha = 1f),
+                        Color.Black.copy(alpha = 0f),
+                    )
+                ),
+            ),
+    )
+}}
 
 @Composable
 private fun WidgetRow(
