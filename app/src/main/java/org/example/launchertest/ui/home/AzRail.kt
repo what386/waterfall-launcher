@@ -77,11 +77,13 @@ fun AzRail(
     val spotlightSizePx = with(LocalDensity.current) { spotlightSizeDp.toPx() }
     val spotlightOffsetPx = with(LocalDensity.current) { (-104).dp.toPx() }
 
-    fun overscrollOffsetFor(y: Float): Float {
+    fun shiftedRailOffsetFor(y: Float, currentOffset: Float): Float {
+        val yInShiftedRail = y - currentOffset
         return when {
-            y < 0f -> y
-            railHeightPx > 0f && y > railHeightPx -> y - railHeightPx
-            else -> 0f
+            yInShiftedRail < 0f -> currentOffset + yInShiftedRail
+            railHeightPx > 0f && yInShiftedRail > railHeightPx ->
+                currentOffset + yInShiftedRail - railHeightPx
+            else -> currentOffset
         }
     }
 
@@ -115,8 +117,9 @@ fun AzRail(
                     if (!down.pressed) return@awaitEachGesture
                     down.consume()
 
+                    railDragY = renderedRailDragY
                     isRailDragging = 1
-                    railDragY = overscrollOffsetFor(down.position.y)
+                    railDragY = shiftedRailOffsetFor(down.position.y, railDragY)
 
                     var currentIdx = pickIndex(down.position.y - railDragY)
                     if (currentIdx < 0) {
@@ -133,7 +136,7 @@ fun AzRail(
                         val change = event.changes.firstOrNull() ?: break
                         change.consume()
                         if (!change.pressed) break
-                        railDragY = overscrollOffsetFor(change.position.y)
+                        railDragY = shiftedRailOffsetFor(change.position.y, railDragY)
                         val idx = pickIndex(change.position.y - railDragY)
                         if (idx != currentIdx) {
                             currentIdx = idx
@@ -147,6 +150,7 @@ fun AzRail(
                     selectedIndex = -1
                     onScrubEnd()
                     isRailDragging = 0
+                    railDragY = 0f
                 }
             },
     ) {
