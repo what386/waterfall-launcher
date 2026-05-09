@@ -35,6 +35,10 @@ start:
 build-debug:
     ./gradlew :app:assembleDebug
 
+build-release:
+    ./gradlew :app:assembleRelease
+    /opt/android-sdk/build-tools/35.0.0/apksigner sign --ks ~/.android/debug.keystore --ks-key-alias androiddebugkey --ks-pass pass:android --key-pass pass:android --out app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/app-release-unsigned.apk
+
 update:
     just uninstall
     just install
@@ -47,4 +51,12 @@ refresh:
 run:
     just build-debug
     just update
+    just start
+
+install-release:
+    adb install -r app/build/outputs/apk/release/app-release.apk
+
+run-release:
+    just build-release
+    just install-release
     just start
