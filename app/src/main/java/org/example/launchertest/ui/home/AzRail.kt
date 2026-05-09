@@ -42,7 +42,7 @@ fun AzRail(
     modifier: Modifier = Modifier,
 ) {
     var selectedIndex by remember { mutableIntStateOf(-1) }
-    val itemTops = remember { mutableMapOf<Int, Float>() }
+    val itemTops = remember(letters) { FloatArray(letters.size) { Float.NaN } }
     var spotlightTargetY by remember { mutableFloatStateOf(0f) }
 
     val spotlightY by animateFloatAsState(
@@ -62,9 +62,11 @@ fun AzRail(
     val spotlightOffsetPx = with(LocalDensity.current) { (-90).dp.toPx() }
 
     fun pickIndex(y: Float): Int {
-        if (itemTops.isEmpty()) return 0
+        if (letters.isEmpty()) return -1
         var best = 0
-        for ((idx, top) in itemTops) {
+        for (idx in itemTops.indices) {
+            val top = itemTops[idx]
+            if (top.isNaN()) continue
             if (top <= y && idx >= best) best = idx
         }
         return best.coerceIn(0, letters.lastIndex)
@@ -82,8 +84,9 @@ fun AzRail(
                     down.consume()
 
                     var currentIdx = pickIndex(down.position.y)
+                    if (currentIdx < 0) return@awaitEachGesture
                     selectedIndex = currentIdx
-                    spotlightTargetY = itemTops[currentIdx] ?: down.position.y
+                    spotlightTargetY = itemTops[currentIdx].takeUnless { it.isNaN() } ?: down.position.y
                     onScrubStart(letters[currentIdx])
                     onLetterSelected(letters[currentIdx])
 
@@ -96,7 +99,7 @@ fun AzRail(
                         if (idx != currentIdx) {
                             currentIdx = idx
                             selectedIndex = idx
-                            spotlightTargetY = itemTops[idx] ?: change.position.y
+                            spotlightTargetY = itemTops[idx].takeUnless { it.isNaN() } ?: change.position.y
                             onScrubMove(letters[idx])
                             onLetterSelected(letters[idx])
                         }

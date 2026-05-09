@@ -37,8 +37,7 @@ import org.example.launchertest.ui.model.LauncherApp
 
 @Composable
 fun AppListPanel(
-    apps: List<LauncherApp>,
-    favorites: List<LauncherApp>,
+    listLayout: AppListLayout,
     scrubbingLetter: Char?,
     isSearchActive: Boolean,
     listState: LazyListState,
@@ -46,6 +45,8 @@ fun AppListPanel(
     onToggleFavorite: (LauncherApp) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val apps = listLayout.apps
+    val favorites = listLayout.favorites
     val dragThresholdPx = with(LocalDensity.current) { 32.dp.toPx() }
 
     // Single animated float for the whole panel — not per-item.

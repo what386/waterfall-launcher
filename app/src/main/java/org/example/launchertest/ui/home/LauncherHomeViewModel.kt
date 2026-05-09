@@ -3,6 +3,7 @@ package org.example.launchertest.ui.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -22,18 +23,19 @@ class LauncherHomeViewModel(
     private val isSearchActive = MutableStateFlow(false)
     private val apps = interactor.launcherAppsFlow(query)
 
-    private val _jumpToIndex = MutableSharedFlow<Int>(extraBufferCapacity = 1)
-    val jumpToIndex: SharedFlow<Int> = _jumpToIndex
+    private val _jumpToTarget = MutableSharedFlow<LetterJumpTarget>(
+        extraBufferCapacity = 1,
+        onBufferOverflow = BufferOverflow.DROP_OLDEST,
+    )
+    val jumpToTarget: SharedFlow<LetterJumpTarget> = _jumpToTarget
 
     val uiState: StateFlow<LauncherHomeUiState> = combine(query, isSearchActive, apps) {
             search, searchActive, launcherApps ->
-        val indexMap = buildLetterIndexMap(launcherApps)
+        val listLayout = buildAppListLayout(launcherApps)
         LauncherHomeUiState(
             query = search,
             isSearchActive = searchActive,
-            favorites = launcherApps.filter { it.isFavorite },
-            apps = launcherApps,
-            letterIndexMap = indexMap,
+            listLayout = listLayout,
         )
     }.stateIn(
         scope = viewModelScope,
@@ -46,8 +48,8 @@ class LauncherHomeViewModel(
     fun onSearchDismissed() { isSearchActive.value = false; query.value = "" }
 
     fun onLetterSelected(letter: Char) {
-        val idx = uiState.value.letterIndexMap[letter] ?: return
-        _jumpToIndex.tryEmit(idx)
+        val target = uiState.value.listLayout.letterJumpTargets[letter] ?: return
+        _jumpToTarget.tryEmit(target)
     }
 
     fun onToggleFavorite(app: LauncherApp) {
@@ -58,20 +60,12 @@ class LauncherHomeViewModel(
 data class LauncherHomeUiState(
     val query: String = "",
     val isSearchActive: Boolean = false,
-    val favorites: List<LauncherApp> = emptyList(),
-    val apps: List<LauncherApp> = emptyList(),
-    val letterIndexMap: Map<Char, Int> = emptyMap(),
+    val listLayout: AppListLayout = AppListLayout(
+        favorites = emptyList(),
+        apps = emptyList(),
+        letterJumpTargets = emptyMap(),
+    ),
 )
-
-private fun buildLetterIndexMap(apps: List<LauncherApp>): Map<Char, Int> {
-    val indexMap = linkedMapOf<Char, Int>()
-    apps.forEachIndexed { index, app ->
-        if (app.isFavorite) return@forEachIndexed
-        val letter = bucketFor(app.label) // uses AppListPanel.bucketFor (internal, same package)
-        if (letter !in indexMap) indexMap[letter] = index
-    }
-    return indexMap
-}
 
 class LauncherHomeViewModelFactory(
     private val interactor: LauncherInteractor,

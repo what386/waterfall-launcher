@@ -15,7 +15,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -31,33 +30,16 @@ fun LauncherHomeRoute(interactor: LauncherInteractor) {
     val state by vm.uiState.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
 
-    val configuration = LocalConfiguration.current
     val density = LocalDensity.current
-    val screenHeightPx = with(density) { configuration.screenHeightDp.dp.toPx() }.toInt()
+    val categoryPinOffsetPx = with(density) { 96.dp.toPx() }.toInt()
 
-    LaunchedEffect(Unit) {
-        vm.jumpToIndex.collectLatest { index ->
-            // Count how many items belong to this bucket so we can estimate group height.
-            val apps = state.apps
-            val bucket = if (index < apps.size) bucketFor(apps[index].label) else null
-            var groupSize = 0
-            if (bucket != null) {
-                var i = index
-                while (i < apps.size && bucketFor(apps[i].label) == bucket) {
-                    groupSize++
-                    i++
-                }
-            }
-
-            // Approximate item height in px (icon 32dp + 16dp vertical padding).
-            val itemHeightPx = with(density) { 48.dp.toPx() }.toInt()
-            val groupHeightPx = groupSize * itemHeightPx
-
-            // Offset so the group sits in the middle of the screen.
-            // Negative offset scrolls the item down from the top edge.
-            val offset = -((screenHeightPx - groupHeightPx) / 2).coerceAtLeast(0)
-
-            listState.scrollToItem(index = index, scrollOffset = offset)
+    LaunchedEffect(categoryPinOffsetPx, listState, vm) {
+        vm.jumpToTarget.collectLatest { target ->
+            // Negative offset pins the selected category below the top edge.
+            listState.scrollToItem(
+                index = target.lazyListIndex,
+                scrollOffset = -categoryPinOffsetPx,
+            )
         }
     }
 
@@ -83,6 +65,9 @@ private fun LauncherHomeScreen(
     onLetterSelected: (Char) -> Unit,
 ) {
     var scrubbingLetter by remember { mutableStateOf<Char?>(null) }
+    val railLetters = remember(state.listLayout.letterJumpTargets) {
+        state.listLayout.letterJumpTargets.keys.toList()
+    }
 
     if (state.isSearchActive) BackHandler(onBack = onSearchDismissed)
 
@@ -90,8 +75,7 @@ private fun LauncherHomeScreen(
         Box(modifier = Modifier.fillMaxSize()) {
 
             AppListPanel(
-                apps = state.apps,
-                favorites = state.favorites,
+                listLayout = state.listLayout,
                 scrubbingLetter = scrubbingLetter,
                 isSearchActive = state.isSearchActive,
                 listState = listState,
@@ -111,7 +95,7 @@ private fun LauncherHomeScreen(
             }
 
             AzRail(
-                letters = state.letterIndexMap.keys.toList(),
+                letters = railLetters,
                 onLetterSelected = onLetterSelected,
                 onScrubStart = { letter -> scrubbingLetter = letter },
                 onScrubMove  = { letter -> scrubbingLetter = letter },
