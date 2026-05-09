@@ -14,28 +14,25 @@ data class AppListLayout(
 
 internal fun buildAppListLayout(apps: List<LauncherApp>): AppListLayout {
     val favorites = apps.filter { it.isFavorite }
-    val jumpTargets = linkedMapOf<Char, LetterJumpTarget>()
 
-    var lazyListIndex = 1 // category_pin_spacer
-
-    if (favorites.isNotEmpty()) {
-        lazyListIndex += 1 // favorites_header
-        lazyListIndex += favorites.size
-        lazyListIndex += 1 // favorites bottom spacer
+    val favoritesSectionItemCount = if (favorites.isNotEmpty()) {
+        1 + favorites.size + 1 // header + rows + bottom spacer
+    } else {
+        0
     }
 
-    var previousBucket: Char? = null
+    val appListStartIndex = 1 + favoritesSectionItemCount // category_pin_spacer + favorites section
 
-    apps.forEach { app ->
+    val jumpTargets = linkedMapOf<Char, LetterJumpTarget>()
+
+    apps.forEachIndexed { appIndex, app ->
         val bucket = bucketFor(app.label)
 
-        if (previousBucket == null || bucket != previousBucket) {
-            jumpTargets.putIfAbsent(bucket, LetterJumpTarget(lazyListIndex))
-            lazyListIndex += 1 // section header
-            previousBucket = bucket
+        if (bucket !in jumpTargets) {
+            jumpTargets[bucket] = LetterJumpTarget(
+                lazyListIndex = appListStartIndex + appIndex,
+            )
         }
-
-        lazyListIndex += 1 // app row
     }
 
     return AppListLayout(
