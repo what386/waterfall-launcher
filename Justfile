@@ -39,7 +39,12 @@ update:
     just uninstall
     just install
 
-run:
+refresh:
     just uninstall
     just install
+    just start
+
+run:
+    just build-debug
+    just update
     just start
