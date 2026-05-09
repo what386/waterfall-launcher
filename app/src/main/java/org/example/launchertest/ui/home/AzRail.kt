@@ -1,6 +1,7 @@
 package org.example.launchertest.ui.home
 
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.snap
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.awaitEachGesture
@@ -8,6 +9,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
@@ -46,6 +48,9 @@ fun AzRail(
     var selectedIndex by remember { mutableIntStateOf(-1) }
     val itemCenters = remember(letters) { FloatArray(letters.size) { Float.NaN } }
     var spotlightTargetY by remember { mutableFloatStateOf(0f) }
+    var railHeightPx by remember { mutableFloatStateOf(0f) }
+    var railDragY by remember { mutableFloatStateOf(0f) }
+    var isRailDragging by remember { mutableIntStateOf(0) }
 
     val spotlightY by animateFloatAsState(
         targetValue = spotlightTargetY,
@@ -57,11 +62,28 @@ fun AzRail(
         animationSpec = spring(stiffness = 500f, dampingRatio = 1f),
         label = "spotlightAlpha",
     )
+    val renderedRailDragY by animateFloatAsState(
+        targetValue = if (isRailDragging > 0) railDragY else 0f,
+        animationSpec = if (isRailDragging > 0) {
+            snap()
+        } else {
+            spring(stiffness = 520f, dampingRatio = 0.78f)
+        },
+        label = "railDragY",
+    )
 
     val primaryColor = MaterialTheme.colorScheme.primary
     val spotlightSizeDp = 56.dp
     val spotlightSizePx = with(LocalDensity.current) { spotlightSizeDp.toPx() }
     val spotlightOffsetPx = with(LocalDensity.current) { (-104).dp.toPx() }
+
+    fun overscrollOffsetFor(y: Float): Float {
+        return when {
+            y < 0f -> y
+            railHeightPx > 0f && y > railHeightPx -> y - railHeightPx
+            else -> 0f
+        }
+    }
 
     fun pickIndex(y: Float): Int {
         if (letters.isEmpty()) return -1
@@ -83,6 +105,9 @@ fun AzRail(
         modifier = modifier
             .width(28.dp)
             .fillMaxHeight()
+            .onGloballyPositioned { coords ->
+                railHeightPx = coords.size.height.toFloat()
+            }
             .pointerInput(letters) {
                 awaitEachGesture {
                     val down = awaitPointerEvent(PointerEventPass.Initial).changes.firstOrNull()
@@ -90,8 +115,14 @@ fun AzRail(
                     if (!down.pressed) return@awaitEachGesture
                     down.consume()
 
-                    var currentIdx = pickIndex(down.position.y)
-                    if (currentIdx < 0) return@awaitEachGesture
+                    isRailDragging = 1
+                    railDragY = overscrollOffsetFor(down.position.y)
+
+                    var currentIdx = pickIndex(down.position.y - railDragY)
+                    if (currentIdx < 0) {
+                        isRailDragging = 0
+                        return@awaitEachGesture
+                    }
                     selectedIndex = currentIdx
                     spotlightTargetY = itemCenters[currentIdx].takeUnless { it.isNaN() } ?: down.position.y
                     onScrubStart(letters[currentIdx])
@@ -102,7 +133,8 @@ fun AzRail(
                         val change = event.changes.firstOrNull() ?: break
                         change.consume()
                         if (!change.pressed) break
-                        val idx = pickIndex(change.position.y)
+                        railDragY = overscrollOffsetFor(change.position.y)
+                        val idx = pickIndex(change.position.y - railDragY)
                         if (idx != currentIdx) {
                             currentIdx = idx
                             selectedIndex = idx
@@ -114,74 +146,81 @@ fun AzRail(
 
                     selectedIndex = -1
                     onScrubEnd()
+                    isRailDragging = 0
                 }
             },
     ) {
-        // Spotlight bubble
-        if (spotlightAlpha > 0f) {
-            val letter = letters.getOrNull(selectedIndex.coerceAtLeast(0))?.toString() ?: ""
-            Box(
-                contentAlignment = Alignment.Center,
-                modifier = Modifier
-                    .graphicsLayer {
-                        translationX = spotlightOffsetPx
-                        translationY = spotlightY - spotlightSizePx / 2f
-                        alpha = spotlightAlpha
-                    }
-                    .size(spotlightSizeDp)
-                    .background(primaryColor, CircleShape),
-            ) {
-                Text(
-                    text = letter,
-                    style = MaterialTheme.typography.titleLarge,
-                    color = Color.White,
-                )
-            }
-        }
-
-        // Letter column
-        Column(
+        Box(
             modifier = Modifier
-                .align(Alignment.Center)
-                .fillMaxHeight(),
-            verticalArrangement = Arrangement.SpaceEvenly,
-            horizontalAlignment = Alignment.CenterHorizontally,
+                .fillMaxSize()
+                .graphicsLayer { translationY = renderedRailDragY },
         ) {
-            letters.forEachIndexed { index, letter ->
-                val isActive = selectedIndex >= 0
-                val d = if (!isActive) 0f else abs(index - selectedIndex).toFloat()
-                val influence = if (isActive) exp(-(d * d) / 8f) else 0f
-
-                val xOffset by animateFloatAsState(
-                    targetValue = -200f * influence,
-                    animationSpec = spring(stiffness = 420f, dampingRatio = 0.82f),
-                    label = "railOffset_$index",
-                )
-                val alpha by animateFloatAsState(
-                    targetValue = if (influence > 0.85f) 1f else 0.55f,
-                    animationSpec = spring(stiffness = 380f, dampingRatio = 0.9f),
-                    label = "railAlpha_$index",
-                )
-                val scale by animateFloatAsState(
-                    targetValue = 1f + 0.5f * influence,
-                    animationSpec = spring(stiffness = 420f, dampingRatio = 0.82f),
-                    label = "railScale_$index",
-                )
-
-                Text(
-                    text = letter.toString(),
-                    style = MaterialTheme.typography.labelSmall,
+            // Spotlight bubble
+            if (spotlightAlpha > 0f) {
+                val letter = letters.getOrNull(selectedIndex.coerceAtLeast(0))?.toString() ?: ""
+                Box(
+                    contentAlignment = Alignment.Center,
                     modifier = Modifier
-                        .onGloballyPositioned { coords ->
-                            itemCenters[index] = coords.positionInParent().y + coords.size.height / 2f
-                        }
                         .graphicsLayer {
-                            translationX = xOffset
-                            scaleX = scale
-                            scaleY = scale
-                            this.alpha = alpha
-                        },
-                )
+                            translationX = spotlightOffsetPx
+                            translationY = spotlightY - spotlightSizePx / 2f
+                            alpha = spotlightAlpha
+                        }
+                        .size(spotlightSizeDp)
+                        .background(primaryColor, CircleShape),
+                ) {
+                    Text(
+                        text = letter,
+                        style = MaterialTheme.typography.titleLarge,
+                        color = Color.White,
+                    )
+                }
+            }
+
+            // Letter column
+            Column(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .fillMaxHeight(),
+                verticalArrangement = Arrangement.SpaceEvenly,
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                letters.forEachIndexed { index, letter ->
+                    val isActive = selectedIndex >= 0
+                    val d = if (!isActive) 0f else abs(index - selectedIndex).toFloat()
+                    val influence = if (isActive) exp(-(d * d) / 8f) else 0f
+
+                    val xOffset by animateFloatAsState(
+                        targetValue = -200f * influence,
+                        animationSpec = spring(stiffness = 420f, dampingRatio = 0.82f),
+                        label = "railOffset_$index",
+                    )
+                    val alpha by animateFloatAsState(
+                        targetValue = if (influence > 0.85f) 1f else 0.55f,
+                        animationSpec = spring(stiffness = 380f, dampingRatio = 0.9f),
+                        label = "railAlpha_$index",
+                    )
+                    val scale by animateFloatAsState(
+                        targetValue = 1f + 0.5f * influence,
+                        animationSpec = spring(stiffness = 420f, dampingRatio = 0.82f),
+                        label = "railScale_$index",
+                    )
+
+                    Text(
+                        text = letter.toString(),
+                        style = MaterialTheme.typography.labelSmall,
+                        modifier = Modifier
+                            .onGloballyPositioned { coords ->
+                                itemCenters[index] = coords.positionInParent().y + coords.size.height / 2f
+                            }
+                            .graphicsLayer {
+                                translationX = xOffset
+                                scaleX = scale
+                                scaleY = scale
+                                this.alpha = alpha
+                            },
+                    )
+                }
             }
         }
     }
