@@ -130,7 +130,7 @@ private fun LauncherHomeScreen(
                     .align(Alignment.CenterEnd)
                     .offset(y = 95.dp)
                     .fillMaxHeight(0.5f)
-                    .padding(end = 4.dp),
+                    .padding(end = 28.dp),
             )
         }
     }

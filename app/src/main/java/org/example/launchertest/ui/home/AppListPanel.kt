@@ -72,6 +72,7 @@ fun AppListPanel(
             },
         state = listState,
         contentPadding = PaddingValues(
+            start = 28.dp,
             top = 16.dp,
             bottom = if (isSearchActive) 80.dp else 24.dp,
             end = 40.dp,
@@ -167,21 +168,21 @@ internal fun AppRow(
                 },
                 onLongClick = { onToggleFavorite(app) },
             )
-            .padding(horizontal = 20.dp, vertical = 8.dp),
+            .padding(horizontal = 20.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (icon != null) {
             Image(
                 bitmap = icon,
                 contentDescription = null,
-                modifier = Modifier.size(if (isFavorite) 40.dp else 32.dp),
+                modifier = Modifier.size(if (isFavorite) 52.dp else 44.dp),
             )
-            Spacer(modifier = Modifier.width(12.dp))
+            Spacer(modifier = Modifier.width(16.dp))
         }
         Text(
             text = app.label,
-            style = if (isFavorite) MaterialTheme.typography.titleLarge
-                    else MaterialTheme.typography.titleMedium,
+            style = if (isFavorite) MaterialTheme.typography.headlineSmall
+                    else MaterialTheme.typography.titleLarge,
         )
     }
 }
