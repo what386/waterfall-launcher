@@ -23,15 +23,6 @@ publish version:
     lash run scripts/release/publish.lash {{version}}
     git switch dev
 
-uninstall:
-    adb uninstall org.example.launchertest
-
-install:
-    adb install -r app/build/outputs/apk/debug/app-debug.apk
-
-start:
-    adb shell monkey -p org.example.launchertest -c android.intent.category.LAUNCHER 1
-
 build-debug:
     ./gradlew :app:assembleDebug
 
@@ -39,24 +30,24 @@ build-release:
     ./gradlew :app:assembleRelease
     /opt/android-sdk/build-tools/35.0.0/apksigner sign --ks ~/.android/debug.keystore --ks-key-alias androiddebugkey --ks-pass pass:android --key-pass pass:android --out app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/app-release-unsigned.apk
 
-update:
-    just uninstall
-    just install
+uninstall:
+    adb uninstall org.example.launchertest
 
-refresh:
-    just uninstall
-    just install
-    just start
-
-run:
-    just build-debug
-    just update
-    just start
+install-debug:
+    adb install -r app/build/outputs/apk/debug/app-debug.apk
 
 install-release:
     adb install -r app/build/outputs/apk/release/app-release.apk
 
+start-app:
+    adb shell monkey -p org.example.launchertest -c android.intent.category.LAUNCHER 1
+
+run-debug:
+    just build-debug
+    just install-debug
+    just start-app
+
 run-release:
     just build-release
     just install-release
-    just start
+    just start-app
