@@ -24,13 +24,18 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import org.example.launchertest.domain.LauncherInteractor
+import org.example.launchertest.widgets.LauncherWidgetController
 
 @Composable
-fun LauncherHomeRoute(interactor: LauncherInteractor) {
+fun LauncherHomeRoute(
+    interactor: LauncherInteractor,
+    widgetController: LauncherWidgetController,
+) {
     val vm: LauncherHomeViewModel = viewModel(
         factory = LauncherHomeViewModelFactory(interactor),
     )
     val state by vm.uiState.collectAsStateWithLifecycle()
+    val widgetIds by widgetController.widgetIds.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
 
     val density = LocalDensity.current
@@ -48,6 +53,7 @@ fun LauncherHomeRoute(interactor: LauncherInteractor) {
 
     LauncherHomeScreen(
         state = state,
+        widgetIds = widgetIds,
         listState = listState,
         categoryPinOffsetPx = categoryPinOffsetPx,
         onQueryChanged = vm::onQueryChanged,
@@ -56,12 +62,16 @@ fun LauncherHomeRoute(interactor: LauncherInteractor) {
         onToggleFavorite = vm::onToggleFavorite,
         onHideApp = vm::onHideApp,
         onLetterSelected = vm::onLetterSelected,
+        onAddWidget = widgetController::addWidget,
+        onRemoveWidget = widgetController::removeWidget,
+        createWidgetView = widgetController::createWidgetView,
     )
 }
 
 @Composable
 private fun LauncherHomeScreen(
     state: LauncherHomeUiState,
+    widgetIds: List<Int>,
     listState: androidx.compose.foundation.lazy.LazyListState,
     categoryPinOffsetPx: Int,
     onQueryChanged: (String) -> Unit,
@@ -70,6 +80,9 @@ private fun LauncherHomeScreen(
     onToggleFavorite: (org.example.launchertest.ui.model.LauncherApp) -> Unit,
     onHideApp: (org.example.launchertest.ui.model.LauncherApp) -> Unit,
     onLetterSelected: (Char) -> Unit,
+    onAddWidget: () -> Unit,
+    onRemoveWidget: (Int) -> Unit,
+    createWidgetView: (Int) -> android.appwidget.AppWidgetHostView?,
 ) {
     val scrubbingLetter = remember { mutableStateOf<Char?>(null) }
     val isScrubbing = remember { mutableStateOf(false) }
@@ -86,13 +99,15 @@ private fun LauncherHomeScreen(
             showFavoritesOnly = true
             scrubbingLetter.value = null
             isScrubbing.value = false
-            if (state.listLayout.favorites.isNotEmpty()) {
-                coroutineScope.launch {
-                    listState.scrollToItem(
-                        index = FavoritesHeaderIndex,
-                        scrollOffset = -categoryPinOffsetPx,
-                    )
-                }
+            coroutineScope.launch {
+                listState.scrollToItem(
+                    index = if (state.listLayout.favorites.isNotEmpty()) {
+                        favoritesHeaderIndex(widgetIds.size)
+                    } else {
+                        FirstHomeContentIndex
+                    },
+                    scrollOffset = -categoryPinOffsetPx,
+                )
             }
         } else {
             showFavoritesOnly = false
@@ -109,6 +124,7 @@ private fun LauncherHomeScreen(
 
             AppListPanel(
                 listLayout = state.listLayout,
+                widgetIds = widgetIds,
                 scrubbingLetter = scrubbingLetter,
                 isScrubbing = isScrubbing,
                 showFavoritesOnly = showFavoritesOnly,
@@ -118,6 +134,9 @@ private fun LauncherHomeScreen(
                 onSearchActivated = onSearchActivated,
                 onToggleFavorite = onToggleFavorite,
                 onHideApp = onHideApp,
+                onAddWidget = onAddWidget,
+                onRemoveWidget = onRemoveWidget,
+                createWidgetView = createWidgetView,
                 modifier = Modifier.fillMaxSize(),
             )
 
@@ -151,3 +170,6 @@ private fun LauncherHomeScreen(
         }
     }
 }
+
+private const val FirstHomeContentIndex = 1
+private fun favoritesHeaderIndex(widgetCount: Int): Int = widgetCount + 2

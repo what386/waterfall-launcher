@@ -6,9 +6,6 @@ data class LetterJumpTarget(
     val lazyListIndex: Int,
 )
 
-const val CategoryPinSpacerIndex = 0
-const val FavoritesHeaderIndex = 1
-
 data class AppListLayout(
     val favorites: List<LauncherApp>,
     val apps: List<LauncherApp>,

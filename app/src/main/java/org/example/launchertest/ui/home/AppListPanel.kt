@@ -1,9 +1,11 @@
 package org.example.launchertest.ui.home
 
+import android.appwidget.AppWidgetHostView
 import android.content.ComponentName
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
+import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -12,12 +14,14 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -29,6 +33,7 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
@@ -42,11 +47,13 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import org.example.launchertest.ui.model.LauncherApp
 
 @Composable
 fun AppListPanel(
     listLayout: AppListLayout,
+    widgetIds: List<Int>,
     scrubbingLetter: State<Char?>,
     isScrubbing: State<Boolean>,
     showFavoritesOnly: Boolean,
@@ -56,6 +63,9 @@ fun AppListPanel(
     onSearchActivated: () -> Unit,
     onToggleFavorite: (LauncherApp) -> Unit,
     onHideApp: (LauncherApp) -> Unit,
+    onAddWidget: () -> Unit,
+    onRemoveWidget: (Int) -> Unit,
+    createWidgetView: (Int) -> AppWidgetHostView?,
     modifier: Modifier = Modifier,
 ) {
     val apps = listLayout.apps
@@ -94,6 +104,30 @@ fun AppListPanel(
     ) {
         item(key = "category_pin_spacer") {
             Spacer(modifier = Modifier.height(categoryPinOffsetDp))
+        }
+
+        if (showFavoritesOnly) {
+            items(
+                items = widgetIds,
+                key = { appWidgetId -> "widget_$appWidgetId" },
+            ) { appWidgetId ->
+                WidgetRow(
+                    appWidgetId = appWidgetId,
+                    createWidgetView = createWidgetView,
+                    onRemoveWidget = onRemoveWidget,
+                    modifier = Modifier.graphicsLayer { alpha = favAlpha },
+                )
+            }
+            item(key = "add_widget") {
+                TextButton(
+                    onClick = onAddWidget,
+                    modifier = Modifier
+                        .padding(start = 12.dp, top = 4.dp, bottom = 8.dp)
+                        .graphicsLayer { alpha = favAlpha },
+                ) {
+                    Text("Add widget")
+                }
+            }
         }
 
         // ── Favorites ──────────────────────────────────────────────────────
@@ -154,6 +188,35 @@ fun AppListPanel(
                     modifier = rowModifier,
                 )
             }
+        }
+    }
+}
+
+@Composable
+private fun WidgetRow(
+    appWidgetId: Int,
+    createWidgetView: (Int) -> AppWidgetHostView?,
+    onRemoveWidget: (Int) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Column(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 12.dp),
+    ) {
+        AndroidView(
+            factory = { context ->
+                createWidgetView(appWidgetId) ?: FrameLayout(context)
+            },
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = 120.dp),
+        )
+        TextButton(
+            onClick = { onRemoveWidget(appWidgetId) },
+            modifier = Modifier.align(Alignment.End),
+        ) {
+            Text("Remove")
         }
     }
 }

@@ -2,6 +2,7 @@ package org.example.launchertest.data
 
 import android.content.Context
 import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
@@ -14,6 +15,7 @@ class LauncherPreferencesRepository(
 ) {
     private val favoritesKey = stringSetPreferencesKey("favorite_components")
     private val hiddenKey = stringSetPreferencesKey("hidden_components")
+    private val widgetIdsKey = stringPreferencesKey("widget_ids")
 
     val favorites: Flow<Set<String>> = context.launcherPrefs.data.map { prefs ->
         prefs[favoritesKey] ?: emptySet()
@@ -21,6 +23,13 @@ class LauncherPreferencesRepository(
 
     val hiddenApps: Flow<Set<String>> = context.launcherPrefs.data.map { prefs ->
         prefs[hiddenKey] ?: emptySet()
+    }
+
+    val widgetIds: Flow<List<Int>> = context.launcherPrefs.data.map { prefs ->
+        prefs[widgetIdsKey]
+            ?.split(",")
+            ?.mapNotNull { rawId -> rawId.toIntOrNull() }
+            ?: emptyList()
     }
 
     suspend fun toggleFavorite(componentId: String) {
@@ -44,5 +53,29 @@ class LauncherPreferencesRepository(
                 prefs[favoritesKey] = favorites
             }
         }
+    }
+
+    suspend fun addWidgetId(appWidgetId: Int) {
+        context.launcherPrefs.edit { prefs ->
+            val current = prefs[widgetIdsKey].toWidgetIdList()
+            if (appWidgetId !in current) {
+                prefs[widgetIdsKey] = (current + appWidgetId).joinToString(",")
+            }
+        }
+    }
+
+    suspend fun removeWidgetId(appWidgetId: Int) {
+        context.launcherPrefs.edit { prefs ->
+            val updated = prefs[widgetIdsKey].toWidgetIdList()
+                .filterNot { it == appWidgetId }
+            prefs[widgetIdsKey] = updated.joinToString(",")
+        }
+    }
+
+    private fun String?.toWidgetIdList(): List<Int> {
+        return this
+            ?.split(",")
+            ?.mapNotNull { rawId -> rawId.toIntOrNull() }
+            ?: emptyList()
     }
 }
