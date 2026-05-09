@@ -1,5 +1,6 @@
 package org.example.launchertest.ui.home
 
+import kotlin.math.exp
 import kotlin.math.roundToInt
 
 internal fun railItemCenter(index: Int, itemCount: Int, railHeightPx: Float): Float {
@@ -27,4 +28,67 @@ internal fun shiftedRailOffsetFor(
             currentOffset + yInShiftedRail - railHeightPx
         else -> currentOffset
     }
+}
+
+internal fun railPullFor(
+    touchX: Float,
+    railWidthPx: Float,
+    pullDistancePx: Float,
+): Float {
+    if (railWidthPx <= 0f || pullDistancePx <= 0f) return 0f
+    val railCenterX = railWidthPx / 2f
+    return ((railCenterX - touchX) / pullDistancePx)
+        .coerceIn(AZ_RAIL_MIN_PULL, AZ_RAIL_MAX_PULL)
+}
+
+internal fun railLeftPull(pull: Float): Float = pull.coerceAtLeast(0f)
+
+internal fun railRightPull(pull: Float): Float = (-pull).coerceAtLeast(0f)
+
+internal fun railAmplitudeFor(leftPull: Float, rightPull: Float): Float {
+    return AZ_RAIL_BASE_AMPLITUDE_PX +
+        AZ_RAIL_LEFT_PULL_AMPLITUDE_PX * leftPull -
+        AZ_RAIL_RIGHT_PULL_AMPLITUDE_PX * rightPull
+}
+
+internal fun railSetpointFor(leftPull: Float, rightPull: Float): Float {
+    return AZ_RAIL_LEFT_PULL_SETPOINT_PX * leftPull +
+        AZ_RAIL_RIGHT_PULL_SETPOINT_PX * rightPull
+}
+
+internal fun railPeakXFor(leftPull: Float, rightPull: Float): Float {
+    return railSetpointFor(leftPull, rightPull) -
+        railAmplitudeFor(leftPull, rightPull)
+}
+
+internal fun railPeakWidthFor(leftPull: Float, rightPull: Float): Float {
+    return AZ_RAIL_BASE_PEAK_WIDTH +
+        AZ_RAIL_LEFT_PULL_PEAK_WIDTH * leftPull -
+        AZ_RAIL_RIGHT_PULL_PEAK_WIDTH * rightPull
+}
+
+internal fun railScaleBoostFor(leftPull: Float, rightPull: Float): Float {
+    return AZ_RAIL_BASE_SCALE_BOOST +
+        AZ_RAIL_LEFT_PULL_SCALE_BOOST * leftPull -
+        AZ_RAIL_RIGHT_PULL_SCALE_BOOST * rightPull
+}
+
+internal fun railInfluenceFor(
+    distanceFromSelected: Float,
+    activeFraction: Float,
+    peakWidth: Float,
+): Float {
+    if (peakWidth <= 0f) return 0f
+    return activeFraction * exp(
+        -(distanceFromSelected * distanceFromSelected) / peakWidth
+    )
+}
+
+internal fun railItemTranslationXFor(
+    influence: Float,
+    leftPull: Float,
+    rightPull: Float,
+): Float {
+    return railSetpointFor(leftPull, rightPull) -
+        railAmplitudeFor(leftPull, rightPull) * influence
 }

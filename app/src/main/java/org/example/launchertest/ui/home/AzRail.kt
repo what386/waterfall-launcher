@@ -37,6 +37,50 @@ import kotlin.math.exp
 
 const val FavoritesRailItem = '★'
 
+// ten billion constants
+internal const val AZ_RAIL_WIDTH_DP = 28f
+internal const val AZ_RAIL_PULL_DISTANCE_DP = 120f
+
+internal const val AZ_RAIL_MIN_PULL = -2f
+internal const val AZ_RAIL_MAX_PULL = 2f
+
+internal const val AZ_RAIL_PULL_SPRING_STIFFNESS = 420f
+internal const val AZ_RAIL_PULL_SPRING_DAMPING = 0.82f
+
+internal const val AZ_RAIL_SPOTLIGHT_SIZE_DP = 56f
+internal const val AZ_RAIL_SPOTLIGHT_GAP_PX = -78f
+internal const val AZ_RAIL_SPOTLIGHT_Y_STIFFNESS = 600f
+internal const val AZ_RAIL_SPOTLIGHT_Y_DAMPING = 0.75f
+internal const val AZ_RAIL_SPOTLIGHT_ALPHA_STIFFNESS = 500f
+internal const val AZ_RAIL_SPOTLIGHT_ALPHA_DAMPING = 1f
+
+internal const val AZ_RAIL_SELECTED_INDEX_STIFFNESS = 420f
+internal const val AZ_RAIL_SELECTED_INDEX_DAMPING = 0.82f
+
+internal const val AZ_RAIL_ACTIVE_STIFFNESS = 380f
+internal const val AZ_RAIL_ACTIVE_DAMPING = 0.9f
+
+internal const val AZ_RAIL_DRAG_Y_STIFFNESS = 520f
+internal const val AZ_RAIL_DRAG_Y_DAMPING = 0.78f
+
+internal const val AZ_RAIL_BASE_AMPLITUDE_PX = 210f
+internal const val AZ_RAIL_LEFT_PULL_AMPLITUDE_PX = 300f
+internal const val AZ_RAIL_RIGHT_PULL_AMPLITUDE_PX = 90f
+
+internal const val AZ_RAIL_LEFT_PULL_SETPOINT_PX = -20f
+internal const val AZ_RAIL_RIGHT_PULL_SETPOINT_PX = 105f
+
+internal const val AZ_RAIL_BASE_PEAK_WIDTH = 8f
+internal const val AZ_RAIL_LEFT_PULL_PEAK_WIDTH = 24f
+internal const val AZ_RAIL_RIGHT_PULL_PEAK_WIDTH = 2f
+
+internal const val AZ_RAIL_BASE_SCALE_BOOST = 0.5f
+internal const val AZ_RAIL_LEFT_PULL_SCALE_BOOST = 0.08f
+internal const val AZ_RAIL_RIGHT_PULL_SCALE_BOOST = 0.18f
+
+internal const val AZ_RAIL_SELECTED_ALPHA_THRESHOLD = 0.85f
+internal const val AZ_RAIL_INACTIVE_ALPHA = 0.55f
+
 // How far left (in px) the user has dragged relative to the rail's own width.
 // 0 = touching the rail edge, more negative = further left.
 // Clamped so dragging right of the rail doesn't invert things.
@@ -70,15 +114,16 @@ fun AzRail(
     val hapticFeedback = LocalHapticFeedback.current
     val primaryColor = MaterialTheme.colorScheme.primary
 
-    val spotlightSizeDp = 56.dp
+    val spotlightSizeDp = AZ_RAIL_SPOTLIGHT_SIZE_DP.dp
     val spotlightSizePx = with(density) { spotlightSizeDp.toPx() }
-    val spotlightBaseOffsetPx = with(density) { (-104).dp.toPx() }
+    val pullDistancePx = with(density) { AZ_RAIL_PULL_DISTANCE_DP.dp.toPx() }
 
-    val pullDistancePx = with(density) { 220.dp.toPx() }
-
-    val rawPull = if (isRailDragging > 0 && railWidthPx > 0f) {
-        val railCenterX = railWidthPx / 2f
-        ((railCenterX - touchX) / pullDistancePx).coerceIn(-1f, 1f)
+    val rawPull = if (isRailDragging > 0) {
+        railPullFor(
+            touchX = touchX,
+            railWidthPx = railWidthPx,
+            pullDistancePx = pullDistancePx,
+        )
     } else {
         0f
     }
@@ -88,32 +133,47 @@ fun AzRail(
         animationSpec = if (isRailDragging > 0) {
             snap()
         } else {
-            spring(stiffness = 420f, dampingRatio = 0.82f)
+            spring(
+                stiffness = AZ_RAIL_PULL_SPRING_STIFFNESS,
+                dampingRatio = AZ_RAIL_PULL_SPRING_DAMPING,
+            )
         },
         label = "azRailPull",
     )
 
     val spotlightY by animateFloatAsState(
         targetValue = spotlightTargetY,
-        animationSpec = spring(stiffness = 600f, dampingRatio = 0.75f),
+        animationSpec = spring(
+            stiffness = AZ_RAIL_SPOTLIGHT_Y_STIFFNESS,
+            dampingRatio = AZ_RAIL_SPOTLIGHT_Y_DAMPING,
+        ),
         label = "spotlightY",
     )
 
     val spotlightAlpha by animateFloatAsState(
         targetValue = if (selectedIndex >= 0) 1f else 0f,
-        animationSpec = spring(stiffness = 500f, dampingRatio = 1f),
+        animationSpec = spring(
+            stiffness = AZ_RAIL_SPOTLIGHT_ALPHA_STIFFNESS,
+            dampingRatio = AZ_RAIL_SPOTLIGHT_ALPHA_DAMPING,
+        ),
         label = "spotlightAlpha",
     )
 
     val animatedSelectedIndex by animateFloatAsState(
         targetValue = selectedIndex.coerceAtLeast(0).toFloat(),
-        animationSpec = spring(stiffness = 420f, dampingRatio = 0.82f),
+        animationSpec = spring(
+            stiffness = AZ_RAIL_SELECTED_INDEX_STIFFNESS,
+            dampingRatio = AZ_RAIL_SELECTED_INDEX_DAMPING,
+        ),
         label = "railSelectedIndex",
     )
 
     val railActiveFraction by animateFloatAsState(
         targetValue = if (selectedIndex >= 0) 1f else 0f,
-        animationSpec = spring(stiffness = 380f, dampingRatio = 0.9f),
+        animationSpec = spring(
+            stiffness = AZ_RAIL_ACTIVE_STIFFNESS,
+            dampingRatio = AZ_RAIL_ACTIVE_DAMPING,
+        ),
         label = "railActiveFraction",
     )
 
@@ -122,10 +182,17 @@ fun AzRail(
         animationSpec = if (isRailDragging > 0) {
             snap()
         } else {
-            spring(stiffness = 520f, dampingRatio = 0.78f)
+            spring(
+                stiffness = AZ_RAIL_DRAG_Y_STIFFNESS,
+                dampingRatio = AZ_RAIL_DRAG_Y_DAMPING,
+            )
         },
         label = "railDragY",
     )
+
+    val leftPull = railLeftPull(animatedPull)
+    val rightPull = railRightPull(animatedPull)
+    val selectedPeakX = railPeakXFor(leftPull, rightPull)
 
     fun pickIndex(y: Float): Int {
         return pickRailIndex(y, letters.size, railHeightPx)
@@ -133,7 +200,7 @@ fun AzRail(
 
     Box(
         modifier = modifier
-            .width(28.dp)
+            .width(AZ_RAIL_WIDTH_DP.dp)
             .fillMaxHeight()
             .onGloballyPositioned { coords ->
                 railHeightPx = coords.size.height.toFloat()
@@ -169,8 +236,8 @@ fun AzRail(
                     while (true) {
                         val event = awaitPointerEvent(PointerEventPass.Initial)
                         val change = event.changes.firstOrNull() ?: break
-                        change.consume()
 
+                        change.consume()
                         if (!change.pressed) break
 
                         touchX = change.position.x
@@ -211,7 +278,7 @@ fun AzRail(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
                         .graphicsLayer {
-                            translationX = spotlightBaseOffsetPx - 70f * animatedPull
+                            translationX = selectedPeakX - spotlightSizePx - AZ_RAIL_SPOTLIGHT_GAP_PX
                             translationY = spotlightY - spotlightSizePx / 2f
                             alpha = spotlightAlpha
                         }
@@ -238,24 +305,32 @@ fun AzRail(
                         text = letter.toString(),
                         style = MaterialTheme.typography.labelMedium,
                         modifier = Modifier.graphicsLayer {
-                            val d = index - animatedSelectedIndex
-                            val distance = abs(d)
+                            val distance = abs(index - animatedSelectedIndex)
+                            val itemLeftPull = railLeftPull(animatedPull)
+                            val itemRightPull = railRightPull(animatedPull)
 
-                            val influence = railActiveFraction * exp(-(distance * distance) / 8f)
+                            val influence = railInfluenceFor(
+                                distanceFromSelected = distance,
+                                activeFraction = railActiveFraction,
+                                peakWidth = railPeakWidthFor(itemLeftPull, itemRightPull),
+                            )
 
-                            val leftPull = animatedPull.coerceAtLeast(0f)
-                            val rightPull = (-animatedPull).coerceAtLeast(0f)
+                            val scaleBoost = railScaleBoostFor(itemLeftPull, itemRightPull)
 
-                            val amplitude = 210f + 180f * leftPull - 90f * rightPull
-                            val setpoint = -20f * leftPull + 105f * rightPull
+                            translationX = railItemTranslationXFor(
+                                influence = influence,
+                                leftPull = itemLeftPull,
+                                rightPull = itemRightPull,
+                            )
 
-                            translationX = setpoint - amplitude * influence
-
-                            val scaleBoost = 0.5f + 0.25f * leftPull - 0.18f * rightPull
                             scaleX = 1f + scaleBoost * influence
                             scaleY = 1f + scaleBoost * influence
 
-                            this.alpha = if (influence > 0.85f) 1f else 0.55f
+                            this.alpha = if (influence > AZ_RAIL_SELECTED_ALPHA_THRESHOLD) {
+                                1f
+                            } else {
+                                AZ_RAIL_INACTIVE_ALPHA
+                            }
                         },
                     )
                 }
