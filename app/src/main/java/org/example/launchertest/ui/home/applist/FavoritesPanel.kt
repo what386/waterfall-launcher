@@ -182,7 +182,6 @@ fun FavoritesPanel(
     }
 }
 
-private const val FAVORITES_CENTER_BIAS_UP_DP = 72f
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
