@@ -1,10 +1,7 @@
 package org.example.launchertest.ui.home
 
-import org.example.launchertest.ui.home.applist.AppListPanel
 import org.example.launchertest.ui.home.applist.AppListLayout
-import org.example.launchertest.ui.home.applist.LetterJumpTarget
 import org.example.launchertest.ui.home.applist.buildAppListLayout
-import org.example.launchertest.ui.home.azrail.AzRailPanel
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
@@ -29,11 +26,11 @@ class LauncherHomeViewModel(
     private val isSearchActive = MutableStateFlow(false)
     private val apps = interactor.launcherAppsFlow(query)
 
-    private val _jumpToTarget = MutableSharedFlow<LetterJumpTarget>(
+    private val _jumpToTarget = MutableSharedFlow<Int>(
         extraBufferCapacity = 1,
         onBufferOverflow = BufferOverflow.DROP_OLDEST,
     )
-    val jumpToTarget: SharedFlow<LetterJumpTarget> = _jumpToTarget
+    val jumpToTarget: SharedFlow<Int> = _jumpToTarget
 
     val uiState: StateFlow<LauncherHomeUiState> = combine(query, isSearchActive, apps) {
             search, searchActive, launcherApps ->
@@ -54,8 +51,8 @@ class LauncherHomeViewModel(
     fun onSearchDismissed() { isSearchActive.value = false; query.value = "" }
 
     fun onLetterSelected(letter: Char) {
-        val target = uiState.value.listLayout.letterJumpTargets[letter] ?: return
-        _jumpToTarget.tryEmit(target)
+        val targetIndex = uiState.value.listLayout.letterJumpTargets[letter] ?: return
+        _jumpToTarget.tryEmit(targetIndex)
     }
 
     fun onToggleFavorite(app: LauncherApp) {

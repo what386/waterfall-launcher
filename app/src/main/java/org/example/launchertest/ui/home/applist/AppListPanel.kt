@@ -31,7 +31,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
-import org.example.launchertest.ui.home.rememberAppIcon
+import org.example.launchertest.ui.home.shared.rememberAppIcon
 import org.example.launchertest.ui.model.LauncherApp
 
 /**

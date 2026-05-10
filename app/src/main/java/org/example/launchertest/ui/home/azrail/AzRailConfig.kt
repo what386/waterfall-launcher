@@ -1,6 +1,12 @@
 package org.example.launchertest.ui.home.azrail
 
-const val FavoritesRailItem = '★'
+private const val FavoritesRailItem = '★'
+
+fun buildRailLetters(letterJumpTargets: Map<Char, Int>): List<Char> {
+    return listOf(FavoritesRailItem) + letterJumpTargets.keys.toList()
+}
+
+fun isFavoritesRailItem(item: Char): Boolean = item == FavoritesRailItem
 
 // ten billion constants
 internal const val AZ_RAIL_WIDTH_DP = 28f

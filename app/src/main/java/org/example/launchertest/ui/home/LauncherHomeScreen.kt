@@ -1,8 +1,9 @@
 package org.example.launchertest.ui.home
 
 import org.example.launchertest.ui.home.applist.AppListPanel
-import org.example.launchertest.ui.home.azrail.FavoritesRailItem
 import org.example.launchertest.ui.home.azrail.AzRailPanel
+import org.example.launchertest.ui.home.azrail.buildRailLetters
+import org.example.launchertest.ui.home.azrail.isFavoritesRailItem
 
 import android.app.WallpaperManager
 import android.widget.ImageView
@@ -83,10 +84,10 @@ fun LauncherHomeRoute(
     val categoryPinOffsetPx = with(density) { 240.dp.toPx() }.toInt()
 
     LaunchedEffect(categoryPinOffsetPx, listState, vm) {
-        vm.jumpToTarget.collectLatest { target ->
+        vm.jumpToTarget.collectLatest { targetIndex ->
             // Negative offset pins the selected category below the top edge.
             listState.scrollToItem(
-                index = target.lazyListIndex,
+                index = targetIndex,
                 scrollOffset = -categoryPinOffsetPx,
             )
         }
@@ -127,21 +128,20 @@ private fun LauncherHomeScreen(
 ) {
     val scrubbingLetter = remember { mutableStateOf<Char?>(null) }
     val isScrubbing = remember { mutableStateOf(false) }
-    val selectedRailItem = remember { mutableStateOf(FavoritesRailItem) }
+    val selectedRailItem = remember { mutableStateOf(buildRailLetters(emptyMap()).first()) }
 
     var showFavoritesOnly by remember { mutableStateOf(true) }
 
     val coroutineScope = rememberCoroutineScope()
 
     val railLetters = remember(state.listLayout.letterJumpTargets) {
-        listOf(FavoritesRailItem) +
-            state.listLayout.letterJumpTargets.keys.toList()
+        buildRailLetters(state.listLayout.letterJumpTargets)
     }
 
     fun selectRailItem(item: Char) {
         selectedRailItem.value = item
 
-        if (item == FavoritesRailItem) {
+        if (isFavoritesRailItem(item)) {
             showFavoritesOnly = true
             scrubbingLetter.value = null
             isScrubbing.value = false
@@ -213,7 +213,7 @@ private fun LauncherHomeScreen(
                 onScrubStart = ::selectRailItem,
                 onScrubMove = ::selectRailItem,
                 onScrubEnd = {
-                    if (selectedRailItem.value != FavoritesRailItem) {
+                    if (!isFavoritesRailItem(selectedRailItem.value)) {
                         scrubbingLetter.value = null
                         isScrubbing.value = false
                     }

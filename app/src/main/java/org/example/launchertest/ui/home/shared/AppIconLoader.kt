@@ -1,4 +1,4 @@
-package org.example.launchertest.ui.home
+package org.example.launchertest.ui.home.shared
 
 import android.graphics.drawable.Drawable
 import android.util.LruCache
@@ -8,8 +8,8 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.graphics.drawable.toBitmap
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import java.util.concurrent.ConcurrentHashMap
 
@@ -21,8 +21,6 @@ private val inFlightIconLoads = ConcurrentHashMap<String, Deferred<ImageBitmap?>
 @Composable
 fun rememberAppIcon(packageName: String): ImageBitmap? {
     val packageManager = LocalContext.current.applicationContext.packageManager
-    // produceState launches a coroutine; Dispatchers.IO keeps decode off the main thread.
-    // The null initial value means rows render immediately without blocking.
     return produceState<ImageBitmap?>(initialValue = appIconCache.get(packageName), key1 = packageName) {
         if (value != null) {
             return@produceState
