@@ -135,36 +135,6 @@ fun AppListPanel(
                 }
             }
 
-            if (favorites.isNotEmpty() && !showFavoritesOnly) {
-                item(key = "favorites_header") {
-                    SectionHeader(
-                        text = "FAVORITES",
-                        modifier = Modifier.graphicsLayer { alpha = favAlpha },
-                    )
-                }
-
-                items(
-                    items = favorites,
-                    key = { app -> app.packageName + app.activityName + "_fav" },
-                ) { app ->
-                    AppRow(
-                        app = app,
-                        isFavorite = true,
-                        onToggleFavorite = onToggleFavorite,
-                        onHideApp = onHideApp,
-                        modifier = Modifier.graphicsLayer { alpha = favAlpha },
-                    )
-                }
-
-                item(key = "favorites_bottom_spacer") {
-                    Spacer(
-                        modifier = Modifier
-                            .height(APP_LIST_FAVORITES_BOTTOM_SPACER_DP.dp)
-                            .graphicsLayer { alpha = favAlpha },
-                    )
-                }
-            }
-
             if (!showFavoritesOnly) {
                 itemsIndexed(
                     items = apps,

@@ -10,14 +10,7 @@ data class AppListLayout(
 
 internal fun buildAppListLayout(apps: List<LauncherApp>): AppListLayout {
     val favorites = apps.filter { it.isFavorite }
-
-    val favoritesSectionItemCount = if (favorites.isNotEmpty()) {
-        1 + favorites.size + 1 // header + rows + bottom spacer
-    } else {
-        0
-    }
-
-    val appListStartIndex = 1 + favoritesSectionItemCount // category_pin_spacer + favorites section
+    val appListStartIndex = 1 // category_pin_spacer
 
     val jumpTargets = linkedMapOf<Char, Int>()
 

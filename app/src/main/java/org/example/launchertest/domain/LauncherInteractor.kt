@@ -25,10 +25,7 @@ class LauncherInteractor(
                 .filter { app ->
                     normalizedQuery.isBlank() || app.label.lowercase().contains(normalizedQuery)
                 }
-                .sortedWith(
-                    compareByDescending<LauncherApp> { it.isFavorite }
-                        .thenBy { it.label.lowercase() }
-                )
+                .sortedBy { it.label.lowercase() }
                 .toList()
         }
     }
