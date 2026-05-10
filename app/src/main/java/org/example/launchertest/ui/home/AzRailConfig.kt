@@ -43,5 +43,5 @@ internal const val AZ_RAIL_BASE_SCALE_BOOST = 0.5f
 internal const val AZ_RAIL_LEFT_PULL_SCALE_BOOST = 0.08f
 internal const val AZ_RAIL_RIGHT_PULL_SCALE_BOOST = 0.18f
 
-internal const val AZ_RAIL_SELECTED_ALPHA_THRESHOLD = 0.85f
-internal const val AZ_RAIL_INACTIVE_ALPHA = 0.55f
+internal const val AZ_RAIL_SELECTED_ALPHA_THRESHOLD = 0.9f
+internal const val AZ_RAIL_INACTIVE_ALPHA = 0.85f
