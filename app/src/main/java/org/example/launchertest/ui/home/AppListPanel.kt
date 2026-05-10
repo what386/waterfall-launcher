@@ -117,31 +117,18 @@ fun AppListPanel(
             }
 
             if (showFavoritesOnly) {
-                items(
-                    items = widgetIds,
-                    key = { appWidgetId -> "widget_$appWidgetId" },
-                ) { appWidgetId ->
-                    WidgetRow(
-                        appWidgetId = appWidgetId,
-                        createWidgetView = createWidgetView,
+                item(key = "favorites_panel") {
+                    FavoritesPanel(
+                        favorites = favorites,
+                        widgetIds = widgetIds,
+                        favAlpha = favAlpha,
+                        onToggleFavorite = onToggleFavorite,
+                        onHideApp = onHideApp,
+                        onAddWidget = onAddWidget,
                         onRemoveWidget = onRemoveWidget,
-                        modifier = Modifier.graphicsLayer { alpha = favAlpha },
+                        createWidgetView = createWidgetView,
+                        modifier = Modifier.fillParentMaxHeight(),
                     )
-                }
-
-                item(key = "add_widget") {
-                    TextButton(
-                        onClick = onAddWidget,
-                        modifier = Modifier
-                            .padding(
-                                start = ADD_WIDGET_START_PADDING_DP.dp,
-                                top = ADD_WIDGET_TOP_PADDING_DP.dp,
-                                bottom = ADD_WIDGET_BOTTOM_PADDING_DP.dp,
-                            )
-                            .graphicsLayer { alpha = favAlpha },
-                    ) {
-                        Text("Add widget")
-                    }
                 }
             }
 
@@ -247,7 +234,7 @@ private fun WidgetRow(
 }
 
 @Composable
-private fun SectionHeader(
+internal fun SectionHeader(
     text: String,
     modifier: Modifier = Modifier,
 ) {

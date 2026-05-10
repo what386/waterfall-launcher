@@ -35,3 +35,11 @@ internal const val APP_WIDGET_MIN_HEIGHT_DP = 120f
 internal const val ADD_WIDGET_START_PADDING_DP = 12f
 internal const val ADD_WIDGET_TOP_PADDING_DP = 4f
 internal const val ADD_WIDGET_BOTTOM_PADDING_DP = 8f
+
+// How much drag resistance to apply when overscrolling the favorites panel.
+// 0.3 = finger moves 100px → panel moves 30px; feels springy without flying away.
+internal const val FAVORITES_OVERSCROLL_RESISTANCE = 0.3f
+
+// Spring that snaps the favorites panel back to center on release.
+internal const val FAVORITES_OVERSCROLL_SPRING_STIFFNESS = 300f
+internal const val FAVORITES_OVERSCROLL_SPRING_DAMPING = 0.6f
