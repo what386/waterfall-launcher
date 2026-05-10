@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -70,6 +71,7 @@ fun FavoritesPanel(
         Column(
             modifier = Modifier
                 .fillMaxHeight()
+                .offset(y = (-FAVORITES_CENTER_BIAS_UP_DP).dp)
                 .graphicsLayer { translationY = overscrollOffset.value }
                 .pointerInput(Unit) {
                     detectVerticalDragGestures(
@@ -177,6 +179,8 @@ fun FavoritesPanel(
         }
     }
 }
+
+private const val FAVORITES_CENTER_BIAS_UP_DP = 72f
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
