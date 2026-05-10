@@ -1,5 +1,9 @@
 package org.example.launchertest.ui.home
 
+import org.example.launchertest.ui.home.applist.AppListPanel
+import org.example.launchertest.ui.home.azrail.FavoritesRailItem
+import org.example.launchertest.ui.home.azrail.AzRailPanel
+
 import android.app.WallpaperManager
 import android.widget.ImageView
 import androidx.compose.ui.viewinterop.AndroidView
@@ -203,7 +207,7 @@ private fun LauncherHomeScreen(
                 )
             }
 
-            AzRail(
+            AzRailPanel(
                 letters = railLetters,
                 onLetterSelected = {},
                 onScrubStart = ::selectRailItem,

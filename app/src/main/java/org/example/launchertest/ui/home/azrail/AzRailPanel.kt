@@ -1,4 +1,4 @@
-package org.example.launchertest.ui.home
+package org.example.launchertest.ui.home.azrail
 
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.snap
@@ -48,7 +48,7 @@ private fun touchXInfluence(touchX: Float, railWidthPx: Float): Float {
 }
 
 @Composable
-fun AzRail(
+fun AzRailPanel(
     letters: List<Char>,
     onLetterSelected: (Char) -> Unit,
     onScrubStart: (Char) -> Unit,

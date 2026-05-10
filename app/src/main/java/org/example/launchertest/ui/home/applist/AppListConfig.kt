@@ -1,4 +1,4 @@
-package org.example.launchertest.ui.home
+package org.example.launchertest.ui.home.applist
 
 internal const val APP_LIST_TOP_FADE_HEIGHT_DP = 220f
 internal const val APP_LIST_CONTENT_START_PADDING_DP = 28f

@@ -1,4 +1,4 @@
-package org.example.launchertest.ui.home
+package org.example.launchertest.ui.home.azrail
 
 const val FavoritesRailItem = '★'
 

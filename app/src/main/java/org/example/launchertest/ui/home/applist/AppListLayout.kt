@@ -1,4 +1,4 @@
-package org.example.launchertest.ui.home
+package org.example.launchertest.ui.home.applist
 
 import org.example.launchertest.ui.model.LauncherApp
 

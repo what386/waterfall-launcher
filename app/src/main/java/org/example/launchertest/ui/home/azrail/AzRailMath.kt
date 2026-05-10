@@ -1,4 +1,4 @@
-package org.example.launchertest.ui.home
+package org.example.launchertest.ui.home.azrail
 
 import kotlin.math.exp
 import kotlin.math.roundToInt
