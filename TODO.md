@@ -8,3 +8,6 @@
 - [ ] feat: rename app to 'Cascade Launcher'
       @created 2026-05-10 00:47
 
+- [ ] feat: drag-and-drop favorite reordering
+      @created 2026-05-10 02:41
+
