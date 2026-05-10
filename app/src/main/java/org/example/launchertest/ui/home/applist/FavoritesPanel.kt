@@ -125,6 +125,8 @@ fun FavoritesPanel(
                 .verticalScroll(scrollState, enabled = false),
             verticalArrangement = Arrangement.Center,
         ) {
+            Spacer(modifier = Modifier.height(FAVORITES_PANEL_TOP_MARGIN_DP.dp))
+
             widgetIds.forEach { appWidgetId ->
                 WidgetRow(
                     appWidgetId = appWidgetId,
