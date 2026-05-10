@@ -15,6 +15,8 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Surface
 import androidx.compose.runtime.Composable
@@ -208,6 +210,12 @@ private fun LauncherHomeScreen(
             }
 
             AzRailPanel(
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .offset(y = 95.dp)
+                    .fillMaxHeight(0.5f)
+                    .padding(end = 28.dp)
+                    .width(36.dp),
                 letters = railLetters,
                 onLetterSelected = {},
                 onScrubStart = ::selectRailItem,
@@ -218,11 +226,16 @@ private fun LauncherHomeScreen(
                         isScrubbing.value = false
                     }
                 },
+            )
+
+            Box(
                 modifier = Modifier
                     .align(Alignment.CenterEnd)
-                    .offset(y = 95.dp)
-                    .fillMaxHeight(0.5f)
-                    .padding(end = 28.dp),
+                    .offset(y = (-105).dp)
+                    .padding(end = 28.dp)
+                    .width(36.dp)
+                    .fillMaxHeight(0.16f)
+                    .clickable { selectRailItem(railLetters.first()) },
             )
         }
     }
