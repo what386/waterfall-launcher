@@ -21,7 +21,7 @@ internal const val APP_LIST_BUCKET_SPACER_HEIGHT_DP = 8f
 internal const val APP_LIST_FAVORITES_BOTTOM_SPACER_DP = 24f
 
 internal const val APP_ROW_HORIZONTAL_PADDING_DP = 20f
-internal const val APP_ROW_VERTICAL_PADDING_DP = 12f
+internal const val APP_ROW_VERTICAL_PADDING_DP = 9f
 internal const val APP_ROW_ICON_SPACING_DP = 16f
 internal const val APP_ROW_ICON_SIZE_DP = 44f
 internal const val APP_ROW_FAVORITE_ICON_SIZE_DP = 52f
