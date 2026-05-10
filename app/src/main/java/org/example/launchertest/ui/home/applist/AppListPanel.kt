@@ -113,8 +113,10 @@ fun AppListPanel(
                 },
             ),
         ) {
-            item(key = "category_pin_spacer") {
-                Spacer(modifier = Modifier.height(categoryPinOffsetDp))
+            if (!showFavoritesOnly) {
+                item(key = "category_pin_spacer") {
+                    Spacer(modifier = Modifier.height(categoryPinOffsetDp))
+                }
             }
 
             if (showFavoritesOnly) {

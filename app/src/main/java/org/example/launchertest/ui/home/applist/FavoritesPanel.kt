@@ -7,9 +7,11 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
@@ -67,6 +69,7 @@ fun FavoritesPanel(
     ) {
         Column(
             modifier = Modifier
+                .fillMaxHeight()
                 .graphicsLayer { translationY = overscrollOffset.value }
                 .pointerInput(Unit) {
                     detectVerticalDragGestures(
@@ -118,6 +121,7 @@ fun FavoritesPanel(
                     )
                 }
                 .verticalScroll(scrollState, enabled = false),
+            verticalArrangement = Arrangement.Center,
         ) {
             widgetIds.forEach { appWidgetId ->
                 WidgetRow(
