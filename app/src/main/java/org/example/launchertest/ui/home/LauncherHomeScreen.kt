@@ -1,6 +1,7 @@
 package org.example.launchertest.ui.home
 
 import org.example.launchertest.ui.home.applist.AppListPanel
+import org.example.launchertest.ui.home.applist.APP_LIST_CATEGORY_PIN_OFFSET_DP
 import org.example.launchertest.ui.home.azrail.AzRailPanel
 import org.example.launchertest.ui.home.azrail.buildRailLetters
 import org.example.launchertest.ui.home.azrail.isFavoritesRailItem
@@ -83,7 +84,7 @@ fun LauncherHomeRoute(
     val listState = rememberLazyListState()
 
     val density = LocalDensity.current
-    val categoryPinOffsetPx = with(density) { 240.dp.toPx() }.toInt()
+    val categoryPinOffsetPx = with(density) { APP_LIST_CATEGORY_PIN_OFFSET_DP.dp.toPx() }.toInt()
 
     LaunchedEffect(categoryPinOffsetPx, listState, vm) {
         vm.jumpToTarget.collectLatest { targetIndex ->
