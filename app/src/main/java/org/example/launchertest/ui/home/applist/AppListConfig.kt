@@ -23,6 +23,7 @@ internal const val APP_LIST_FAVORITES_BOTTOM_SPACER_DP = 24f
 internal const val APP_ROW_HORIZONTAL_PADDING_DP = 20f
 internal const val APP_ROW_VERTICAL_PADDING_DP = 9f
 internal const val APP_ROW_CONTENT_SCALE = 0.8f
+internal const val APP_ROW_TEXT_SCALE = 0.82f
 internal const val APP_ROW_ICON_SPACING_DP = 16f
 internal const val APP_ROW_ICON_SIZE_DP = 44f
 internal const val APP_ROW_FAVORITE_ICON_SIZE_DP = 52f
@@ -36,6 +37,7 @@ internal const val APP_WIDGET_MIN_HEIGHT_DP = 120f
 internal const val ADD_WIDGET_START_PADDING_DP = 12f
 internal const val ADD_WIDGET_TOP_PADDING_DP = 4f
 internal const val ADD_WIDGET_BOTTOM_PADDING_DP = 8f
+internal const val FAVORITES_PANEL_TOP_MARGIN_DP = 75f
 
 // How much drag resistance to apply when overscrolling the favorites panel.
 // 0.3 = finger moves 100px → panel moves 30px; feels springy without flying away.
