@@ -244,14 +244,14 @@ internal fun AppRow(
                     contentDescription = null,
                     modifier = Modifier.size(
                         if (isFavorite) {
-                            APP_ROW_FAVORITE_ICON_SIZE_DP.dp
+                            (APP_ROW_FAVORITE_ICON_SIZE_DP * APP_ROW_CONTENT_SCALE).dp
                         } else {
-                            APP_ROW_ICON_SIZE_DP.dp
+                            (APP_ROW_ICON_SIZE_DP * APP_ROW_CONTENT_SCALE).dp
                         },
                     ),
                 )
 
-                Spacer(modifier = Modifier.width(APP_ROW_ICON_SPACING_DP.dp))
+                Spacer(modifier = Modifier.width((APP_ROW_ICON_SPACING_DP * APP_ROW_CONTENT_SCALE).dp))
             }
 
             Text(
