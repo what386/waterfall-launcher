@@ -133,7 +133,7 @@ fun AppListPanel(
                 }
             }
 
-            if (favorites.isNotEmpty()) {
+            if (favorites.isNotEmpty() && !showFavoritesOnly) {
                 item(key = "favorites_header") {
                     SectionHeader(
                         text = "FAVORITES",
@@ -199,41 +199,6 @@ fun AppListPanel(
         }
     }
 }
-@Composable
-private fun WidgetRow(
-    appWidgetId: Int,
-    createWidgetView: (Int) -> AppWidgetHostView?,
-    onRemoveWidget: (Int) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Column(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(
-                start = APP_WIDGET_ROW_START_PADDING_DP.dp,
-                end = APP_WIDGET_ROW_END_PADDING_DP.dp,
-                top = APP_WIDGET_ROW_TOP_PADDING_DP.dp,
-                bottom = APP_WIDGET_ROW_BOTTOM_PADDING_DP.dp,
-            ),
-    ) {
-        AndroidView(
-            factory = { context ->
-                createWidgetView(appWidgetId) ?: FrameLayout(context)
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = APP_WIDGET_MIN_HEIGHT_DP.dp),
-        )
-
-        TextButton(
-            onClick = { onRemoveWidget(appWidgetId) },
-            modifier = Modifier.align(Alignment.End),
-        ) {
-            Text("Remove")
-        }
-    }
-}
-
 @Composable
 internal fun SectionHeader(
     text: String,

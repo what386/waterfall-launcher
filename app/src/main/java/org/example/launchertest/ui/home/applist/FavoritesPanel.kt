@@ -4,7 +4,10 @@ import android.appwidget.AppWidgetHostView
 import android.widget.FrameLayout
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -14,11 +17,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
@@ -34,6 +40,7 @@ import org.example.launchertest.ui.model.LauncherApp
  * Overscroll resistance: drag distance is dampened by [FAVORITES_OVERSCROLL_RESISTANCE]
  * so the panel feels springy but not free-floating.
  */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun FavoritesPanel(
     favorites: List<LauncherApp>,
@@ -49,111 +56,129 @@ fun FavoritesPanel(
     val scrollState = rememberScrollState()
     val overscrollOffset = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
+    var showPanelMenu by remember { mutableStateOf(false) }
 
-    Column(
+    Box(
         modifier = modifier
-            .graphicsLayer { translationY = overscrollOffset.value }
-            .pointerInput(Unit) {
-                detectVerticalDragGestures(
-                    onDragEnd = {
-                        scope.launch {
-                            overscrollOffset.animateTo(
-                                targetValue = 0f,
-                                animationSpec = spring(
-                                    stiffness = FAVORITES_OVERSCROLL_SPRING_STIFFNESS,
-                                    dampingRatio = FAVORITES_OVERSCROLL_SPRING_DAMPING,
-                                ),
-                            )
-                        }
-                    },
-                    onDragCancel = {
-                        scope.launch {
-                            overscrollOffset.animateTo(
-                                targetValue = 0f,
-                                animationSpec = spring(
-                                    stiffness = FAVORITES_OVERSCROLL_SPRING_STIFFNESS,
-                                    dampingRatio = FAVORITES_OVERSCROLL_SPRING_DAMPING,
-                                ),
-                            )
-                        }
-                    },
-                    onVerticalDrag = { _, dragAmount ->
-                        val atTop = scrollState.value == 0
-                        val atBottom = scrollState.value == scrollState.maxValue
-
-                        val canNormalScroll = when {
-                            dragAmount < 0 && !atBottom -> true  // scrolling down, not at bottom
-                            dragAmount > 0 && !atTop    -> true  // scrolling up, not at top
-                            else                        -> false
-                        }
-
-                        if (canNormalScroll) {
-                            // Let the inner scroll consume it
+            .combinedClickable(
+                onClick = {},
+                onLongClick = { showPanelMenu = true },
+            ),
+    ) {
+        Column(
+            modifier = Modifier
+                .graphicsLayer { translationY = overscrollOffset.value }
+                .pointerInput(Unit) {
+                    detectVerticalDragGestures(
+                        onDragEnd = {
                             scope.launch {
-                                scrollState.scrollTo(
-                                    (scrollState.value - dragAmount.toInt()).coerceIn(0, scrollState.maxValue)
+                                overscrollOffset.animateTo(
+                                    targetValue = 0f,
+                                    animationSpec = spring(
+                                        stiffness = FAVORITES_OVERSCROLL_SPRING_STIFFNESS,
+                                        dampingRatio = FAVORITES_OVERSCROLL_SPRING_DAMPING,
+                                    ),
                                 )
                             }
-                        } else {
-                            // Overscroll — apply dampened translation
-                            val dampened = dragAmount * FAVORITES_OVERSCROLL_RESISTANCE
+                        },
+                        onDragCancel = {
                             scope.launch {
-                                overscrollOffset.snapTo(overscrollOffset.value + dampened)
+                                overscrollOffset.animateTo(
+                                    targetValue = 0f,
+                                    animationSpec = spring(
+                                        stiffness = FAVORITES_OVERSCROLL_SPRING_STIFFNESS,
+                                        dampingRatio = FAVORITES_OVERSCROLL_SPRING_DAMPING,
+                                    ),
+                                )
                             }
-                        }
-                    },
-                )
-            }
-            .verticalScroll(scrollState, enabled = false), // scroll driven manually above
-    ) {
-        // Widgets
-        widgetIds.forEach { appWidgetId ->
-            WidgetRow(
-                appWidgetId = appWidgetId,
-                createWidgetView = createWidgetView,
-                onRemoveWidget = onRemoveWidget,
-                modifier = Modifier.graphicsLayer { alpha = favAlpha },
-            )
-        }
+                        },
+                        onVerticalDrag = { _, dragAmount ->
+                            val atTop = scrollState.value == 0
+                            val atBottom = scrollState.value == scrollState.maxValue
 
-        TextButton(
-            onClick = onAddWidget,
-            modifier = Modifier
-                .padding(
-                    start = ADD_WIDGET_START_PADDING_DP.dp,
-                    top = ADD_WIDGET_TOP_PADDING_DP.dp,
-                    bottom = ADD_WIDGET_BOTTOM_PADDING_DP.dp,
-                )
-                .graphicsLayer { alpha = favAlpha },
+                            val canNormalScroll = when {
+                                dragAmount < 0 && !atBottom -> true
+                                dragAmount > 0 && !atTop    -> true
+                                else                        -> false
+                            }
+
+                            if (canNormalScroll) {
+                                scope.launch {
+                                    scrollState.scrollTo(
+                                        (scrollState.value - dragAmount.toInt()).coerceIn(0, scrollState.maxValue)
+                                    )
+                                }
+                            } else {
+                                val dampened = dragAmount * FAVORITES_OVERSCROLL_RESISTANCE
+                                scope.launch {
+                                    overscrollOffset.snapTo(overscrollOffset.value + dampened)
+                                }
+                            }
+                        },
+                    )
+                }
+                .verticalScroll(scrollState, enabled = false),
         ) {
-            Text("Add widget")
-        }
-
-        // Favorites header + rows
-        if (favorites.isNotEmpty()) {
-            SectionHeader(
-                text = "FAVORITES",
-                modifier = Modifier.graphicsLayer { alpha = favAlpha },
-            )
-            favorites.forEach { app ->
-                AppRow(
-                    app = app,
-                    isFavorite = true,
-                    onToggleFavorite = onToggleFavorite,
-                    onHideApp = onHideApp,
+            widgetIds.forEach { appWidgetId ->
+                WidgetRow(
+                    appWidgetId = appWidgetId,
+                    createWidgetView = createWidgetView,
                     modifier = Modifier.graphicsLayer { alpha = favAlpha },
                 )
             }
-            Spacer(modifier = Modifier.height(APP_LIST_FAVORITES_BOTTOM_SPACER_DP.dp))
+
+            if (widgetIds.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(ADD_WIDGET_BOTTOM_PADDING_DP.dp))
+            }
+
+            if (favorites.isNotEmpty()) {
+                SectionHeader(
+                    text = "FAVORITES",
+                    modifier = Modifier.graphicsLayer { alpha = favAlpha },
+                )
+                favorites.forEach { app ->
+                    AppRow(
+                        app = app,
+                        isFavorite = true,
+                        onToggleFavorite = onToggleFavorite,
+                        onHideApp = onHideApp,
+                        modifier = Modifier.graphicsLayer { alpha = favAlpha },
+                    )
+                }
+                Spacer(modifier = Modifier.height(APP_LIST_FAVORITES_BOTTOM_SPACER_DP.dp))
+            }
+        }
+
+        DropdownMenu(
+            expanded = showPanelMenu,
+            onDismissRequest = { showPanelMenu = false },
+        ) {
+            DropdownMenuItem(
+                text = { Text("Add widget") },
+                onClick = {
+                    showPanelMenu = false
+                    onAddWidget()
+                },
+            )
+
+            if (widgetIds.isNotEmpty()) {
+                DropdownMenuItem(
+                    text = { Text("Clear all widgets") },
+                    onClick = {
+                        showPanelMenu = false
+                        widgetIds.toList().forEach(onRemoveWidget)
+                    },
+                )
+            }
         }
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun WidgetRow(
     appWidgetId: Int,
     createWidgetView: (Int) -> AppWidgetHostView?,
-    onRemoveWidget: (Int) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Column(
@@ -172,11 +197,5 @@ private fun WidgetRow(
                 .fillMaxWidth()
                 .heightIn(min = APP_WIDGET_MIN_HEIGHT_DP.dp),
         )
-        TextButton(
-            onClick = { onRemoveWidget(appWidgetId) },
-            modifier = Modifier.align(Alignment.End),
-        ) {
-            Text("Remove")
-        }
     }
 }
