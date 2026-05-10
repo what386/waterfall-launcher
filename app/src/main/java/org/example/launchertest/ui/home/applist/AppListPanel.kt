@@ -257,9 +257,13 @@ internal fun AppRow(
             Text(
                 text = app.label,
                 style = if (isFavorite) {
-                    MaterialTheme.typography.headlineSmall
+                    MaterialTheme.typography.headlineSmall.copy(
+                        fontSize = MaterialTheme.typography.headlineSmall.fontSize * APP_ROW_TEXT_SCALE,
+                    )
                 } else {
-                    MaterialTheme.typography.titleLarge
+                    MaterialTheme.typography.titleLarge.copy(
+                        fontSize = MaterialTheme.typography.titleLarge.fontSize * APP_ROW_TEXT_SCALE,
+                    )
                 },
             )
         }
