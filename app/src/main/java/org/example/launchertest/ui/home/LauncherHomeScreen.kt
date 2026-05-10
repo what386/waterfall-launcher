@@ -1,6 +1,10 @@
 package org.example.launchertest.ui.home
 
+import android.app.WallpaperManager
+import android.widget.ImageView
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.activity.compose.BackHandler
+import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -25,6 +29,39 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import org.example.launchertest.domain.LauncherInteractor
 import org.example.launchertest.widgets.LauncherWidgetController
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.ui.graphics.toArgb
+
+@Composable
+private fun WallpaperBackground(
+    modifier: Modifier = Modifier,
+) {
+    val fallbackColor = MaterialTheme.colorScheme.background.toArgb()
+
+    AndroidView(
+        modifier = modifier,
+        factory = { context ->
+            ImageView(context).apply {
+                scaleType = ImageView.ScaleType.CENTER_CROP
+
+                // Attempt to get wallpaper
+                val wallpaperManager = WallpaperManager.getInstance(context)
+                val drawable = try {
+                    wallpaperManager.drawable
+                } catch (e: SecurityException) {
+                    null
+                }
+
+                if (drawable != null) {
+                    setImageDrawable(drawable)
+                } else {
+                    setBackgroundColor(fallbackColor)
+                }
+            }
+        },
+        update = { /* Leave empty to avoid overwriting the factory setup */ }
+    )
+}
 
 @Composable
 fun LauncherHomeRoute(
@@ -87,18 +124,24 @@ private fun LauncherHomeScreen(
     val scrubbingLetter = remember { mutableStateOf<Char?>(null) }
     val isScrubbing = remember { mutableStateOf(false) }
     val selectedRailItem = remember { mutableStateOf(FavoritesRailItem) }
+
     var showFavoritesOnly by remember { mutableStateOf(true) }
+
     val coroutineScope = rememberCoroutineScope()
+
     val railLetters = remember(state.listLayout.letterJumpTargets) {
-        listOf(FavoritesRailItem) + state.listLayout.letterJumpTargets.keys.toList()
+        listOf(FavoritesRailItem) +
+            state.listLayout.letterJumpTargets.keys.toList()
     }
 
     fun selectRailItem(item: Char) {
         selectedRailItem.value = item
+
         if (item == FavoritesRailItem) {
             showFavoritesOnly = true
             scrubbingLetter.value = null
             isScrubbing.value = false
+
             coroutineScope.launch {
                 listState.scrollToItem(
                     index = if (state.listLayout.favorites.isNotEmpty()) {
@@ -117,11 +160,18 @@ private fun LauncherHomeScreen(
         }
     }
 
-    if (state.isSearchActive) BackHandler(onBack = onSearchDismissed)
+    if (state.isSearchActive) {
+        BackHandler(onBack = onSearchDismissed)
+    }
 
-    Surface(modifier = Modifier.fillMaxSize()) {
-        Box(modifier = Modifier.fillMaxSize()) {
-
+    Surface(
+        modifier = Modifier.fillMaxSize(),
+        color = Color.Transparent,
+        contentColor = Color.White.copy(alpha = 0.92f)
+    ) {
+        Box(
+            modifier = Modifier.fillMaxSize(),
+        ) {
             AppListPanel(
                 listLayout = state.listLayout,
                 widgetIds = widgetIds,
@@ -146,7 +196,10 @@ private fun LauncherHomeScreen(
                     onQueryChanged = onQueryChanged,
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
-                        .padding(horizontal = 12.dp, vertical = 12.dp),
+                        .padding(
+                            horizontal = 12.dp,
+                            vertical = 12.dp,
+                        ),
                 )
             }
 
@@ -154,8 +207,8 @@ private fun LauncherHomeScreen(
                 letters = railLetters,
                 onLetterSelected = {},
                 onScrubStart = ::selectRailItem,
-                onScrubMove  = ::selectRailItem,
-                onScrubEnd   = {
+                onScrubMove = ::selectRailItem,
+                onScrubEnd = {
                     if (selectedRailItem.value != FavoritesRailItem) {
                         scrubbingLetter.value = null
                         isScrubbing.value = false
@@ -170,6 +223,5 @@ private fun LauncherHomeScreen(
         }
     }
 }
-
 private const val FirstHomeContentIndex = 1
 private fun favoritesHeaderIndex(widgetCount: Int): Int = widgetCount + 2
