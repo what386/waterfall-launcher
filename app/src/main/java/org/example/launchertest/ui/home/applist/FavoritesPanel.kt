@@ -262,7 +262,14 @@ fun FavoritesPanel(
                                     val startIndex = activeDragStartIndex
                                     if (startIndex !in orderedFavorites.indices) return@ReorderableFavoriteRow
 
-                                    val stepOffset = (activeDragOffsetY / reorderSwapThresholdPx).toInt()
+                                    val activeHeight = rowHeightsPx[componentId].orZero()
+                                    val effectiveSwapThreshold = maxOf(
+                                        reorderSwapThresholdPx,
+                                        activeHeight * FAVORITES_REORDER_SWAP_FRACTION_OF_ROW,
+                                    )
+                                    if (effectiveSwapThreshold <= 0f) return@ReorderableFavoriteRow
+
+                                    val stepOffset = (activeDragOffsetY / effectiveSwapThreshold).toInt()
                                     activeDragTargetIndex = (startIndex + stepOffset)
                                         .coerceIn(0, orderedFavorites.lastIndex)
                                 },
