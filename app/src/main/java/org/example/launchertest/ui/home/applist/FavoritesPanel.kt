@@ -34,6 +34,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.key
@@ -44,6 +45,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
@@ -84,6 +86,7 @@ fun FavoritesPanel(
     var activeDragStartIndex by remember { mutableIntStateOf(-1) }
     var activeDragTargetIndex by remember { mutableIntStateOf(-1) }
     var activeDragOffsetY by remember { mutableFloatStateOf(0f) }
+    val rowHeightsPx = remember { mutableStateMapOf<String, Float>() }
     val orderedFavorites = remember { mutableStateListOf<LauncherApp>() }
 
     LaunchedEffect(favorites) {
@@ -224,6 +227,20 @@ fun FavoritesPanel(
                     key(favoriteComponentId(app)) {
                         if (reorderMode) {
                             val componentId = favoriteComponentId(app)
+                            val index = orderedFavorites.indexOfFirst {
+                                favoriteComponentId(it) == componentId
+                            }
+                            val activeRowHeight = rowHeightsPx[activeDragComponentId].orZero()
+                            val laneShiftY = when {
+                                activeDragComponentId == null || index == -1 -> 0f
+                                index == activeDragStartIndex -> 0f
+                                activeDragStartIndex < activeDragTargetIndex &&
+                                    index in (activeDragStartIndex + 1)..activeDragTargetIndex -> -activeRowHeight
+                                activeDragStartIndex > activeDragTargetIndex &&
+                                    index in activeDragTargetIndex until activeDragStartIndex -> activeRowHeight
+                                else -> 0f
+                            }
+
                             ReorderableFavoriteRow(
                                 app = app,
                                 isActiveDrag = activeDragComponentId == componentId,
@@ -232,11 +249,10 @@ fun FavoritesPanel(
                                 } else {
                                     0f
                                 },
+                                laneShiftY = laneShiftY,
                                 onDragStart = {
                                     activeDragComponentId = componentId
-                                    activeDragStartIndex = orderedFavorites.indexOfFirst {
-                                        favoriteComponentId(it) == componentId
-                                    }
+                                    activeDragStartIndex = index
                                     activeDragTargetIndex = activeDragStartIndex
                                     activeDragOffsetY = 0f
                                 },
@@ -254,6 +270,9 @@ fun FavoritesPanel(
                                     if (activeDragComponentId == componentId) {
                                         commitDragReorderIfNeeded()
                                     }
+                                },
+                                onMeasured = { heightPx ->
+                                    rowHeightsPx[componentId] = heightPx
                                 },
                                 modifier = Modifier.graphicsLayer { alpha = favAlpha },
                             )
@@ -364,9 +383,11 @@ private fun ReorderableFavoriteRow(
     app: LauncherApp,
     isActiveDrag: Boolean,
     dragOffsetY: Float,
+    laneShiftY: Float,
     onDragStart: () -> Unit,
     onDragDelta: (Float) -> Unit,
     onDragEnd: () -> Unit,
+    onMeasured: (Float) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val icon = rememberAppIcon(app.packageName)
@@ -386,7 +407,7 @@ private fun ReorderableFavoriteRow(
         label = "reorderTint",
     )
     val animatedTranslationY by animateFloatAsState(
-        targetValue = dragOffsetY,
+        targetValue = dragOffsetY + laneShiftY,
         animationSpec = settleSpec,
         label = "reorderTranslationY",
     )
@@ -404,6 +425,9 @@ private fun ReorderableFavoriteRow(
                 } else {
                     0f
                 }
+            }
+            .onGloballyPositioned { coordinates ->
+                onMeasured(coordinates.size.height.toFloat())
             }
             .pointerInput(app.packageName, app.activityName) {
                 detectDragGesturesAfterLongPress(
@@ -451,3 +475,5 @@ private fun ReorderableFavoriteRow(
 }
 
 private fun favoriteComponentId(app: LauncherApp): String = "${app.packageName}/${app.activityName}"
+
+private fun Float?.orZero(): Float = this ?: 0f
