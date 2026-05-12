@@ -7,6 +7,7 @@ import androidx.compose.animation.core.spring
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -90,14 +91,20 @@ fun FavoritesPanel(
 
     Box(
         modifier = modifier
-            .combinedClickable(
-                onClick = {
-                    if (reorderMode) {
-                        reorderMode = false
-                        persistFavoriteOrder()
+            .then(
+                if (reorderMode) {
+                    Modifier.pointerInput(reorderMode) {
+                        detectTapGestures {
+                            reorderMode = false
+                            persistFavoriteOrder()
+                        }
                     }
-                },
-                onLongClick = { showPanelMenu = true },
+                } else {
+                    Modifier.combinedClickable(
+                        onClick = {},
+                        onLongClick = { showPanelMenu = true },
+                    )
+                }
             ),
     ) {
         Column(
@@ -313,6 +320,7 @@ private fun ReorderableFavoriteRow(
                         onOrderChanged()
                     },
                     onDrag = { change, dragAmount ->
+                        change.consume()
                         dragAccumulator += dragAmount.y
 
                         val direction = when {
