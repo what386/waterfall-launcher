@@ -41,6 +41,7 @@ import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
@@ -86,6 +87,7 @@ fun FavoritesPanel(
     var showPanelMenu by remember { mutableStateOf(false) }
     var reorderMode by remember { mutableStateOf(false) }
     var didTriggerSearchDuringDrag by remember { mutableStateOf(false) }
+    val panelInteractionSource = remember { MutableInteractionSource() }
     var activeDragComponentId by remember { mutableStateOf<String?>(null) }
     var activeDragStartIndex by remember { mutableIntStateOf(-1) }
     var activeDragTargetIndex by remember { mutableIntStateOf(-1) }
@@ -183,6 +185,8 @@ fun FavoritesPanel(
                     }
                 } else {
                     Modifier.combinedClickable(
+                        interactionSource = panelInteractionSource,
+                        indication = null,
                         onClick = {},
                         onLongClick = { showPanelMenu = true },
                     )
