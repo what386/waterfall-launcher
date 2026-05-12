@@ -27,7 +27,6 @@ class LauncherHomeViewModel(
     private val isSearchActive = MutableStateFlow(false)
     private val apps = interactor.launcherAppsFlow(query)
     private val favoriteOrder = interactor.favoriteOrderFlow()
-    private val autoOpenUnambiguousSearch = interactor.autoOpenUnambiguousSearchFlow()
 
     private val _jumpToTarget = MutableSharedFlow<Int>(
         extraBufferCapacity = 1,
@@ -40,13 +39,11 @@ class LauncherHomeViewModel(
         isSearchActive,
         apps,
         favoriteOrder,
-        autoOpenUnambiguousSearch,
-    ) { search, searchActive, launcherApps, storedFavoriteOrder, autoOpenSearch ->
+    ) { search, searchActive, launcherApps, storedFavoriteOrder ->
         val listLayout = buildAppListLayout(launcherApps, storedFavoriteOrder)
         LauncherHomeUiState(
             query = search,
             isSearchActive = searchActive,
-            autoOpenUnambiguousSearch = autoOpenSearch,
             listLayout = listLayout,
         )
     }.stateIn(
@@ -78,17 +75,11 @@ class LauncherHomeViewModel(
         }
     }
 
-    fun onAutoOpenUnambiguousSearchChanged(enabled: Boolean) {
-        viewModelScope.launch {
-            interactor.setAutoOpenUnambiguousSearch(enabled)
-        }
-    }
 }
 
 data class LauncherHomeUiState(
     val query: String = "",
     val isSearchActive: Boolean = false,
-    val autoOpenUnambiguousSearch: Boolean = false,
     val listLayout: AppListLayout = AppListLayout(
         favorites = emptyList(),
         apps = emptyList(),

@@ -123,7 +123,6 @@ fun LauncherHomeRoute(
         onToggleFavorite = vm::onToggleFavorite,
         onHideApp = vm::onHideApp,
         onReorderFavorites = vm::onFavoriteOrderChanged,
-        onAutoOpenUnambiguousSearchChanged = vm::onAutoOpenUnambiguousSearchChanged,
         onLetterSelected = vm::onLetterSelected,
         onAddWidget = widgetController::addWidget,
         onRemoveWidget = widgetController::removeWidget,
@@ -144,7 +143,6 @@ private fun LauncherHomeScreen(
     onToggleFavorite: (org.example.launchertest.ui.model.LauncherApp) -> Unit,
     onHideApp: (org.example.launchertest.ui.model.LauncherApp) -> Unit,
     onReorderFavorites: (List<org.example.launchertest.ui.model.LauncherApp>) -> Unit,
-    onAutoOpenUnambiguousSearchChanged: (Boolean) -> Unit,
     onLetterSelected: (Char) -> Unit,
     onAddWidget: () -> Unit,
     onRemoveWidget: (Int) -> Unit,
@@ -219,12 +217,10 @@ private fun LauncherHomeScreen(
 
     LaunchedEffect(
         state.isSearchActive,
-        state.autoOpenUnambiguousSearch,
         state.query,
         state.listLayout.apps,
     ) {
         if (!state.isSearchActive ||
-            !state.autoOpenUnambiguousSearch ||
             state.query.trim().length < SEARCH_AUTO_OPEN_MIN_QUERY_LENGTH ||
             state.listLayout.apps.size != 1
         ) {
@@ -257,14 +253,12 @@ private fun LauncherHomeScreen(
                     isScrubbing = isScrubbing,
                     showFavoritesOnly = mode == HomeContentMode.Favorites,
                     isSearchActive = mode == HomeContentMode.Search,
-                    autoOpenUnambiguousSearch = state.autoOpenUnambiguousSearch,
                     listState = listState,
                     categoryPinOffsetPx = categoryPinOffsetPx,
                     onSearchActivated = ::activateSearch,
                     onToggleFavorite = onToggleFavorite,
                     onHideApp = onHideApp,
                     onReorderFavorites = onReorderFavorites,
-                    onAutoOpenUnambiguousSearchChanged = onAutoOpenUnambiguousSearchChanged,
                     onAddWidget = onAddWidget,
                     onRemoveWidget = onRemoveWidget,
                     createWidgetView = createWidgetView,

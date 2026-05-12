@@ -1,7 +1,6 @@
 package org.example.launchertest.data
 
 import android.content.Context
-import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
@@ -18,7 +17,6 @@ class LauncherPreferencesRepository(
     private val favoriteOrderKey = stringPreferencesKey("favorite_order")
     private val hiddenKey = stringSetPreferencesKey("hidden_components")
     private val widgetIdsKey = stringPreferencesKey("widget_ids")
-    private val autoOpenUnambiguousSearchKey = booleanPreferencesKey("auto_open_unambiguous_search")
 
     val favorites: Flow<Set<String>> = context.launcherPrefs.data.map { prefs ->
         prefs[favoritesKey] ?: emptySet()
@@ -37,10 +35,6 @@ class LauncherPreferencesRepository(
             ?.split(",")
             ?.mapNotNull { rawId -> rawId.toIntOrNull() }
             ?: emptyList()
-    }
-
-    val autoOpenUnambiguousSearch: Flow<Boolean> = context.launcherPrefs.data.map { prefs ->
-        prefs[autoOpenUnambiguousSearchKey] ?: false
     }
 
     suspend fun toggleFavorite(componentId: String) {
@@ -80,12 +74,6 @@ class LauncherPreferencesRepository(
     suspend fun setFavoriteOrder(componentIds: List<String>) {
         context.launcherPrefs.edit { prefs ->
             prefs[favoriteOrderKey] = componentIds.dedupComponentIds().joinToString(",")
-        }
-    }
-
-    suspend fun setAutoOpenUnambiguousSearch(enabled: Boolean) {
-        context.launcherPrefs.edit { prefs ->
-            prefs[autoOpenUnambiguousSearchKey] = enabled
         }
     }
 
