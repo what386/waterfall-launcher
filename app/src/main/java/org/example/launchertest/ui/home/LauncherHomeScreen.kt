@@ -8,6 +8,15 @@ import org.example.launchertest.ui.home.azrail.isFavoritesRailItem
 
 import android.app.WallpaperManager
 import android.widget.ImageView
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.ContentTransform
+import androidx.compose.animation.ExperimentalAnimationApi
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.activity.compose.BackHandler
 import androidx.compose.ui.graphics.Color
@@ -114,6 +123,7 @@ fun LauncherHomeRoute(
     )
 }
 
+@OptIn(ExperimentalAnimationApi::class)
 @Composable
 private fun LauncherHomeScreen(
     state: LauncherHomeUiState,
@@ -135,7 +145,7 @@ private fun LauncherHomeScreen(
     val isScrubbing = remember { mutableStateOf(false) }
     val selectedRailItem = remember { mutableStateOf(buildRailLetters(emptyMap()).first()) }
 
-    var showFavoritesOnly by remember { mutableStateOf(true) }
+    var contentMode by remember { mutableStateOf(HomeContentMode.Favorites) }
 
     val coroutineScope = rememberCoroutineScope()
 
@@ -147,7 +157,7 @@ private fun LauncherHomeScreen(
         selectedRailItem.value = item
 
         if (isFavoritesRailItem(item)) {
-            showFavoritesOnly = true
+            contentMode = HomeContentMode.Favorites
             scrubbingLetter.value = null
             isScrubbing.value = false
 
@@ -162,15 +172,33 @@ private fun LauncherHomeScreen(
                 )
             }
         } else {
-            showFavoritesOnly = false
+            contentMode = HomeContentMode.Apps
             scrubbingLetter.value = item
             isScrubbing.value = true
             onLetterSelected(item)
         }
     }
 
+    fun activateSearch() {
+        contentMode = HomeContentMode.Search
+        scrubbingLetter.value = null
+        isScrubbing.value = false
+        onSearchActivated()
+
+        coroutineScope.launch {
+            listState.scrollToItem(index = 0)
+        }
+    }
+
+    fun dismissSearch() {
+        contentMode = HomeContentMode.Favorites
+        scrubbingLetter.value = null
+        isScrubbing.value = false
+        onSearchDismissed()
+    }
+
     if (state.isSearchActive) {
-        BackHandler(onBack = onSearchDismissed)
+        BackHandler(onBack = ::dismissSearch)
     }
 
     Surface(
@@ -181,68 +209,109 @@ private fun LauncherHomeScreen(
         Box(
             modifier = Modifier.fillMaxSize(),
         ) {
-            AppListPanel(
-                listLayout = state.listLayout,
-                widgetIds = widgetIds,
-                scrubbingLetter = scrubbingLetter,
-                isScrubbing = isScrubbing,
-                showFavoritesOnly = showFavoritesOnly,
-                isSearchActive = state.isSearchActive,
-                listState = listState,
-                categoryPinOffsetPx = categoryPinOffsetPx,
-                onSearchActivated = onSearchActivated,
-                onToggleFavorite = onToggleFavorite,
-                onHideApp = onHideApp,
-                onReorderFavorites = onReorderFavorites,
-                onAddWidget = onAddWidget,
-                onRemoveWidget = onRemoveWidget,
-                createWidgetView = createWidgetView,
-                modifier = Modifier.fillMaxSize(),
-            )
+            AnimatedContent(
+                targetState = contentMode,
+                transitionSpec = {
+                    homeModeTransition(initialState, targetState)
+                },
+                label = "homeContentMode",
+            ) { mode ->
+                AppListPanel(
+                    listLayout = state.listLayout,
+                    widgetIds = widgetIds,
+                    scrubbingLetter = scrubbingLetter,
+                    isScrubbing = isScrubbing,
+                    showFavoritesOnly = mode == HomeContentMode.Favorites,
+                    isSearchActive = mode == HomeContentMode.Search,
+                    listState = listState,
+                    categoryPinOffsetPx = categoryPinOffsetPx,
+                    onSearchActivated = ::activateSearch,
+                    onToggleFavorite = onToggleFavorite,
+                    onHideApp = onHideApp,
+                    onReorderFavorites = onReorderFavorites,
+                    onAddWidget = onAddWidget,
+                    onRemoveWidget = onRemoveWidget,
+                    createWidgetView = createWidgetView,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
 
-            if (state.isSearchActive) {
+            AnimatedVisibility(
+                visible = state.isSearchActive,
+                enter = fadeIn() + slideInVertically { -it / 2 },
+                exit = fadeOut() + slideOutVertically { -it / 2 },
+                modifier = Modifier.align(Alignment.TopCenter),
+            ) {
                 SearchOverlay(
                     query = state.query,
                     onQueryChanged = onQueryChanged,
                     modifier = Modifier
-                        .align(Alignment.BottomCenter)
                         .padding(
-                            horizontal = 12.dp,
-                            vertical = 12.dp,
+                            horizontal = 0.dp,
+                            vertical = 0.dp,
                         ),
                 )
             }
 
-            AzRailPanel(
-                modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .offset(y = 95.dp)
-                    .fillMaxHeight(0.5f)
-                    .padding(end = 28.dp)
-                    .width(36.dp),
-                letters = railLetters,
-                onLetterSelected = {},
-                onScrubStart = ::selectRailItem,
-                onScrubMove = ::selectRailItem,
-                onScrubEnd = {
-                    if (!isFavoritesRailItem(selectedRailItem.value)) {
-                        scrubbingLetter.value = null
-                        isScrubbing.value = false
-                    }
-                },
-            )
+            AnimatedVisibility(
+                visible = !state.isSearchActive,
+                enter = fadeIn(),
+                exit = fadeOut(),
+                modifier = Modifier.align(Alignment.CenterEnd),
+            ) {
+                AzRailPanel(
+                    modifier = Modifier
+                        .offset(y = 95.dp)
+                        .fillMaxHeight(0.5f)
+                        .padding(end = 28.dp)
+                        .width(36.dp),
+                    letters = railLetters,
+                    onLetterSelected = {},
+                    onScrubStart = ::selectRailItem,
+                    onScrubMove = ::selectRailItem,
+                    onScrubEnd = {
+                        if (!isFavoritesRailItem(selectedRailItem.value)) {
+                            scrubbingLetter.value = null
+                            isScrubbing.value = false
+                        }
+                    },
+                )
+            }
 
-            Box(
-                modifier = Modifier
-                    .align(Alignment.CenterEnd)
-                    .offset(y = (-105).dp)
-                    .padding(end = 28.dp)
-                    .width(36.dp)
-                    .fillMaxHeight(0.16f)
-                    .clickable { selectRailItem(railLetters.first()) },
-            )
+            if (!state.isSearchActive) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterEnd)
+                        .offset(y = (-105).dp)
+                        .padding(end = 28.dp)
+                        .width(36.dp)
+                        .fillMaxHeight(0.16f)
+                        .clickable { selectRailItem(railLetters.first()) },
+                )
+            }
         }
     }
 }
 private const val FirstHomeContentIndex = 1
 private fun favoritesHeaderIndex(widgetCount: Int): Int = widgetCount + 2
+
+private enum class HomeContentMode {
+    Favorites,
+    Apps,
+    Search,
+}
+
+private fun homeModeTransition(
+    initialState: HomeContentMode,
+    targetState: HomeContentMode,
+): ContentTransform {
+    return if (targetState == HomeContentMode.Search) {
+        (fadeIn() + slideInVertically { it / 8 }) togetherWith
+            (fadeOut() + slideOutVertically { -it / 8 })
+    } else if (initialState == HomeContentMode.Search) {
+        (fadeIn() + slideInVertically { -it / 8 }) togetherWith
+            (fadeOut() + slideOutVertically { it / 8 })
+    } else {
+        fadeIn() togetherWith fadeOut()
+    }
+}

@@ -107,7 +107,11 @@ fun AppListPanel(
             state = listState,
             contentPadding = PaddingValues(
                 start = APP_LIST_CONTENT_START_PADDING_DP.dp,
-                top = APP_LIST_CONTENT_TOP_PADDING_DP.dp,
+                top = if (isSearchActive) {
+                    APP_LIST_SEARCH_TOP_PADDING_DP.dp
+                } else {
+                    APP_LIST_CONTENT_TOP_PADDING_DP.dp
+                },
                 end = APP_LIST_CONTENT_END_PADDING_DP.dp,
                 bottom = if (isSearchActive) {
                     APP_LIST_SEARCH_BOTTOM_PADDING_DP.dp
@@ -116,7 +120,7 @@ fun AppListPanel(
                 },
             ),
         ) {
-            if (!showFavoritesOnly) {
+            if (!showFavoritesOnly && !isSearchActive) {
                 item(key = "category_pin_spacer") {
                     Spacer(modifier = Modifier.height(categoryPinOffsetDp))
                 }

@@ -5,6 +5,7 @@ internal const val APP_LIST_CONTENT_START_PADDING_DP = 28f
 internal const val APP_LIST_CONTENT_TOP_PADDING_DP = 16f
 internal const val APP_LIST_CONTENT_END_PADDING_DP = 40f
 internal const val APP_LIST_CONTENT_BOTTOM_PADDING_DP = 24f
+internal const val APP_LIST_SEARCH_TOP_PADDING_DP = 96f
 internal const val APP_LIST_SEARCH_BOTTOM_PADDING_DP = 80f
 internal const val APP_LIST_CATEGORY_PIN_OFFSET_DP = 340f
 
