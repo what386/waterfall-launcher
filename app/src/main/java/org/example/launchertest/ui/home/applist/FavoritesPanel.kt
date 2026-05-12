@@ -6,6 +6,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -24,7 +25,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.background
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.MaterialTheme
@@ -46,8 +46,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import kotlinx.coroutines.launch
@@ -78,15 +78,13 @@ fun FavoritesPanel(
     val scrollState = rememberScrollState()
     val overscrollOffset = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
-    val density = LocalDensity.current
-    val reorderSwapThresholdPx = with(density) { FAVORITES_REORDER_SWAP_THRESHOLD_DP.dp.toPx() }
     var showPanelMenu by remember { mutableStateOf(false) }
     var reorderMode by remember { mutableStateOf(false) }
     var activeDragComponentId by remember { mutableStateOf<String?>(null) }
     var activeDragStartIndex by remember { mutableIntStateOf(-1) }
     var activeDragTargetIndex by remember { mutableIntStateOf(-1) }
     var activeDragOffsetY by remember { mutableFloatStateOf(0f) }
-    val rowHeightsPx = remember { mutableStateMapOf<String, Float>() }
+    val rowMetrics = remember { mutableStateMapOf<String, FavoriteRowMetrics>() }
     val orderedFavorites = remember { mutableStateListOf<LauncherApp>() }
 
     LaunchedEffect(favorites) {
@@ -110,21 +108,61 @@ fun FavoritesPanel(
     }
 
     fun commitDragReorderIfNeeded() {
-        if (activeDragStartIndex == -1 || activeDragTargetIndex == -1) {
+        val activeComponentId = activeDragComponentId
+        if (activeComponentId == null || activeDragTargetIndex == -1) {
             clearDragState()
             return
         }
 
-        if (activeDragStartIndex != activeDragTargetIndex &&
-            activeDragStartIndex in orderedFavorites.indices &&
+        val currentIndex = orderedFavorites.indexOfFirst {
+            favoriteComponentId(it) == activeComponentId
+        }
+
+        if (currentIndex != -1 &&
+            currentIndex != activeDragTargetIndex &&
             activeDragTargetIndex in orderedFavorites.indices
         ) {
-            val moved = orderedFavorites.removeAt(activeDragStartIndex)
+            val moved = orderedFavorites.removeAt(currentIndex)
             orderedFavorites.add(activeDragTargetIndex, moved)
             persistFavoriteOrder()
         }
 
         clearDragState()
+    }
+
+    fun updateDragTarget(componentId: String) {
+        val startIndex = activeDragStartIndex
+        if (startIndex !in orderedFavorites.indices) return
+
+        val activeMetrics = rowMetrics[componentId] ?: return
+        val draggedCenterY = activeMetrics.centerY + activeDragOffsetY
+        var targetIndex = startIndex
+
+        if (activeDragOffsetY > 0f && startIndex < orderedFavorites.lastIndex) {
+            for (index in (startIndex + 1)..orderedFavorites.lastIndex) {
+                val candidateId = favoriteComponentId(orderedFavorites[index])
+                val metrics = rowMetrics[candidateId] ?: continue
+                val replaceThresholdY = metrics.topY +
+                    (metrics.height * FAVORITES_REORDER_SWAP_FRACTION_OF_ROW)
+
+                if (draggedCenterY >= replaceThresholdY) {
+                    targetIndex = index
+                }
+            }
+        } else if (activeDragOffsetY < 0f && startIndex > 0) {
+            for (index in (startIndex - 1) downTo 0) {
+                val candidateId = favoriteComponentId(orderedFavorites[index])
+                val metrics = rowMetrics[candidateId] ?: continue
+                val replaceThresholdY = metrics.topY +
+                    (metrics.height * (1f - FAVORITES_REORDER_SWAP_FRACTION_OF_ROW))
+
+                if (draggedCenterY <= replaceThresholdY) {
+                    targetIndex = index
+                }
+            }
+        }
+
+        activeDragTargetIndex = targetIndex
     }
 
     Box(
@@ -230,7 +268,7 @@ fun FavoritesPanel(
                             val index = orderedFavorites.indexOfFirst {
                                 favoriteComponentId(it) == componentId
                             }
-                            val activeRowHeight = rowHeightsPx[activeDragComponentId].orZero()
+                            val activeRowHeight = rowMetrics[activeDragComponentId]?.height.orZero()
                             val laneShiftY = when {
                                 activeDragComponentId == null || index == -1 -> 0f
                                 index == activeDragStartIndex -> 0f
@@ -251,35 +289,28 @@ fun FavoritesPanel(
                                 },
                                 laneShiftY = laneShiftY,
                                 onDragStart = {
+                                    val freshIndex = orderedFavorites.indexOfFirst {
+                                        favoriteComponentId(it) == componentId
+                                    }
+                                    if (freshIndex == -1) return@ReorderableFavoriteRow
+
                                     activeDragComponentId = componentId
-                                    activeDragStartIndex = index
-                                    activeDragTargetIndex = activeDragStartIndex
+                                    activeDragStartIndex = freshIndex
+                                    activeDragTargetIndex = freshIndex
                                     activeDragOffsetY = 0f
                                 },
                                 onDragDelta = { deltaY ->
                                     if (activeDragComponentId != componentId) return@ReorderableFavoriteRow
                                     activeDragOffsetY += deltaY
-                                    val startIndex = activeDragStartIndex
-                                    if (startIndex !in orderedFavorites.indices) return@ReorderableFavoriteRow
-
-                                    val activeHeight = rowHeightsPx[componentId].orZero()
-                                    val effectiveSwapThreshold = maxOf(
-                                        reorderSwapThresholdPx,
-                                        activeHeight * FAVORITES_REORDER_SWAP_FRACTION_OF_ROW,
-                                    )
-                                    if (effectiveSwapThreshold <= 0f) return@ReorderableFavoriteRow
-
-                                    val stepOffset = (activeDragOffsetY / effectiveSwapThreshold).toInt()
-                                    activeDragTargetIndex = (startIndex + stepOffset)
-                                        .coerceIn(0, orderedFavorites.lastIndex)
+                                    updateDragTarget(componentId)
                                 },
                                 onDragEnd = {
                                     if (activeDragComponentId == componentId) {
                                         commitDragReorderIfNeeded()
                                     }
                                 },
-                                onMeasured = { heightPx ->
-                                    rowHeightsPx[componentId] = heightPx
+                                onMeasured = { metrics ->
+                                    rowMetrics[componentId] = metrics
                                 },
                                 modifier = Modifier.graphicsLayer { alpha = favAlpha },
                             )
@@ -319,7 +350,7 @@ fun FavoritesPanel(
                     showPanelMenu = false
                     if (reorderMode) {
                         reorderMode = false
-                        persistFavoriteOrder()
+                        commitDragReorderIfNeeded()
                     }
                     onAddWidget()
                 },
@@ -332,7 +363,7 @@ fun FavoritesPanel(
                         showPanelMenu = false
                         if (reorderMode) {
                             reorderMode = false
-                            persistFavoriteOrder()
+                            commitDragReorderIfNeeded()
                         }
                         widgetIds.toList().forEach(onRemoveWidget)
                     },
@@ -348,7 +379,6 @@ fun FavoritesPanel(
                         reorderMode = nextMode
                         if (!nextMode) {
                             commitDragReorderIfNeeded()
-                            persistFavoriteOrder()
                         }
                     },
                 )
@@ -394,7 +424,7 @@ private fun ReorderableFavoriteRow(
     onDragStart: () -> Unit,
     onDragDelta: (Float) -> Unit,
     onDragEnd: () -> Unit,
-    onMeasured: (Float) -> Unit,
+    onMeasured: (FavoriteRowMetrics) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val icon = rememberAppIcon(app.packageName)
@@ -434,7 +464,12 @@ private fun ReorderableFavoriteRow(
                 }
             }
             .onGloballyPositioned { coordinates ->
-                onMeasured(coordinates.size.height.toFloat())
+                onMeasured(
+                    FavoriteRowMetrics(
+                        topY = coordinates.positionInParent().y,
+                        height = coordinates.size.height.toFloat(),
+                    )
+                )
             }
             .pointerInput(app.packageName, app.activityName) {
                 detectDragGesturesAfterLongPress(
@@ -479,6 +514,14 @@ private fun ReorderableFavoriteRow(
             ),
         )
     }
+}
+
+private data class FavoriteRowMetrics(
+    val topY: Float,
+    val height: Float,
+) {
+    val centerY: Float
+        get() = topY + (height / 2f)
 }
 
 private fun favoriteComponentId(app: LauncherApp): String = "${app.packageName}/${app.activityName}"
