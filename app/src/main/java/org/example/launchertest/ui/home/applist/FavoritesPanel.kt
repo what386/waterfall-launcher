@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Text
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.runtime.Composable
@@ -154,6 +155,17 @@ fun FavoritesPanel(
                     )
                 }
                 Spacer(modifier = Modifier.height(APP_LIST_FAVORITES_BOTTOM_SPACER_DP.dp))
+            } else if (widgetIds.isEmpty()) {
+                Text(
+                    text = "No favorites yet. Long-press any app and choose Favorite.",
+                    modifier = Modifier
+                        .padding(
+                            horizontal = APP_ROW_HORIZONTAL_PADDING_DP.dp,
+                            vertical = APP_ROW_VERTICAL_PADDING_DP.dp,
+                        )
+                        .graphicsLayer { alpha = favAlpha * 0.78f },
+                    style = MaterialTheme.typography.bodyMedium,
+                )
             }
         }
 
