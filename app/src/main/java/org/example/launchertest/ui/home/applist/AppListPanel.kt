@@ -31,6 +31,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import org.example.launchertest.ui.home.shared.rememberAppIcon
 import org.example.launchertest.ui.model.LauncherApp
 
@@ -209,27 +211,57 @@ internal fun AppRow(
     val context = LocalContext.current
     val icon = rememberAppIcon(app.packageName)
     var showMenu by remember { mutableStateOf(false) }
+    var isLaunching by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+
+    val rowScale by animateFloatAsState(
+        targetValue = if (isLaunching) APP_ROW_PRESS_SCALE else 1f,
+        animationSpec = spring(),
+        label = "rowScale",
+    )
+    val rowTintAlpha by animateFloatAsState(
+        targetValue = if (isLaunching) APP_ROW_PRESS_TINT_ALPHA else 0f,
+        animationSpec = spring(),
+        label = "rowTintAlpha",
+    )
 
     Box(modifier = modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
+                .graphicsLayer {
+                    scaleX = rowScale
+                    scaleY = rowScale
+                }
+                .background(
+                    color = Color.White.copy(alpha = rowTintAlpha),
+                    shape = MaterialTheme.shapes.medium,
+                )
                 .combinedClickable(
                     onClick = {
-                        val intent = Intent(Intent.ACTION_MAIN).apply {
-                            addCategory(Intent.CATEGORY_LAUNCHER)
-                            component = ComponentName(app.packageName, app.activityName)
-                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        }
+                        if (isLaunching) return@combinedClickable
 
-                        try {
-                            context.startActivity(intent)
-                        } catch (_: Exception) {
-                            Toast.makeText(
-                                context,
-                                "Unable to launch ${app.label}",
-                                Toast.LENGTH_SHORT,
-                            ).show()
+                        isLaunching = true
+                        scope.launch {
+                            delay(APP_ROW_PRESS_LAUNCH_DELAY_MS)
+
+                            val intent = Intent(Intent.ACTION_MAIN).apply {
+                                addCategory(Intent.CATEGORY_LAUNCHER)
+                                component = ComponentName(app.packageName, app.activityName)
+                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                            }
+
+                            try {
+                                context.startActivity(intent)
+                            } catch (_: Exception) {
+                                Toast.makeText(
+                                    context,
+                                    "Unable to launch ${app.label}",
+                                    Toast.LENGTH_SHORT,
+                                ).show()
+                            } finally {
+                                isLaunching = false
+                            }
                         }
                     },
                     onLongClick = { showMenu = true },

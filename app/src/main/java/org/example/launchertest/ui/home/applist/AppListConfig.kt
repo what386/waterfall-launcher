@@ -27,3 +27,6 @@ internal const val APP_ROW_TEXT_SCALE = 0.82f
 internal const val APP_ROW_ICON_SPACING_DP = 16f
 internal const val APP_ROW_ICON_SIZE_DP = 44f
 internal const val APP_ROW_FAVORITE_ICON_SIZE_DP = 52f
+internal const val APP_ROW_PRESS_SCALE = 0.97f
+internal const val APP_ROW_PRESS_TINT_ALPHA = 0.14f
+internal const val APP_ROW_PRESS_LAUNCH_DELAY_MS = 85L
