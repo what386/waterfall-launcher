@@ -48,6 +48,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import kotlinx.coroutines.launch
@@ -67,9 +68,11 @@ fun FavoritesPanel(
     favorites: List<LauncherApp>,
     widgetIds: List<Int>,
     favAlpha: Float,
+    isSearchActive: Boolean,
     onToggleFavorite: (LauncherApp) -> Unit,
     onHideApp: (LauncherApp) -> Unit,
     onReorderFavorites: (List<LauncherApp>) -> Unit,
+    onSearchActivated: () -> Unit,
     onAddWidget: () -> Unit,
     onRemoveWidget: (Int) -> Unit,
     createWidgetView: (Int) -> AppWidgetHostView?,
@@ -78,8 +81,11 @@ fun FavoritesPanel(
     val scrollState = rememberScrollState()
     val overscrollOffset = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
+    val density = LocalDensity.current
+    val searchTriggerPx = with(density) { APP_LIST_SEARCH_DRAG_THRESHOLD_DP.dp.toPx() }
     var showPanelMenu by remember { mutableStateOf(false) }
     var reorderMode by remember { mutableStateOf(false) }
+    var didTriggerSearchDuringDrag by remember { mutableStateOf(false) }
     var activeDragComponentId by remember { mutableStateOf<String?>(null) }
     var activeDragStartIndex by remember { mutableIntStateOf(-1) }
     var activeDragTargetIndex by remember { mutableIntStateOf(-1) }
@@ -192,6 +198,7 @@ fun FavoritesPanel(
                     if (reorderMode) return@pointerInput
                     detectVerticalDragGestures(
                         onDragEnd = {
+                            didTriggerSearchDuringDrag = false
                             scope.launch {
                                 overscrollOffset.animateTo(
                                     targetValue = 0f,
@@ -203,6 +210,7 @@ fun FavoritesPanel(
                             }
                         },
                         onDragCancel = {
+                            didTriggerSearchDuringDrag = false
                             scope.launch {
                                 overscrollOffset.animateTo(
                                     targetValue = 0f,
@@ -232,7 +240,17 @@ fun FavoritesPanel(
                             } else {
                                 val dampened = dragAmount * FAVORITES_OVERSCROLL_RESISTANCE
                                 scope.launch {
-                                    overscrollOffset.snapTo(overscrollOffset.value + dampened)
+                                    val nextOverscroll = overscrollOffset.value + dampened
+                                    overscrollOffset.snapTo(nextOverscroll)
+                                    if (!isSearchActive &&
+                                        !didTriggerSearchDuringDrag &&
+                                        atTop &&
+                                        dragAmount > 0f &&
+                                        nextOverscroll >= searchTriggerPx
+                                    ) {
+                                        didTriggerSearchDuringDrag = true
+                                        onSearchActivated()
+                                    }
                                 }
                             }
                         },
