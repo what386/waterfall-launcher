@@ -14,6 +14,7 @@ class LauncherPreferencesRepository(
     private val context: Context,
 ) {
     private val favoritesKey = stringSetPreferencesKey("favorite_components")
+    private val favoriteOrderKey = stringPreferencesKey("favorite_order")
     private val hiddenKey = stringSetPreferencesKey("hidden_components")
     private val widgetIdsKey = stringPreferencesKey("widget_ids")
 
@@ -23,6 +24,10 @@ class LauncherPreferencesRepository(
 
     val hiddenApps: Flow<Set<String>> = context.launcherPrefs.data.map { prefs ->
         prefs[hiddenKey] ?: emptySet()
+    }
+
+    val favoriteOrder: Flow<List<String>> = context.launcherPrefs.data.map { prefs ->
+        prefs[favoriteOrderKey].toComponentIdList()
     }
 
     val widgetIds: Flow<List<Int>> = context.launcherPrefs.data.map { prefs ->
@@ -35,8 +40,15 @@ class LauncherPreferencesRepository(
     suspend fun toggleFavorite(componentId: String) {
         context.launcherPrefs.edit { prefs ->
             val current = prefs[favoritesKey]?.toMutableSet() ?: mutableSetOf()
-            if (!current.add(componentId)) {
+            val favoriteOrder = prefs[favoriteOrderKey].toComponentIdList()
+
+            if (current.add(componentId)) {
+                val updatedOrder = (favoriteOrder + componentId).dedupComponentIds()
+                prefs[favoriteOrderKey] = updatedOrder.joinToString(",")
+            } else {
                 current.remove(componentId)
+                val updatedOrder = favoriteOrder.filterNot { it == componentId }
+                prefs[favoriteOrderKey] = updatedOrder.joinToString(",")
             }
             prefs[favoritesKey] = current
         }
@@ -52,6 +64,16 @@ class LauncherPreferencesRepository(
             if (favorites.remove(componentId)) {
                 prefs[favoritesKey] = favorites
             }
+
+            val favoriteOrder = prefs[favoriteOrderKey].toComponentIdList()
+                .filterNot { it == componentId }
+            prefs[favoriteOrderKey] = favoriteOrder.joinToString(",")
+        }
+    }
+
+    suspend fun setFavoriteOrder(componentIds: List<String>) {
+        context.launcherPrefs.edit { prefs ->
+            prefs[favoriteOrderKey] = componentIds.dedupComponentIds().joinToString(",")
         }
     }
 
@@ -77,5 +99,19 @@ class LauncherPreferencesRepository(
             ?.split(",")
             ?.mapNotNull { rawId -> rawId.toIntOrNull() }
             ?: emptyList()
+    }
+
+    private fun String?.toComponentIdList(): List<String> {
+        return this
+            ?.split(",")
+            ?.map { it.trim() }
+            ?.filter { it.isNotEmpty() }
+            ?: emptyList()
+    }
+
+    private fun List<String>.dedupComponentIds(): List<String> {
+        return this.map { it.trim() }
+            .filter { it.isNotEmpty() }
+            .distinct()
     }
 }

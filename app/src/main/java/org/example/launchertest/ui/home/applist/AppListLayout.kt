@@ -8,8 +8,18 @@ data class AppListLayout(
     val letterJumpTargets: Map<Char, Int>,
 )
 
-internal fun buildAppListLayout(apps: List<LauncherApp>): AppListLayout {
-    val favorites = apps.filter { it.isFavorite }
+internal fun buildAppListLayout(
+    apps: List<LauncherApp>,
+    favoriteOrder: List<String>,
+): AppListLayout {
+    val favoriteApps = apps.filter { it.isFavorite }
+    val favoritesById = favoriteApps.associateBy(::componentId)
+    val orderedFavorites = favoriteOrder
+        .mapNotNull(favoritesById::get)
+    val orderedFavoriteIds = favoriteOrder.toSet()
+
+    val appendedFavorites = favoriteApps.filter { componentId(it) !in orderedFavoriteIds }
+    val favorites = orderedFavorites + appendedFavorites
     val appListStartIndex = 1 // category_pin_spacer
 
     val jumpTargets = linkedMapOf<Char, Int>()
@@ -28,3 +38,5 @@ internal fun buildAppListLayout(apps: List<LauncherApp>): AppListLayout {
         letterJumpTargets = jumpTargets,
     )
 }
+
+private fun componentId(app: LauncherApp): String = "${app.packageName}/${app.activityName}"

@@ -1,8 +1,8 @@
 package org.example.launchertest.ui.home
 
+import org.example.launchertest.ui.home.applist.buildAppListLayout
 import org.example.launchertest.ui.model.LauncherApp
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Test
 
 class AppListLayoutTest {
@@ -15,16 +15,17 @@ class AppListLayoutTest {
                 app("Beta"),
                 app("1Password"),
             ),
+            favoriteOrder = emptyList(),
         )
 
         assertEquals(emptyList<LauncherApp>(), layout.favorites)
-        assertEquals(LetterJumpTarget(lazyListIndex = 1), layout.letterJumpTargets['A'])
-        assertEquals(LetterJumpTarget(lazyListIndex = 3), layout.letterJumpTargets['B'])
-        assertEquals(LetterJumpTarget(lazyListIndex = 4), layout.letterJumpTargets['#'])
+        assertEquals(1, layout.letterJumpTargets['A'])
+        assertEquals(3, layout.letterJumpTargets['B'])
+        assertEquals(4, layout.letterJumpTargets['#'])
     }
 
     @Test
-    fun accountsForFavoriteHeaderRowsAndSpacerInLazyListIndex() {
+    fun keepsAppListIndexingWithoutFavoritesSectionRows() {
         val layout = buildAppListLayout(
             listOf(
                 app("Alpha", favorite = true),
@@ -33,13 +34,14 @@ class AppListLayoutTest {
                 app("Calculator"),
                 app("Delta"),
             ),
+            favoriteOrder = emptyList(),
         )
 
         assertEquals(2, layout.favorites.size)
-        assertEquals(LetterJumpTarget(lazyListIndex = 7), layout.letterJumpTargets['B'])
-        assertEquals(LetterJumpTarget(lazyListIndex = 8), layout.letterJumpTargets['C'])
-        assertEquals(LetterJumpTarget(lazyListIndex = 9), layout.letterJumpTargets['D'])
-        assertFalse(layout.letterJumpTargets.containsKey('A'))
+        assertEquals(1, layout.letterJumpTargets['A'])
+        assertEquals(2, layout.letterJumpTargets['B'])
+        assertEquals(3, layout.letterJumpTargets['C'])
+        assertEquals(5, layout.letterJumpTargets['D'])
     }
 
     @Test
@@ -49,9 +51,30 @@ class AppListLayoutTest {
                 app("Maps"),
                 app("Messages"),
             ),
+            favoriteOrder = emptyList(),
         )
 
-        assertEquals(mapOf('M' to LetterJumpTarget(lazyListIndex = 1)), layout.letterJumpTargets)
+        assertEquals(mapOf('M' to 1), layout.letterJumpTargets)
+    }
+
+    @Test
+    fun ordersFavoritesByStoredFavoriteOrderThenAppendsUnorderedFavorites() {
+        val alpha = app("Alpha", favorite = true)
+        val camera = app("Camera", favorite = true)
+        val browser = app("Browser", favorite = true)
+
+        val layout = buildAppListLayout(
+            apps = listOf(alpha, browser, camera),
+            favoriteOrder = listOf(
+                "${camera.packageName}/${camera.activityName}",
+                "${alpha.packageName}/${alpha.activityName}",
+            ),
+        )
+
+        assertEquals(
+            listOf(camera, alpha, browser),
+            layout.favorites,
+        )
     }
 
     private fun app(label: String, favorite: Boolean = false): LauncherApp {

@@ -10,6 +10,8 @@ class LauncherInteractor(
     private val appRepository: AppRepository,
     private val preferencesRepository: LauncherPreferencesRepository,
 ) {
+    fun favoriteOrderFlow(): Flow<List<String>> = preferencesRepository.favoriteOrder
+
     fun launcherAppsFlow(query: Flow<String>): Flow<List<LauncherApp>> {
         val allApps = appRepository.loadLauncherApps()
         return combine(preferencesRepository.favorites, preferencesRepository.hiddenApps, query) {
@@ -36,6 +38,10 @@ class LauncherInteractor(
 
     suspend fun hideApp(app: LauncherApp) {
         preferencesRepository.hideApp(app.componentId())
+    }
+
+    suspend fun setFavoriteOrder(componentIds: List<String>) {
+        preferencesRepository.setFavoriteOrder(componentIds)
     }
 }
 

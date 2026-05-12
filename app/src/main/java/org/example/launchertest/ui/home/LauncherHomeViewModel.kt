@@ -16,6 +16,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import org.example.launchertest.domain.LauncherInteractor
+import org.example.launchertest.domain.componentId
 import org.example.launchertest.ui.model.LauncherApp
 
 class LauncherHomeViewModel(
@@ -25,6 +26,7 @@ class LauncherHomeViewModel(
     private val query = MutableStateFlow("")
     private val isSearchActive = MutableStateFlow(false)
     private val apps = interactor.launcherAppsFlow(query)
+    private val favoriteOrder = interactor.favoriteOrderFlow()
 
     private val _jumpToTarget = MutableSharedFlow<Int>(
         extraBufferCapacity = 1,
@@ -32,9 +34,13 @@ class LauncherHomeViewModel(
     )
     val jumpToTarget: SharedFlow<Int> = _jumpToTarget
 
-    val uiState: StateFlow<LauncherHomeUiState> = combine(query, isSearchActive, apps) {
-            search, searchActive, launcherApps ->
-        val listLayout = buildAppListLayout(launcherApps)
+    val uiState: StateFlow<LauncherHomeUiState> = combine(
+        query,
+        isSearchActive,
+        apps,
+        favoriteOrder,
+    ) { search, searchActive, launcherApps, storedFavoriteOrder ->
+        val listLayout = buildAppListLayout(launcherApps, storedFavoriteOrder)
         LauncherHomeUiState(
             query = search,
             isSearchActive = searchActive,
@@ -61,6 +67,12 @@ class LauncherHomeViewModel(
 
     fun onHideApp(app: LauncherApp) {
         viewModelScope.launch { interactor.hideApp(app) }
+    }
+
+    fun onFavoriteOrderChanged(orderedFavorites: List<LauncherApp>) {
+        viewModelScope.launch {
+            interactor.setFavoriteOrder(orderedFavorites.map { it.componentId() })
+        }
     }
 }
 
