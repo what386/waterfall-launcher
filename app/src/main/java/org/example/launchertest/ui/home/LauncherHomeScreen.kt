@@ -48,7 +48,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.example.launchertest.domain.LauncherInteractor
 import org.example.launchertest.ui.model.LauncherApp
@@ -227,7 +226,6 @@ private fun LauncherHomeScreen(
             return@LaunchedEffect
         }
 
-        delay(SEARCH_AUTO_OPEN_DELAY_MS)
         launchBestSearchMatch()
     }
 
@@ -326,7 +324,6 @@ private fun LauncherHomeScreen(
 }
 private const val FirstHomeContentIndex = 1
 private const val SEARCH_AUTO_OPEN_MIN_QUERY_LENGTH = 3
-private const val SEARCH_AUTO_OPEN_DELAY_MS = 600L
 
 private fun favoritesHeaderIndex(widgetCount: Int): Int = widgetCount + 2
 
