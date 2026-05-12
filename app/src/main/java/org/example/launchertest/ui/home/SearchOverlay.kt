@@ -16,6 +16,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.unit.dp
 
@@ -23,6 +26,7 @@ import androidx.compose.ui.unit.dp
 fun SearchOverlay(
     query: String,
     onQueryChanged: (String) -> Unit,
+    onSearchSubmitted: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val focusRequester = remember { FocusRequester() }
@@ -44,6 +48,14 @@ fun SearchOverlay(
             onValueChange = onQueryChanged,
             placeholder = { Text("Search apps") },
             singleLine = true,
+            keyboardOptions = KeyboardOptions(
+                imeAction = ImeAction.Search,
+            ),
+            keyboardActions = KeyboardActions(
+                onSearch = {
+                    onSearchSubmitted()
+                },
+            ),
             colors = OutlinedTextFieldDefaults.colors(
                 focusedContainerColor = Color(0x66000000),
                 unfocusedContainerColor = Color(0x66000000),

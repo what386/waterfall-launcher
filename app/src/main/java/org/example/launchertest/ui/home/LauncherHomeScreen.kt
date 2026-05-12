@@ -7,7 +7,11 @@ import org.example.launchertest.ui.home.azrail.buildRailLetters
 import org.example.launchertest.ui.home.azrail.isFavoritesRailItem
 
 import android.app.WallpaperManager
+import android.content.ComponentName
+import android.content.Context
+import android.content.Intent
 import android.widget.ImageView
+import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ContentTransform
@@ -38,13 +42,16 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.example.launchertest.domain.LauncherInteractor
+import org.example.launchertest.ui.model.LauncherApp
 import org.example.launchertest.widgets.LauncherWidgetController
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.graphics.toArgb
@@ -116,6 +123,7 @@ fun LauncherHomeRoute(
         onToggleFavorite = vm::onToggleFavorite,
         onHideApp = vm::onHideApp,
         onReorderFavorites = vm::onFavoriteOrderChanged,
+        onAutoOpenUnambiguousSearchChanged = vm::onAutoOpenUnambiguousSearchChanged,
         onLetterSelected = vm::onLetterSelected,
         onAddWidget = widgetController::addWidget,
         onRemoveWidget = widgetController::removeWidget,
@@ -136,6 +144,7 @@ private fun LauncherHomeScreen(
     onToggleFavorite: (org.example.launchertest.ui.model.LauncherApp) -> Unit,
     onHideApp: (org.example.launchertest.ui.model.LauncherApp) -> Unit,
     onReorderFavorites: (List<org.example.launchertest.ui.model.LauncherApp>) -> Unit,
+    onAutoOpenUnambiguousSearchChanged: (Boolean) -> Unit,
     onLetterSelected: (Char) -> Unit,
     onAddWidget: () -> Unit,
     onRemoveWidget: (Int) -> Unit,
@@ -144,6 +153,7 @@ private fun LauncherHomeScreen(
     val scrubbingLetter = remember { mutableStateOf<Char?>(null) }
     val isScrubbing = remember { mutableStateOf(false) }
     val selectedRailItem = remember { mutableStateOf(buildRailLetters(emptyMap()).first()) }
+    val context = LocalContext.current
 
     var contentMode by remember { mutableStateOf(HomeContentMode.Favorites) }
 
@@ -197,8 +207,32 @@ private fun LauncherHomeScreen(
         onSearchDismissed()
     }
 
+    fun launchBestSearchMatch() {
+        val app = state.listLayout.apps.firstOrNull() ?: return
+        launchApp(context, app)
+        dismissSearch()
+    }
+
     if (state.isSearchActive) {
         BackHandler(onBack = ::dismissSearch)
+    }
+
+    LaunchedEffect(
+        state.isSearchActive,
+        state.autoOpenUnambiguousSearch,
+        state.query,
+        state.listLayout.apps,
+    ) {
+        if (!state.isSearchActive ||
+            !state.autoOpenUnambiguousSearch ||
+            state.query.trim().length < SEARCH_AUTO_OPEN_MIN_QUERY_LENGTH ||
+            state.listLayout.apps.size != 1
+        ) {
+            return@LaunchedEffect
+        }
+
+        delay(SEARCH_AUTO_OPEN_DELAY_MS)
+        launchBestSearchMatch()
     }
 
     Surface(
@@ -223,12 +257,14 @@ private fun LauncherHomeScreen(
                     isScrubbing = isScrubbing,
                     showFavoritesOnly = mode == HomeContentMode.Favorites,
                     isSearchActive = mode == HomeContentMode.Search,
+                    autoOpenUnambiguousSearch = state.autoOpenUnambiguousSearch,
                     listState = listState,
                     categoryPinOffsetPx = categoryPinOffsetPx,
                     onSearchActivated = ::activateSearch,
                     onToggleFavorite = onToggleFavorite,
                     onHideApp = onHideApp,
                     onReorderFavorites = onReorderFavorites,
+                    onAutoOpenUnambiguousSearchChanged = onAutoOpenUnambiguousSearchChanged,
                     onAddWidget = onAddWidget,
                     onRemoveWidget = onRemoveWidget,
                     createWidgetView = createWidgetView,
@@ -245,6 +281,7 @@ private fun LauncherHomeScreen(
                 SearchOverlay(
                     query = state.query,
                     onQueryChanged = onQueryChanged,
+                    onSearchSubmitted = ::launchBestSearchMatch,
                     modifier = Modifier
                         .padding(
                             horizontal = 0.dp,
@@ -293,7 +330,31 @@ private fun LauncherHomeScreen(
     }
 }
 private const val FirstHomeContentIndex = 1
+private const val SEARCH_AUTO_OPEN_MIN_QUERY_LENGTH = 3
+private const val SEARCH_AUTO_OPEN_DELAY_MS = 600L
+
 private fun favoritesHeaderIndex(widgetCount: Int): Int = widgetCount + 2
+
+private fun launchApp(
+    context: Context,
+    app: LauncherApp,
+) {
+    val intent = Intent(Intent.ACTION_MAIN).apply {
+        addCategory(Intent.CATEGORY_LAUNCHER)
+        component = ComponentName(app.packageName, app.activityName)
+        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+    }
+
+    try {
+        context.startActivity(intent)
+    } catch (_: Exception) {
+        Toast.makeText(
+            context,
+            "Unable to launch ${app.label}",
+            Toast.LENGTH_SHORT,
+        ).show()
+    }
+}
 
 private enum class HomeContentMode {
     Favorites,

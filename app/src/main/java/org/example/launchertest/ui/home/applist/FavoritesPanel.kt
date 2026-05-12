@@ -69,10 +69,12 @@ fun FavoritesPanel(
     widgetIds: List<Int>,
     favAlpha: Float,
     isSearchActive: Boolean,
+    autoOpenUnambiguousSearch: Boolean,
     onToggleFavorite: (LauncherApp) -> Unit,
     onHideApp: (LauncherApp) -> Unit,
     onReorderFavorites: (List<LauncherApp>) -> Unit,
     onSearchActivated: () -> Unit,
+    onAutoOpenUnambiguousSearchChanged: (Boolean) -> Unit,
     onAddWidget: () -> Unit,
     onRemoveWidget: (Int) -> Unit,
     createWidgetView: (Int) -> AppWidgetHostView?,
@@ -401,6 +403,26 @@ fun FavoritesPanel(
                     },
                 )
             }
+
+            DropdownMenuItem(
+                text = {
+                    Text(
+                        if (autoOpenUnambiguousSearch) {
+                            "Disable search auto-open"
+                        } else {
+                            "Enable search auto-open"
+                        }
+                    )
+                },
+                onClick = {
+                    showPanelMenu = false
+                    if (reorderMode) {
+                        reorderMode = false
+                        commitDragReorderIfNeeded()
+                    }
+                    onAutoOpenUnambiguousSearchChanged(!autoOpenUnambiguousSearch)
+                },
+            )
         }
     }
 }

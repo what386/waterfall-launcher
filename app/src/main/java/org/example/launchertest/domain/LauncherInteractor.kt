@@ -11,6 +11,7 @@ class LauncherInteractor(
     private val preferencesRepository: LauncherPreferencesRepository,
 ) {
     fun favoriteOrderFlow(): Flow<List<String>> = preferencesRepository.favoriteOrder
+    fun autoOpenUnambiguousSearchFlow(): Flow<Boolean> = preferencesRepository.autoOpenUnambiguousSearch
 
     fun launcherAppsFlow(query: Flow<String>): Flow<List<LauncherApp>> {
         val allApps = appRepository.loadLauncherApps()
@@ -42,6 +43,10 @@ class LauncherInteractor(
 
     suspend fun setFavoriteOrder(componentIds: List<String>) {
         preferencesRepository.setFavoriteOrder(componentIds)
+    }
+
+    suspend fun setAutoOpenUnambiguousSearch(enabled: Boolean) {
+        preferencesRepository.setAutoOpenUnambiguousSearch(enabled)
     }
 }
 
