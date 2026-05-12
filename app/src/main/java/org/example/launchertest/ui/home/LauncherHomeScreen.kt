@@ -276,6 +276,7 @@ private fun LauncherHomeScreen(
                     query = state.query,
                     onQueryChanged = onQueryChanged,
                     onSearchSubmitted = ::launchBestSearchMatch,
+                    onKeyboardDismissed = ::dismissSearch,
                     modifier = Modifier
                         .padding(
                             horizontal = 0.dp,
