@@ -65,6 +65,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.zIndex
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.example.launchertest.data.HomeRowNavigationMode
 import org.example.launchertest.data.LauncherFont
 import org.example.launchertest.data.LauncherSettings
 import org.example.launchertest.ui.home.shared.rememberAppIcon
@@ -99,6 +100,7 @@ fun FavoritesPanel(
     settings: LauncherSettings,
     onHideStatusBarChanged: (Boolean) -> Unit,
     onHideAppIconsChanged: (Boolean) -> Unit,
+    onHomeRowNavigationModeChanged: (HomeRowNavigationMode) -> Unit,
     onFontChanged: (LauncherFont) -> Unit,
     onRestartLauncher: () -> Unit,
     createWidgetView: (Int) -> AppWidgetHostView?,
@@ -113,6 +115,7 @@ fun FavoritesPanel(
     var showPanelMenu by remember { mutableStateOf(false) }
     var showSettingsSheet by remember { mutableStateOf(false) }
     var showFontSheet by remember { mutableStateOf(false) }
+    var showHomeRowSheet by remember { mutableStateOf(false) }
     var hideStatusBarAtSettingsOpen by remember { mutableStateOf<Boolean?>(null) }
     var hideStatusBarSettingsDraft by remember { mutableStateOf<Boolean?>(null) }
     var reorderMode by remember { mutableStateOf(false) }
@@ -162,6 +165,7 @@ fun FavoritesPanel(
         hideStatusBarAtSettingsOpen = settings.hideStatusBar
         hideStatusBarSettingsDraft = settings.hideStatusBar
         showPanelMenu = false
+        showHomeRowSheet = false
         showSettingsSheet = true
     }
 
@@ -171,6 +175,7 @@ fun FavoritesPanel(
 
         showSettingsSheet = false
         showFontSheet = false
+        showHomeRowSheet = false
         hideStatusBarAtSettingsOpen = null
         hideStatusBarSettingsDraft = null
         showPanelMenu = reopenFavorites
@@ -185,11 +190,23 @@ fun FavoritesPanel(
 
     fun openFontSheet() {
         showSettingsSheet = false
+        showHomeRowSheet = false
         showFontSheet = true
     }
 
     fun closeFontSheet() {
         showFontSheet = false
+        showSettingsSheet = true
+    }
+
+    fun openHomeRowSheet() {
+        showSettingsSheet = false
+        showFontSheet = false
+        showHomeRowSheet = true
+    }
+
+    fun closeHomeRowSheet() {
+        showHomeRowSheet = false
         showSettingsSheet = true
     }
 
@@ -670,6 +687,7 @@ fun FavoritesPanel(
                         onHideStatusBarChanged(enabled)
                     },
                     onHideAppIconsChanged = onHideAppIconsChanged,
+                    onHomeRowClicked = ::openHomeRowSheet,
                     onFontClicked = ::openFontSheet,
                     onBackClicked = {
                         closeSettingsSheet(reopenFavorites = true)
@@ -691,6 +709,23 @@ fun FavoritesPanel(
                         closeFontSheet()
                     },
                     onBackClicked = ::closeFontSheet,
+                )
+            }
+        }
+
+        if (showHomeRowSheet) {
+            ModalBottomSheet(
+                onDismissRequest = ::closeHomeRowSheet,
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+            ) {
+                HomeRowSheet(
+                    selectedMode = settings.homeRowNavigationMode,
+                    onModeSelected = { mode ->
+                        onHomeRowNavigationModeChanged(mode)
+                        closeHomeRowSheet()
+                    },
+                    onBackClicked = ::closeHomeRowSheet,
                 )
             }
         }
@@ -771,6 +806,7 @@ private fun SettingsSheet(
     settings: LauncherSettings,
     onHideStatusBarChanged: (Boolean) -> Unit,
     onHideAppIconsChanged: (Boolean) -> Unit,
+    onHomeRowClicked: () -> Unit,
     onFontClicked: () -> Unit,
     onBackClicked: () -> Unit,
 ) {
@@ -807,11 +843,54 @@ private fun SettingsSheet(
         )
 
         SheetActionRow(
+            icon = "⌂",
+            title = "Home row",
+            subtitle = settings.homeRowNavigationMode.displayName,
+            onClick = onHomeRowClicked,
+        )
+
+        SheetActionRow(
             icon = "Aa",
             title = "Font",
             subtitle = settings.font.displayName,
             onClick = onFontClicked,
         )
+    }
+}
+
+@Composable
+private fun HomeRowSheet(
+    selectedMode: HomeRowNavigationMode,
+    onModeSelected: (HomeRowNavigationMode) -> Unit,
+    onBackClicked: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 20.dp, end = 20.dp, bottom = 28.dp),
+    ) {
+        Text(
+            text = "Home row",
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(bottom = 8.dp),
+        )
+
+        SheetActionRow(
+            icon = "‹",
+            title = "Back",
+            subtitle = "Return to Settings",
+            onClick = onBackClicked,
+        )
+
+        HomeRowNavigationMode.entries.forEach { mode ->
+            SheetActionRow(
+                icon = if (mode == selectedMode) "✓" else " ",
+                title = mode.displayName,
+                subtitle = mode.description,
+                active = mode == selectedMode,
+                onClick = { onModeSelected(mode) },
+            )
+        }
     }
 }
 

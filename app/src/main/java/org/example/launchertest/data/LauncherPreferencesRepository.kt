@@ -25,6 +25,7 @@ class LauncherPreferencesRepository(
     private val widgetStacksKey = stringPreferencesKey("widget_stacks")
     private val hideStatusBarKey = booleanPreferencesKey("hide_status_bar")
     private val hideAppIconsKey = booleanPreferencesKey("hide_app_icons")
+    private val homeRowNavigationModeKey = stringPreferencesKey("home_row_navigation_mode")
     private val fontKey = stringPreferencesKey("font")
 
     val favorites: Flow<Set<String>> = context.launcherPrefs.data.map { prefs ->
@@ -56,6 +57,7 @@ class LauncherPreferencesRepository(
         LauncherSettings(
             hideStatusBar = prefs[hideStatusBarKey] ?: false,
             hideAppIcons = prefs[hideAppIconsKey] ?: false,
+            homeRowNavigationMode = HomeRowNavigationMode.fromStorageValue(prefs[homeRowNavigationModeKey]),
             font = LauncherFont.fromStorageValue(prefs[fontKey]),
         )
     }
@@ -159,6 +161,12 @@ class LauncherPreferencesRepository(
     suspend fun setHideAppIcons(enabled: Boolean) {
         context.launcherPrefs.edit { prefs ->
             prefs[hideAppIconsKey] = enabled
+        }
+    }
+
+    suspend fun setHomeRowNavigationMode(mode: HomeRowNavigationMode) {
+        context.launcherPrefs.edit { prefs ->
+            prefs[homeRowNavigationModeKey] = mode.storageValue
         }
     }
 

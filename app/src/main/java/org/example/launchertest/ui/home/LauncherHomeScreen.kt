@@ -60,6 +60,7 @@ import kotlinx.coroutines.launch
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import org.example.launchertest.data.HomeRowNavigationMode
 import org.example.launchertest.domain.LauncherInteractor
 import org.example.launchertest.data.LauncherFont
 import org.example.launchertest.ui.model.LauncherApp
@@ -142,6 +143,7 @@ fun LauncherHomeRoute(
             onReorderFavorites = vm::onFavoriteOrderChanged,
             onHideStatusBarChanged = vm::onHideStatusBarChanged,
             onHideAppIconsChanged = vm::onHideAppIconsChanged,
+            onHomeRowNavigationModeChanged = vm::onHomeRowNavigationModeChanged,
             onFontChanged = vm::onFontChanged,
             onRestartLauncher = {
                 context.findActivity()?.recreate()
@@ -174,6 +176,7 @@ private fun LauncherHomeScreen(
     onReorderFavorites: (List<org.example.launchertest.ui.model.LauncherApp>) -> Unit,
     onHideStatusBarChanged: (Boolean) -> Unit,
     onHideAppIconsChanged: (Boolean) -> Unit,
+    onHomeRowNavigationModeChanged: (HomeRowNavigationMode) -> Unit,
     onFontChanged: (LauncherFont) -> Unit,
     onRestartLauncher: () -> Unit,
     onLetterSelected: (Char) -> Unit,
@@ -332,6 +335,7 @@ private fun LauncherHomeScreen(
                     settings = state.settings,
                     onHideStatusBarChanged = onHideStatusBarChanged,
                     onHideAppIconsChanged = onHideAppIconsChanged,
+                    onHomeRowNavigationModeChanged = onHomeRowNavigationModeChanged,
                     onFontChanged = onFontChanged,
                     onRestartLauncher = onRestartLauncher,
                     createWidgetView = createWidgetView,

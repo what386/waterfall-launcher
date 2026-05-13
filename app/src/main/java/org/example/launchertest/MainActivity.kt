@@ -9,7 +9,11 @@ import androidx.activity.enableEdgeToEdge
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import org.example.launchertest.data.AppRepository
+import org.example.launchertest.data.HomeRowNavigationMode
 import org.example.launchertest.data.LauncherPreferencesRepository
 import org.example.launchertest.domain.LauncherInteractor
 import org.example.launchertest.ui.home.LauncherHomeRoute
@@ -18,6 +22,7 @@ import org.example.launchertest.widgets.LauncherWidgetController
 
 class MainActivity : ComponentActivity() {
     private lateinit var widgetController: LauncherWidgetController
+    private var homeRowNavigationMode = HomeRowNavigationMode.Shown
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -31,7 +36,6 @@ class MainActivity : ComponentActivity() {
         }
 
 
-        hideNavigationBar()
         setHighRefreshRate()
 
         val appRepository = AppRepository(
@@ -40,6 +44,15 @@ class MainActivity : ComponentActivity() {
         )
 
         val preferencesRepository = LauncherPreferencesRepository(applicationContext)
+        lifecycleScope.launch {
+            preferencesRepository.settings
+                .map { settings -> settings.homeRowNavigationMode }
+                .distinctUntilChanged()
+                .collect { mode ->
+                    homeRowNavigationMode = mode
+                    applyHomeRowNavigationMode(mode)
+                }
+        }
 
         val interactor = LauncherInteractor(
             appRepository = appRepository,
@@ -77,13 +90,17 @@ class MainActivity : ComponentActivity() {
         super.onWindowFocusChanged(hasFocus)
 
         if (hasFocus) {
-            hideNavigationBar()
+            applyHomeRowNavigationMode(homeRowNavigationMode)
         }
     }
 
-    private fun hideNavigationBar() {
+    private fun applyHomeRowNavigationMode(mode: HomeRowNavigationMode) {
         WindowInsetsControllerCompat(window, window.decorView).apply {
-            hide(WindowInsetsCompat.Type.navigationBars())
+            if (mode == HomeRowNavigationMode.Hidden) {
+                hide(WindowInsetsCompat.Type.navigationBars())
+            } else {
+                show(WindowInsetsCompat.Type.navigationBars())
+            }
             systemBarsBehavior =
                 WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         }

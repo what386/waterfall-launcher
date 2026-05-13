@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.example.launchertest.data.HomeRowNavigationMode
 import org.example.launchertest.data.LauncherFont
 import org.example.launchertest.data.LauncherSettings
 import org.example.launchertest.ui.home.shared.rememberAppIcon
@@ -76,6 +77,7 @@ fun AppListPanel(
     settings: LauncherSettings,
     onHideStatusBarChanged: (Boolean) -> Unit,
     onHideAppIconsChanged: (Boolean) -> Unit,
+    onHomeRowNavigationModeChanged: (HomeRowNavigationMode) -> Unit,
     onFontChanged: (LauncherFont) -> Unit,
     onRestartLauncher: () -> Unit,
     createWidgetView: (Int) -> AppWidgetHostView?,
@@ -185,6 +187,7 @@ fun AppListPanel(
                         settings = settings,
                         onHideStatusBarChanged = onHideStatusBarChanged,
                         onHideAppIconsChanged = onHideAppIconsChanged,
+                        onHomeRowNavigationModeChanged = onHomeRowNavigationModeChanged,
                         onFontChanged = onFontChanged,
                         onRestartLauncher = onRestartLauncher,
                         createWidgetView = createWidgetView,

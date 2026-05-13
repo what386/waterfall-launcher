@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import org.example.launchertest.data.HomeRowNavigationMode
 import org.example.launchertest.data.LauncherFont
 import org.example.launchertest.data.LauncherSettings
 import org.example.launchertest.domain.LauncherInteractor
@@ -99,6 +100,10 @@ class LauncherHomeViewModel(
 
     fun onHideAppIconsChanged(enabled: Boolean) {
         viewModelScope.launch { interactor.setHideAppIcons(enabled) }
+    }
+
+    fun onHomeRowNavigationModeChanged(mode: HomeRowNavigationMode) {
+        viewModelScope.launch { interactor.setHomeRowNavigationMode(mode) }
     }
 
     fun onFontChanged(font: LauncherFont) {
