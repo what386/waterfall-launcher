@@ -882,14 +882,10 @@ private fun EditDragHandle(
 ) {
     Text(
         text = text,
-        color = Color.White,
-        style = MaterialTheme.typography.titleMedium,
+        color = Color.White.copy(alpha = 0.84f),
+        style = MaterialTheme.typography.headlineMedium,
         modifier = modifier
-            .background(
-                color = Color.Black.copy(alpha = 0.52f),
-                shape = MaterialTheme.shapes.medium,
-            )
-            .padding(horizontal = 10.dp, vertical = 5.dp),
+            .padding(horizontal = 10.dp, vertical = 4.dp),
     )
 }
 
