@@ -26,3 +26,6 @@
 - [ ] gesture bar?
       @created 2026-05-13 17:32
 
+- [ ] icon pack support?
+      @created 2026-05-13 17:33
+
