@@ -176,6 +176,15 @@ class LauncherPreferencesRepository(
         }
     }
 
+    suspend fun resetSettings() {
+        context.launcherPrefs.edit { prefs ->
+            prefs.remove(hideStatusBarKey)
+            prefs.remove(hideAppIconsKey)
+            prefs.remove(homeRowNavigationModeKey)
+            prefs.remove(fontKey)
+        }
+    }
+
     private fun currentWidgetStacks(
         prefs: androidx.datastore.preferences.core.Preferences,
     ): List<WidgetStack> {

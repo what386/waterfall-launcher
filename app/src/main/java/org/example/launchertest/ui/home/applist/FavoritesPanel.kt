@@ -102,6 +102,7 @@ fun FavoritesPanel(
     onHideAppIconsChanged: (Boolean) -> Unit,
     onHomeRowNavigationModeChanged: (HomeRowNavigationMode) -> Unit,
     onFontChanged: (LauncherFont) -> Unit,
+    onResetSettings: () -> Unit,
     onRestartLauncher: () -> Unit,
     createWidgetView: (Int) -> AppWidgetHostView?,
     getWidgetMinHeightDp: (Int) -> Int?,
@@ -689,6 +690,10 @@ fun FavoritesPanel(
                     onHideAppIconsChanged = onHideAppIconsChanged,
                     onHomeRowClicked = ::openHomeRowSheet,
                     onFontClicked = ::openFontSheet,
+                    onResetClicked = {
+                        hideStatusBarSettingsDraft = LauncherSettings().hideStatusBar
+                        onResetSettings()
+                    },
                     onBackClicked = {
                         closeSettingsSheet(reopenFavorites = true)
                     },
@@ -808,6 +813,7 @@ private fun SettingsSheet(
     onHideAppIconsChanged: (Boolean) -> Unit,
     onHomeRowClicked: () -> Unit,
     onFontClicked: () -> Unit,
+    onResetClicked: () -> Unit,
     onBackClicked: () -> Unit,
 ) {
     Column(
@@ -854,6 +860,13 @@ private fun SettingsSheet(
             title = "Font",
             subtitle = settings.font.displayName,
             onClick = onFontClicked,
+        )
+
+        SheetActionRow(
+            icon = "↺",
+            title = "Reset to default",
+            subtitle = "Restore original launcher settings",
+            onClick = onResetClicked,
         )
     }
 }

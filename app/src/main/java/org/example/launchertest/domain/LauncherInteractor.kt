@@ -72,6 +72,10 @@ class LauncherInteractor(
         preferencesRepository.setFont(font)
     }
 
+    suspend fun resetSettings() {
+        preferencesRepository.resetSettings()
+    }
+
 }
 
 fun LauncherApp.componentId(): String = "$packageName/$activityName"

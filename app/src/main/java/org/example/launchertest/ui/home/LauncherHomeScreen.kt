@@ -145,6 +145,7 @@ fun LauncherHomeRoute(
             onHideAppIconsChanged = vm::onHideAppIconsChanged,
             onHomeRowNavigationModeChanged = vm::onHomeRowNavigationModeChanged,
             onFontChanged = vm::onFontChanged,
+            onResetSettings = vm::onResetSettings,
             onRestartLauncher = {
                 context.findActivity()?.recreate()
             },
@@ -178,6 +179,7 @@ private fun LauncherHomeScreen(
     onHideAppIconsChanged: (Boolean) -> Unit,
     onHomeRowNavigationModeChanged: (HomeRowNavigationMode) -> Unit,
     onFontChanged: (LauncherFont) -> Unit,
+    onResetSettings: () -> Unit,
     onRestartLauncher: () -> Unit,
     onLetterSelected: (Char) -> Unit,
     onAddWidget: () -> Unit,
@@ -337,6 +339,7 @@ private fun LauncherHomeScreen(
                     onHideAppIconsChanged = onHideAppIconsChanged,
                     onHomeRowNavigationModeChanged = onHomeRowNavigationModeChanged,
                     onFontChanged = onFontChanged,
+                    onResetSettings = onResetSettings,
                     onRestartLauncher = onRestartLauncher,
                     createWidgetView = createWidgetView,
                     getWidgetMinHeightDp = getWidgetMinHeightDp,

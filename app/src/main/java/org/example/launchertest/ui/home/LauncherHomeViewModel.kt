@@ -110,6 +110,10 @@ class LauncherHomeViewModel(
         viewModelScope.launch { interactor.setFont(font) }
     }
 
+    fun onResetSettings() {
+        viewModelScope.launch { interactor.resetSettings() }
+    }
+
 }
 
 data class LauncherHomeUiState(
