@@ -11,9 +11,6 @@
 - [ ] icon pack support?
       @created 2026-05-13 17:33
 
-- [ ] option to change font
-      @created 2026-05-13 17:33
-
 - [ ] greeter screen idea
       @created 2026-05-13 18:53
 
@@ -39,4 +36,8 @@
 - [x] allow hide iconsr
       @created 2026-05-13 17:32
       @completed 2026-05-13 18:53
+
+- [x] option to change font
+      @created 2026-05-13 17:33
+      @completed 2026-05-13 19:00
 
