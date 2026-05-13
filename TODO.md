@@ -5,9 +5,6 @@
 
 ## Tasks
 
-- [ ] feat: rename app to 'Cascade Launcher'
-      @created 2026-05-10 00:47
-
 - [ ] behavior: widget stacks (swipe to change widgets in a carousel)
       @created 2026-05-13 17:19
 
