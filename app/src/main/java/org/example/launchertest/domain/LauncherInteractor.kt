@@ -3,6 +3,7 @@ package org.example.launchertest.domain
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import org.example.launchertest.data.AppRepository
+import org.example.launchertest.data.LauncherFont
 import org.example.launchertest.data.LauncherPreferencesRepository
 import org.example.launchertest.data.LauncherSettings
 import org.example.launchertest.ui.model.LauncherApp
@@ -60,6 +61,10 @@ class LauncherInteractor(
 
     suspend fun setHideAppIcons(enabled: Boolean) {
         preferencesRepository.setHideAppIcons(enabled)
+    }
+
+    suspend fun setFont(font: LauncherFont) {
+        preferencesRepository.setFont(font)
     }
 
 }

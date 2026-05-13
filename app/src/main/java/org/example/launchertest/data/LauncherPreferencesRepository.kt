@@ -25,6 +25,7 @@ class LauncherPreferencesRepository(
     private val widgetStacksKey = stringPreferencesKey("widget_stacks")
     private val hideStatusBarKey = booleanPreferencesKey("hide_status_bar")
     private val hideAppIconsKey = booleanPreferencesKey("hide_app_icons")
+    private val fontKey = stringPreferencesKey("font")
 
     val favorites: Flow<Set<String>> = context.launcherPrefs.data.map { prefs ->
         prefs[favoritesKey] ?: emptySet()
@@ -55,6 +56,7 @@ class LauncherPreferencesRepository(
         LauncherSettings(
             hideStatusBar = prefs[hideStatusBarKey] ?: false,
             hideAppIcons = prefs[hideAppIconsKey] ?: false,
+            font = LauncherFont.fromStorageValue(prefs[fontKey]),
         )
     }
 
@@ -157,6 +159,12 @@ class LauncherPreferencesRepository(
     suspend fun setHideAppIcons(enabled: Boolean) {
         context.launcherPrefs.edit { prefs ->
             prefs[hideAppIconsKey] = enabled
+        }
+    }
+
+    suspend fun setFont(font: LauncherFont) {
+        context.launcherPrefs.edit { prefs ->
+            prefs[fontKey] = font.storageValue
         }
     }
 

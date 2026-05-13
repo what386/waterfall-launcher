@@ -61,7 +61,9 @@ import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import org.example.launchertest.domain.LauncherInteractor
+import org.example.launchertest.data.LauncherFont
 import org.example.launchertest.ui.model.LauncherApp
+import org.example.launchertest.ui.theme.LauncherTheme
 import org.example.launchertest.widgets.LauncherWidgetController
 import org.example.launchertest.widgets.WidgetStack
 import androidx.compose.material3.MaterialTheme
@@ -124,32 +126,35 @@ fun LauncherHomeRoute(
         }
     }
 
-    LauncherHomeScreen(
-        state = state,
-        widgetStacks = widgetStacks,
-        listState = listState,
-        categoryPinOffsetPx = categoryPinOffsetPx,
-        onQueryChanged = vm::onQueryChanged,
-        onSearchActivated = vm::onSearchActivated,
-        onSearchDismissed = vm::onSearchDismissed,
-        onHiddenModeChanged = vm::onHiddenModeChanged,
-        onToggleFavorite = vm::onToggleFavorite,
-        onHideApp = vm::onHideApp,
-        onUnhideApp = vm::onUnhideApp,
-        onReorderFavorites = vm::onFavoriteOrderChanged,
-        onHideStatusBarChanged = vm::onHideStatusBarChanged,
-        onHideAppIconsChanged = vm::onHideAppIconsChanged,
-        onRestartLauncher = {
-            context.findActivity()?.recreate()
-        },
-        onLetterSelected = vm::onLetterSelected,
-        onAddWidget = widgetController::addWidgetToNewStack,
-        onAddWidgetToStack = widgetController::addWidgetToStack,
-        onRemoveWidget = widgetController::removeWidget,
-        onReorderWidgetStacks = widgetController::reorderWidgetStacks,
-        createWidgetView = widgetController::createWidgetView,
-        getWidgetMinHeightDp = widgetController::getWidgetMinHeightDp,
-    )
+    LauncherTheme(font = state.settings.font) {
+        LauncherHomeScreen(
+            state = state,
+            widgetStacks = widgetStacks,
+            listState = listState,
+            categoryPinOffsetPx = categoryPinOffsetPx,
+            onQueryChanged = vm::onQueryChanged,
+            onSearchActivated = vm::onSearchActivated,
+            onSearchDismissed = vm::onSearchDismissed,
+            onHiddenModeChanged = vm::onHiddenModeChanged,
+            onToggleFavorite = vm::onToggleFavorite,
+            onHideApp = vm::onHideApp,
+            onUnhideApp = vm::onUnhideApp,
+            onReorderFavorites = vm::onFavoriteOrderChanged,
+            onHideStatusBarChanged = vm::onHideStatusBarChanged,
+            onHideAppIconsChanged = vm::onHideAppIconsChanged,
+            onFontChanged = vm::onFontChanged,
+            onRestartLauncher = {
+                context.findActivity()?.recreate()
+            },
+            onLetterSelected = vm::onLetterSelected,
+            onAddWidget = widgetController::addWidgetToNewStack,
+            onAddWidgetToStack = widgetController::addWidgetToStack,
+            onRemoveWidget = widgetController::removeWidget,
+            onReorderWidgetStacks = widgetController::reorderWidgetStacks,
+            createWidgetView = widgetController::createWidgetView,
+            getWidgetMinHeightDp = widgetController::getWidgetMinHeightDp,
+        )
+    }
 }
 
 @OptIn(ExperimentalAnimationApi::class)
@@ -169,6 +174,7 @@ private fun LauncherHomeScreen(
     onReorderFavorites: (List<org.example.launchertest.ui.model.LauncherApp>) -> Unit,
     onHideStatusBarChanged: (Boolean) -> Unit,
     onHideAppIconsChanged: (Boolean) -> Unit,
+    onFontChanged: (LauncherFont) -> Unit,
     onRestartLauncher: () -> Unit,
     onLetterSelected: (Char) -> Unit,
     onAddWidget: () -> Unit,
@@ -326,6 +332,7 @@ private fun LauncherHomeScreen(
                     settings = state.settings,
                     onHideStatusBarChanged = onHideStatusBarChanged,
                     onHideAppIconsChanged = onHideAppIconsChanged,
+                    onFontChanged = onFontChanged,
                     onRestartLauncher = onRestartLauncher,
                     createWidgetView = createWidgetView,
                     getWidgetMinHeightDp = getWidgetMinHeightDp,

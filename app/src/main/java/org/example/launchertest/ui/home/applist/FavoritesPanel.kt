@@ -65,6 +65,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.zIndex
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.example.launchertest.data.LauncherFont
 import org.example.launchertest.data.LauncherSettings
 import org.example.launchertest.ui.home.shared.rememberAppIcon
 import org.example.launchertest.ui.model.LauncherApp
@@ -98,6 +99,7 @@ fun FavoritesPanel(
     settings: LauncherSettings,
     onHideStatusBarChanged: (Boolean) -> Unit,
     onHideAppIconsChanged: (Boolean) -> Unit,
+    onFontChanged: (LauncherFont) -> Unit,
     onRestartLauncher: () -> Unit,
     createWidgetView: (Int) -> AppWidgetHostView?,
     getWidgetMinHeightDp: (Int) -> Int?,
@@ -110,6 +112,7 @@ fun FavoritesPanel(
     val searchTriggerPx = with(density) { APP_LIST_SEARCH_DRAG_THRESHOLD_DP.dp.toPx() }
     var showPanelMenu by remember { mutableStateOf(false) }
     var showSettingsSheet by remember { mutableStateOf(false) }
+    var showFontSheet by remember { mutableStateOf(false) }
     var hideStatusBarAtSettingsOpen by remember { mutableStateOf<Boolean?>(null) }
     var hideStatusBarSettingsDraft by remember { mutableStateOf<Boolean?>(null) }
     var reorderMode by remember { mutableStateOf(false) }
@@ -167,6 +170,7 @@ fun FavoritesPanel(
             hideStatusBarAtSettingsOpen != hideStatusBarSettingsDraft
 
         showSettingsSheet = false
+        showFontSheet = false
         hideStatusBarAtSettingsOpen = null
         hideStatusBarSettingsDraft = null
         showPanelMenu = reopenFavorites
@@ -177,6 +181,16 @@ fun FavoritesPanel(
                 onRestartLauncher()
             }
         }
+    }
+
+    fun openFontSheet() {
+        showSettingsSheet = false
+        showFontSheet = true
+    }
+
+    fun closeFontSheet() {
+        showFontSheet = false
+        showSettingsSheet = true
     }
 
     fun clearDragState() {
@@ -656,9 +670,27 @@ fun FavoritesPanel(
                         onHideStatusBarChanged(enabled)
                     },
                     onHideAppIconsChanged = onHideAppIconsChanged,
+                    onFontClicked = ::openFontSheet,
                     onBackClicked = {
                         closeSettingsSheet(reopenFavorites = true)
                     },
+                )
+            }
+        }
+
+        if (showFontSheet) {
+            ModalBottomSheet(
+                onDismissRequest = ::closeFontSheet,
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+            ) {
+                FontSheet(
+                    selectedFont = settings.font,
+                    onFontSelected = { font ->
+                        onFontChanged(font)
+                        closeFontSheet()
+                    },
+                    onBackClicked = ::closeFontSheet,
                 )
             }
         }
@@ -739,6 +771,7 @@ private fun SettingsSheet(
     settings: LauncherSettings,
     onHideStatusBarChanged: (Boolean) -> Unit,
     onHideAppIconsChanged: (Boolean) -> Unit,
+    onFontClicked: () -> Unit,
     onBackClicked: () -> Unit,
 ) {
     Column(
@@ -772,6 +805,53 @@ private fun SettingsSheet(
             checked = settings.hideAppIcons,
             onCheckedChange = onHideAppIconsChanged,
         )
+
+        SheetActionRow(
+            icon = "Aa",
+            title = "Font",
+            subtitle = settings.font.displayName,
+            onClick = onFontClicked,
+        )
+    }
+}
+
+@Composable
+private fun FontSheet(
+    selectedFont: LauncherFont,
+    onFontSelected: (LauncherFont) -> Unit,
+    onBackClicked: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 20.dp, end = 20.dp, bottom = 28.dp),
+    ) {
+        Text(
+            text = "Font",
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(bottom = 8.dp),
+        )
+
+        SheetActionRow(
+            icon = "‹",
+            title = "Back",
+            subtitle = "Return to Settings",
+            onClick = onBackClicked,
+        )
+
+        LauncherFont.entries.forEach { font ->
+            SheetActionRow(
+                icon = if (font == selectedFont) "✓" else " ",
+                title = font.displayName,
+                subtitle = if (font == LauncherFont.System) {
+                    "Use Android's default font"
+                } else {
+                    "Preview in ${font.displayName}"
+                },
+                active = font == selectedFont,
+                onClick = { onFontSelected(font) },
+            )
+        }
     }
 }
 
