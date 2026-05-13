@@ -46,9 +46,6 @@ install-release:
 start-app:
     adb shell monkey -p org.example.launchertest -c android.intent.category.LAUNCHER 1
 
-refresh-release:
-    just build-release
-    just install-release
 run-debug:
     just build-debug
     just install-debug
@@ -59,8 +56,10 @@ run-release:
     just install-release
     just start-app
 
+refresh-release:
+    just build-release
+    just install-release
+
 gen-release:
     just build-release
     just dist
-
-
