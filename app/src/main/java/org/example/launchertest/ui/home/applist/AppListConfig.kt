@@ -9,7 +9,7 @@ internal const val APP_LIST_SEARCH_TOP_PADDING_DP = 96f
 internal const val APP_LIST_SEARCH_BOTTOM_PADDING_DP = 80f
 internal const val APP_LIST_CATEGORY_PIN_OFFSET_DP = 340f
 
-internal const val APP_LIST_SEARCH_DRAG_THRESHOLD_DP = 32f
+internal const val APP_LIST_SEARCH_DRAG_THRESHOLD_DP = 18f
 
 internal const val APP_LIST_FAVORITES_FADE_STIFFNESS = 300f
 internal const val APP_LIST_FAVORITES_FADE_DAMPING = 1f
