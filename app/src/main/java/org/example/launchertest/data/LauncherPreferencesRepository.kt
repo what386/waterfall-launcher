@@ -1,6 +1,7 @@
 package org.example.launchertest.data
 
 import android.content.Context
+import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
@@ -22,6 +23,7 @@ class LauncherPreferencesRepository(
     private val hiddenKey = stringSetPreferencesKey("hidden_components")
     private val widgetIdsKey = stringPreferencesKey("widget_ids")
     private val widgetStacksKey = stringPreferencesKey("widget_stacks")
+    private val settingsReservedKey = booleanPreferencesKey("settings_reserved")
 
     val favorites: Flow<Set<String>> = context.launcherPrefs.data.map { prefs ->
         prefs[favoritesKey] ?: emptySet()
@@ -46,6 +48,12 @@ class LauncherPreferencesRepository(
         prefs[widgetStacksKey]
             ?.let(::decodeWidgetStacks)
             ?: widgetStacksFromWidgetIds(prefs[widgetIdsKey].toWidgetIdList())
+    }
+
+    val settings: Flow<LauncherSettings> = context.launcherPrefs.data.map { prefs ->
+        LauncherSettings(
+            reserved = prefs[settingsReservedKey] ?: false,
+        )
     }
 
     suspend fun toggleFavorite(componentId: String) {

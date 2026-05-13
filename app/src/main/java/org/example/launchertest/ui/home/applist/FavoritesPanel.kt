@@ -102,6 +102,7 @@ fun FavoritesPanel(
     val density = LocalDensity.current
     val searchTriggerPx = with(density) { APP_LIST_SEARCH_DRAG_THRESHOLD_DP.dp.toPx() }
     var showPanelMenu by remember { mutableStateOf(false) }
+    var showSettingsSheet by remember { mutableStateOf(false) }
     var reorderMode by remember { mutableStateOf(false) }
     var widgetReorderMode by remember { mutableStateOf(false) }
     var didTriggerSearchDuringDrag by remember { mutableStateOf(false) }
@@ -295,7 +296,10 @@ fun FavoritesPanel(
                         interactionSource = panelInteractionSource,
                         indication = null,
                         onClick = {},
-                        onLongClick = { showPanelMenu = true },
+                        onLongClick = {
+                            showSettingsSheet = false
+                            showPanelMenu = true
+                        },
                     )
                 }
             ),
@@ -595,7 +599,21 @@ fun FavoritesPanel(
                             commitDragReorderIfNeeded()
                         }
                     },
+                    onSettingsClicked = {
+                        showPanelMenu = false
+                        showSettingsSheet = true
+                    },
                 )
+            }
+        }
+
+        if (showSettingsSheet) {
+            ModalBottomSheet(
+                onDismissRequest = { showSettingsSheet = false },
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+            ) {
+                SettingsSheet()
             }
         }
     }
@@ -610,6 +628,7 @@ private fun FavoritesOptionsSheet(
     onHiddenModeClicked: () -> Unit,
     onReorderWidgetsClicked: () -> Unit,
     onReorderFavoritesClicked: () -> Unit,
+    onSettingsClicked: () -> Unit,
 ) {
     Column(
         modifier = Modifier
@@ -659,6 +678,28 @@ private fun FavoritesOptionsSheet(
                 onClick = onReorderFavoritesClicked,
             )
         }
+
+        SheetActionRow(
+            icon = "⚙",
+            title = "Settings",
+            subtitle = "Launcher settings",
+            onClick = onSettingsClicked,
+        )
+    }
+}
+
+@Composable
+private fun SettingsSheet() {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 20.dp, end = 20.dp, bottom = 28.dp),
+    ) {
+        Text(
+            text = "Settings",
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(bottom = 8.dp),
+        )
     }
 }
 
