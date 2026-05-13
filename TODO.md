@@ -14,6 +14,9 @@
 - [ ] greeter screen idea
       @created 2026-05-13 18:53
 
+- [ ] make font options render in the font they are
+      @created 2026-05-13 19:55
+
 
 ## Completed
 
