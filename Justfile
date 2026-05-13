@@ -34,6 +34,10 @@ dist:
     mkdir -p dist
     cp app/build/outputs/apk/release/app-release.apk dist/waterfall-launcher.apk
 
+gen-release:
+    just build-release
+    just dist
+
 uninstall:
     adb uninstall org.example.launchertest
 
