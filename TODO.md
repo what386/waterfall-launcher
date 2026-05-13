@@ -5,9 +5,6 @@
 
 ## Tasks
 
-- [ ] settings page
-      @created 2026-05-13 17:32
-
 - [ ] allow hide statusbar
       @created 2026-05-13 17:32
 
@@ -33,4 +30,8 @@
 - [x] behavior: widget stacks (swipe to change widgets in a carousel)
       @created 2026-05-13 17:19
       @completed 2026-05-13 18:10
+
+- [x] settings page
+      @created 2026-05-13 17:32
+      @completed 2026-05-13 18:42
 

@@ -18,5 +18,15 @@
       "completed_at": "2026-05-13T18:10:05.100907090Z"
     },
     "version": null
+  },
+  {
+    "change": {
+      "description": "settings page",
+      "priority": "Medium",
+      "tags": [],
+      "commit": null,
+      "completed_at": "2026-05-13T18:42:04.591909038Z"
+    },
+    "version": null
   }
 ]
