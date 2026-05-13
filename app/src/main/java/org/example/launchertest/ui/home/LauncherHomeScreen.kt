@@ -31,8 +31,10 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -44,6 +46,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -151,6 +154,7 @@ private fun LauncherHomeScreen(
     val isScrubbing = remember { mutableStateOf(false) }
     val selectedRailItem = remember { mutableStateOf(buildRailLetters(emptyMap()).first()) }
     val context = LocalContext.current
+    var isRailDragging by remember { mutableStateOf(false) }
 
     var contentMode by remember { mutableStateOf(HomeContentMode.Favorites) }
 
@@ -305,6 +309,9 @@ private fun LauncherHomeScreen(
                             isScrubbing.value = false
                         }
                     },
+                    onDragStateChanged = { dragging ->
+                        isRailDragging = dragging
+                    },
                 )
             }
 
@@ -318,6 +325,31 @@ private fun LauncherHomeScreen(
                         .fillMaxHeight(0.16f)
                         .clickable { selectRailItem(railLetters.first()) },
                 )
+            }
+
+            AnimatedVisibility(
+                visible = contentMode == HomeContentMode.Apps && !state.isSearchActive && !isRailDragging,
+                enter = fadeIn(),
+                exit = fadeOut(),
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 28.dp, bottom = 40.dp),
+            ) {
+                Surface(
+                    shape = CircleShape,
+                    color = MaterialTheme.colorScheme.primary,
+                    contentColor = Color.White,
+                    tonalElevation = 0.dp,
+                    shadowElevation = 0.dp,
+                    modifier = Modifier.clickable { activateSearch() },
+                ) {
+                    Text(
+                        text = "\u2315",
+                        style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Medium,
+                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
+                    )
+                }
             }
         }
     }

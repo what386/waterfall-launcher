@@ -54,6 +54,7 @@ fun AzRailPanel(
     onScrubStart: (Char) -> Unit,
     onScrubMove: (Char) -> Unit,
     onScrubEnd: () -> Unit,
+    onDragStateChanged: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var selectedIndex by remember { mutableIntStateOf(-1) }
@@ -171,11 +172,13 @@ fun AzRailPanel(
                     touchX = down.position.x
                     railDragY = renderedRailDragY
                     isRailDragging = 1
+                    onDragStateChanged(true)
                     railDragY = shiftedRailOffsetFor(down.position.y, railDragY, railHeightPx)
 
                     var currentIdx = pickIndex(down.position.y - railDragY)
                     if (currentIdx < 0) {
                         isRailDragging = 0
+                        onDragStateChanged(false)
                         return@awaitEachGesture
                     }
 
@@ -213,6 +216,7 @@ fun AzRailPanel(
                     selectedIndex = -1
                     onScrubEnd()
                     isRailDragging = 0
+                    onDragStateChanged(false)
                     railDragY = 0f
                     touchX = railWidthPx / 2f
                 }
