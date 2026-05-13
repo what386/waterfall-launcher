@@ -20,6 +20,9 @@
 - [ ] fix behavior on phones with home buttons
       @created 2026-05-13 19:55
 
+- [ ] fix cutoff on many favorites
+      @created 2026-05-13 19:57
+
 
 ## Completed
 
