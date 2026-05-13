@@ -8,9 +8,6 @@
 - [ ] feat: rename app to 'Cascade Launcher'
       @created 2026-05-10 00:47
 
-- [ ] feat: drag-and-drop favorite reordering
-      @created 2026-05-10 02:41
-
 - [ ] behavior: widget stacks (swipe to change widgets in a carousel)
       @created 2026-05-13 17:19
 
@@ -31,4 +28,11 @@
 
 - [ ] option to change font
       @created 2026-05-13 17:33
+
+
+## Completed
+
+- [x] feat: drag-and-drop favorite reordering
+      @created 2026-05-10 02:41
+      @completed 2026-05-13 17:33
 
