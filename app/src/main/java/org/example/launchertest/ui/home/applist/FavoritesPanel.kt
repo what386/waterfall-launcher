@@ -7,6 +7,7 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -25,9 +26,9 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -63,7 +64,7 @@ import org.example.launchertest.ui.model.LauncherApp
  * Overscroll resistance: drag distance is dampened by [FAVORITES_OVERSCROLL_RESISTANCE]
  * so the panel feels springy but not free-floating.
  */
-@OptIn(ExperimentalFoundationApi::class)
+@OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
 fun FavoritesPanel(
     favorites: List<LauncherApp>,
@@ -370,38 +371,34 @@ fun FavoritesPanel(
             }
         }
 
-        DropdownMenu(
-            expanded = showPanelMenu,
-            onDismissRequest = { showPanelMenu = false },
-        ) {
-            DropdownMenuItem(
-                text = { Text(if (isHiddenMode) "Exit unhide mode" else "Unhide mode") },
-                onClick = {
-                    showPanelMenu = false
-                    if (reorderMode) {
-                        reorderMode = false
-                        commitDragReorderIfNeeded()
-                    }
-                    onHiddenModeChanged(!isHiddenMode)
-                },
-            )
-
-            DropdownMenuItem(
-                text = { Text("Add widget") },
-                onClick = {
-                    showPanelMenu = false
-                    if (reorderMode) {
-                        reorderMode = false
-                        commitDragReorderIfNeeded()
-                    }
-                    onAddWidget()
-                },
-            )
-
-            if (widgetIds.isNotEmpty()) {
-                DropdownMenuItem(
-                    text = { Text("Clear all widgets") },
-                    onClick = {
+        if (showPanelMenu) {
+            ModalBottomSheet(
+                onDismissRequest = { showPanelMenu = false },
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.onSurface,
+            ) {
+                FavoritesOptionsSheet(
+                    isHiddenMode = isHiddenMode,
+                    reorderMode = reorderMode,
+                    hasWidgets = widgetIds.isNotEmpty(),
+                    hasFavorites = orderedFavorites.isNotEmpty(),
+                    onHiddenModeClicked = {
+                        showPanelMenu = false
+                        if (reorderMode) {
+                            reorderMode = false
+                            commitDragReorderIfNeeded()
+                        }
+                        onHiddenModeChanged(!isHiddenMode)
+                    },
+                    onAddWidgetClicked = {
+                        showPanelMenu = false
+                        if (reorderMode) {
+                            reorderMode = false
+                            commitDragReorderIfNeeded()
+                        }
+                        onAddWidget()
+                    },
+                    onClearWidgetsClicked = {
                         showPanelMenu = false
                         if (reorderMode) {
                             reorderMode = false
@@ -409,13 +406,7 @@ fun FavoritesPanel(
                         }
                         widgetIds.toList().forEach(onRemoveWidget)
                     },
-                )
-            }
-
-            if (orderedFavorites.isNotEmpty()) {
-                DropdownMenuItem(
-                    text = { Text(if (reorderMode) "Done reordering" else "Reorder favorites") },
-                    onClick = {
+                    onReorderFavoritesClicked = {
                         showPanelMenu = false
                         val nextMode = !reorderMode
                         reorderMode = nextMode
@@ -425,7 +416,113 @@ fun FavoritesPanel(
                     },
                 )
             }
+        }
+    }
+}
 
+@Composable
+private fun FavoritesOptionsSheet(
+    isHiddenMode: Boolean,
+    reorderMode: Boolean,
+    hasWidgets: Boolean,
+    hasFavorites: Boolean,
+    onHiddenModeClicked: () -> Unit,
+    onAddWidgetClicked: () -> Unit,
+    onClearWidgetsClicked: () -> Unit,
+    onReorderFavoritesClicked: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(start = 20.dp, end = 20.dp, bottom = 28.dp),
+    ) {
+        Text(
+            text = "Favorites",
+            style = MaterialTheme.typography.titleMedium,
+            modifier = Modifier.padding(bottom = 8.dp),
+        )
+
+        SheetActionRow(
+            icon = if (isHiddenMode) "×" else "◌",
+            title = if (isHiddenMode) "Exit unhide mode" else "Unhide mode",
+            subtitle = if (isHiddenMode) {
+                "Return to normal apps"
+            } else {
+                "Show hidden apps and hide normal apps"
+            },
+            active = isHiddenMode,
+            onClick = onHiddenModeClicked,
+        )
+
+        SheetActionRow(
+            icon = "+",
+            title = "Add widget",
+            subtitle = "Place a widget above Favorites",
+            onClick = onAddWidgetClicked,
+        )
+
+        if (hasWidgets) {
+            SheetActionRow(
+                icon = "−",
+                title = "Clear all widgets",
+                subtitle = "Remove every widget from Favorites",
+                onClick = onClearWidgetsClicked,
+            )
+        }
+
+        if (hasFavorites) {
+            SheetActionRow(
+                icon = "↕",
+                title = if (reorderMode) "Done reordering" else "Reorder favorites",
+                subtitle = if (reorderMode) {
+                    "Save the current favorite order"
+                } else {
+                    "Drag favorites into a custom order"
+                },
+                active = reorderMode,
+                onClick = onReorderFavoritesClicked,
+            )
+        }
+    }
+}
+
+@Composable
+private fun SheetActionRow(
+    icon: String,
+    title: String,
+    subtitle: String,
+    active: Boolean = false,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = icon,
+            color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.size(40.dp),
+        )
+
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = 12.dp),
+        ) {
+            Text(
+                text = title,
+                color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Text(
+                text = subtitle,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f),
+                style = MaterialTheme.typography.bodyMedium,
+            )
         }
     }
 }
