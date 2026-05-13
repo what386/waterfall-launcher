@@ -164,8 +164,9 @@ private fun LauncherHomeScreen(
 
     val coroutineScope = rememberCoroutineScope()
 
-    val railLetters = remember(state.listLayout.letterJumpTargets) {
+    val railLetters = remember(state.isHiddenMode, state.listLayout.letterJumpTargets) {
         buildRailLetters(state.listLayout.letterJumpTargets)
+            .filterNot { state.isHiddenMode && isFavoritesRailItem(it) }
     }
 
     fun selectRailItem(item: Char) {
@@ -306,7 +307,7 @@ private fun LauncherHomeScreen(
             }
 
             AnimatedVisibility(
-                visible = !state.isSearchActive,
+                visible = !state.isSearchActive && railLetters.isNotEmpty(),
                 enter = fadeIn(),
                 exit = fadeOut(),
                 modifier = Modifier.align(Alignment.CenterEnd),
@@ -333,7 +334,7 @@ private fun LauncherHomeScreen(
                 )
             }
 
-            if (!state.isSearchActive) {
+            if (!state.isSearchActive && !state.isHiddenMode) {
                 Box(
                     modifier = Modifier
                         .align(Alignment.CenterEnd)
