@@ -449,6 +449,16 @@ fun FavoritesPanel(
             if (favorites.isNotEmpty()) {
                 SectionHeader(
                     text = "FAVORITES",
+                    topPaddingDp = if (orderedWidgetStacks.isNotEmpty()) {
+                        0f
+                    } else {
+                        APP_LIST_SECTION_HEADER_TOP_PADDING_DP
+                    },
+                    bottomPaddingDp = if (orderedWidgetStacks.isNotEmpty()) {
+                        0f
+                    } else {
+                        APP_LIST_SECTION_HEADER_BOTTOM_PADDING_DP
+                    },
                     modifier = Modifier.graphicsLayer { alpha = favAlpha },
                 )
 
@@ -947,12 +957,12 @@ private fun WidgetStackContent(
         if (pageCount > 1) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
-                modifier = Modifier.padding(top = 8.dp),
+                modifier = Modifier.padding(top = 2.dp),
             ) {
                 repeat(pageCount) { index ->
                     Box(
                         modifier = Modifier
-                            .size(if (pagerState.currentPage == index) 7.dp else 5.dp)
+                            .size(if (pagerState.currentPage == index) 5.dp else 4.dp)
                             .background(
                                 color = Color.White.copy(
                                     alpha = if (pagerState.currentPage == index) 0.82f else 0.38f,

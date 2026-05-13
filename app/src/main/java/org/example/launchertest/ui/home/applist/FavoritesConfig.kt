@@ -7,7 +7,7 @@ internal const val APP_LIST_FAVORITES_BOTTOM_SPACER_DP = 24f
 internal const val APP_WIDGET_ROW_START_PADDING_DP = 20f
 internal const val APP_WIDGET_ROW_END_PADDING_DP = 20f
 internal const val APP_WIDGET_ROW_TOP_PADDING_DP = 8f
-internal const val APP_WIDGET_ROW_BOTTOM_PADDING_DP = 4f
+internal const val APP_WIDGET_ROW_BOTTOM_PADDING_DP = 0f
 internal const val APP_WIDGET_MIN_HEIGHT_DP = 120f
 
 internal const val ADD_WIDGET_START_PADDING_DP = 12f

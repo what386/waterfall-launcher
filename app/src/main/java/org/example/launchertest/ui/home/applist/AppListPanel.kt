@@ -229,6 +229,8 @@ fun AppListPanel(
 @Composable
 internal fun SectionHeader(
     text: String,
+    topPaddingDp: Float = APP_LIST_SECTION_HEADER_TOP_PADDING_DP,
+    bottomPaddingDp: Float = APP_LIST_SECTION_HEADER_BOTTOM_PADDING_DP,
     modifier: Modifier = Modifier,
 ) {
     Text(
@@ -239,8 +241,8 @@ internal fun SectionHeader(
         ),
         modifier = modifier.padding(
             start = APP_LIST_SECTION_HEADER_START_PADDING_DP.dp,
-            top = APP_LIST_SECTION_HEADER_TOP_PADDING_DP.dp,
-            bottom = APP_LIST_SECTION_HEADER_BOTTOM_PADDING_DP.dp,
+            top = topPaddingDp.dp,
+            bottom = bottomPaddingDp.dp,
         ),
     )
 }
