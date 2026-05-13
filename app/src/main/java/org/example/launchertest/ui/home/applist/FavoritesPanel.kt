@@ -9,7 +9,6 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -439,10 +438,6 @@ fun FavoritesPanel(
                 }
             }
 
-            if (orderedWidgetStacks.isNotEmpty()) {
-                Spacer(modifier = Modifier.height(ADD_WIDGET_BOTTOM_PADDING_DP.dp))
-            }
-
             if (widgetReorderMode) {
                 AddWidgetEditRow(
                     onClick = onAddWidget,
@@ -706,6 +701,7 @@ private fun WidgetStackRow(
         widgetStack = widgetStack,
         createWidgetView = createWidgetView,
         getWidgetMinHeightDp = getWidgetMinHeightDp,
+        showAddPlaceholder = false,
         modifier = modifier
             .fillMaxWidth(),
     )
@@ -769,7 +765,7 @@ private fun ReorderableWidgetStackRow(
     modifier: Modifier = Modifier,
 ) {
     var showContextMenu by remember { mutableStateOf(false) }
-    val pagerState = rememberPagerState(pageCount = { widgetStack.widgetIds.size })
+    val pagerState = rememberPagerState(pageCount = { widgetStack.widgetIds.size + 1 })
     val currentWidgetId = widgetStack.widgetIds.getOrNull(pagerState.currentPage)
     val settleSpec = spring<Float>(
         stiffness = FAVORITES_REORDER_SETTLE_STIFFNESS,
@@ -817,10 +813,14 @@ private fun ReorderableWidgetStackRow(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
                 onClick = {},
-                onLongClick = { showContextMenu = true },
+                onLongClick = {
+                    if (currentWidgetId != null) {
+                        showContextMenu = true
+                    }
+                },
             )
             .pointerInput(widgetStack) {
-                detectDragGestures(
+                detectVerticalDragGestures(
                     onDragStart = {
                         onDragStart()
                     },
@@ -830,9 +830,9 @@ private fun ReorderableWidgetStackRow(
                     onDragCancel = {
                         onDragEnd()
                     },
-                    onDrag = { change, dragAmount ->
+                    onVerticalDrag = { change, dragAmount ->
                         change.consume()
-                        onDragDelta(dragAmount.y)
+                        onDragDelta(dragAmount)
                     },
                 )
             }
@@ -851,6 +851,8 @@ private fun ReorderableWidgetStackRow(
             widgetStack = widgetStack,
             createWidgetView = createWidgetView,
             getWidgetMinHeightDp = getWidgetMinHeightDp,
+            showAddPlaceholder = true,
+            onAddWidgetToStack = { onAddWidgetToStack(stackIndex) },
             pagerState = pagerState,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -862,23 +864,17 @@ private fun ReorderableWidgetStackRow(
                 .padding(top = 12.dp, end = 12.dp),
         )
 
-        WidgetEditButton(
-            text = "Delete",
-            onClick = {
-                currentWidgetId?.let(onRemoveWidget)
-            },
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .padding(end = 12.dp, bottom = 12.dp),
-        )
-
-        WidgetEditButton(
-            text = "+",
-            onClick = { onAddWidgetToStack(stackIndex) },
-            modifier = Modifier
-                .align(Alignment.BottomStart)
-                .padding(start = 12.dp, bottom = 12.dp),
-        )
+        if (currentWidgetId != null) {
+            WidgetEditButton(
+                text = "Delete",
+                onClick = {
+                    currentWidgetId.let(onRemoveWidget)
+                },
+                modifier = Modifier
+                    .align(Alignment.BottomEnd)
+                    .padding(end = 12.dp, bottom = 12.dp),
+            )
+        }
 
         DropdownMenu(
             expanded = showContextMenu,
@@ -891,13 +887,6 @@ private fun ReorderableWidgetStackRow(
                     currentWidgetId?.let(onRemoveWidget)
                 },
             )
-            DropdownMenuItem(
-                text = { Text("Add widget to stack") },
-                onClick = {
-                    showContextMenu = false
-                    onAddWidgetToStack(stackIndex)
-                },
-            )
         }
     }
 }
@@ -908,6 +897,8 @@ private fun WidgetStackContent(
     widgetStack: WidgetStack,
     createWidgetView: (Int) -> AppWidgetHostView?,
     getWidgetMinHeightDp: (Int) -> Int?,
+    showAddPlaceholder: Boolean,
+    onAddWidgetToStack: (() -> Unit)? = null,
     modifier: Modifier = Modifier,
     pagerState: androidx.compose.foundation.pager.PagerState = rememberPagerState(
         pageCount = { widgetStack.widgetIds.size },
@@ -934,21 +925,31 @@ private fun WidgetStackContent(
             state = pagerState,
             modifier = Modifier.fillMaxWidth(),
         ) { page ->
-            val appWidgetId = widgetStack.widgetIds[page]
-            AndroidView(
-                factory = { context -> createWidgetView(appWidgetId) ?: FrameLayout(context) },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(stackHeightDp.dp),
-            )
+            val appWidgetId = widgetStack.widgetIds.getOrNull(page)
+            if (appWidgetId != null) {
+                AndroidView(
+                    factory = { context -> createWidgetView(appWidgetId) ?: FrameLayout(context) },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(stackHeightDp.dp),
+                )
+            } else if (showAddPlaceholder && onAddWidgetToStack != null) {
+                AddWidgetToStackPlaceholder(
+                    onClick = onAddWidgetToStack,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(stackHeightDp.dp),
+                )
+            }
         }
 
-        if (widgetStack.widgetIds.size > 1) {
+        val pageCount = widgetStack.widgetIds.size + if (showAddPlaceholder) 1 else 0
+        if (pageCount > 1) {
             Row(
                 horizontalArrangement = Arrangement.spacedBy(6.dp),
                 modifier = Modifier.padding(top = 8.dp),
             ) {
-                widgetStack.widgetIds.forEachIndexed { index, _ ->
+                repeat(pageCount) { index ->
                     Box(
                         modifier = Modifier
                             .size(if (pagerState.currentPage == index) 7.dp else 5.dp)
@@ -961,6 +962,37 @@ private fun WidgetStackContent(
                     )
                 }
             }
+        }
+    }
+}
+
+@Composable
+private fun AddWidgetToStackPlaceholder(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier
+            .background(
+                color = Color.White.copy(alpha = 0.08f),
+                shape = MaterialTheme.shapes.medium,
+            )
+            .clickable(onClick = onClick),
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally,
+        ) {
+            Text(
+                text = "+",
+                color = Color.White.copy(alpha = 0.9f),
+                style = MaterialTheme.typography.displaySmall,
+            )
+            Text(
+                text = "Add widget",
+                color = Color.White.copy(alpha = 0.72f),
+                style = MaterialTheme.typography.bodyMedium,
+            )
         }
     }
 }
