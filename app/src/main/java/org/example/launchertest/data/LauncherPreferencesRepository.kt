@@ -7,6 +7,10 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import org.example.launchertest.widgets.WidgetStack
+import org.example.launchertest.widgets.decodeWidgetStacks
+import org.example.launchertest.widgets.encodeWidgetStacks
+import org.example.launchertest.widgets.widgetStacksFromWidgetIds
 
 private val Context.launcherPrefs by preferencesDataStore(name = "launcher_prefs")
 
@@ -17,6 +21,7 @@ class LauncherPreferencesRepository(
     private val favoriteOrderKey = stringPreferencesKey("favorite_order")
     private val hiddenKey = stringSetPreferencesKey("hidden_components")
     private val widgetIdsKey = stringPreferencesKey("widget_ids")
+    private val widgetStacksKey = stringPreferencesKey("widget_stacks")
 
     val favorites: Flow<Set<String>> = context.launcherPrefs.data.map { prefs ->
         prefs[favoritesKey] ?: emptySet()
@@ -35,6 +40,12 @@ class LauncherPreferencesRepository(
             ?.split(",")
             ?.mapNotNull { rawId -> rawId.toIntOrNull() }
             ?: emptyList()
+    }
+
+    val widgetStacks: Flow<List<WidgetStack>> = context.launcherPrefs.data.map { prefs ->
+        prefs[widgetStacksKey]
+            ?.let(::decodeWidgetStacks)
+            ?: widgetStacksFromWidgetIds(prefs[widgetIdsKey].toWidgetIdList())
     }
 
     suspend fun toggleFavorite(componentId: String) {
@@ -87,25 +98,62 @@ class LauncherPreferencesRepository(
 
     suspend fun addWidgetId(appWidgetId: Int) {
         context.launcherPrefs.edit { prefs ->
-            val current = prefs[widgetIdsKey].toWidgetIdList()
-            if (appWidgetId !in current) {
-                prefs[widgetIdsKey] = (current + appWidgetId).joinToString(",")
+            val stacks = currentWidgetStacks(prefs) + WidgetStack(listOf(appWidgetId))
+            prefs.setWidgetStacks(stacks)
+        }
+    }
+
+    suspend fun addWidgetIdToStack(appWidgetId: Int, stackIndex: Int) {
+        context.launcherPrefs.edit { prefs ->
+            val stacks = currentWidgetStacks(prefs).toMutableList()
+            if (stackIndex !in stacks.indices) {
+                stacks.add(WidgetStack(listOf(appWidgetId)))
+            } else if (appWidgetId !in stacks[stackIndex].widgetIds) {
+                stacks[stackIndex] = stacks[stackIndex].copy(
+                    widgetIds = stacks[stackIndex].widgetIds + appWidgetId,
+                )
             }
+            prefs.setWidgetStacks(stacks)
         }
     }
 
     suspend fun removeWidgetId(appWidgetId: Int) {
         context.launcherPrefs.edit { prefs ->
-            val updated = prefs[widgetIdsKey].toWidgetIdList()
-                .filterNot { it == appWidgetId }
-            prefs[widgetIdsKey] = updated.joinToString(",")
+            val stacks = currentWidgetStacks(prefs)
+                .map { stack -> stack.copy(widgetIds = stack.widgetIds.filterNot { it == appWidgetId }) }
+                .filter { stack -> stack.widgetIds.isNotEmpty() }
+            prefs.setWidgetStacks(stacks)
         }
     }
 
     suspend fun setWidgetIds(appWidgetIds: List<Int>) {
         context.launcherPrefs.edit { prefs ->
-            prefs[widgetIdsKey] = appWidgetIds.distinct().joinToString(",")
+            prefs.setWidgetStacks(widgetStacksFromWidgetIds(appWidgetIds))
         }
+    }
+
+    suspend fun setWidgetStacks(stacks: List<WidgetStack>) {
+        context.launcherPrefs.edit { prefs ->
+            prefs.setWidgetStacks(stacks)
+        }
+    }
+
+    private fun currentWidgetStacks(
+        prefs: androidx.datastore.preferences.core.Preferences,
+    ): List<WidgetStack> {
+        return prefs[widgetStacksKey]
+            ?.let(::decodeWidgetStacks)
+            ?: widgetStacksFromWidgetIds(prefs[widgetIdsKey].toWidgetIdList())
+    }
+
+    private fun androidx.datastore.preferences.core.MutablePreferences.setWidgetStacks(
+        stacks: List<WidgetStack>,
+    ) {
+        val cleanedStacks = stacks
+            .map { stack -> stack.copy(widgetIds = stack.widgetIds.distinct()) }
+            .filter { stack -> stack.widgetIds.isNotEmpty() }
+        this[widgetStacksKey] = encodeWidgetStacks(cleanedStacks)
+        this[widgetIdsKey] = cleanedStacks.flatMap { it.widgetIds }.distinct().joinToString(",")
     }
 
     private fun String?.toWidgetIdList(): List<Int> {

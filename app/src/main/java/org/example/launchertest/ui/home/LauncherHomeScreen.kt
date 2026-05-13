@@ -55,6 +55,7 @@ import kotlinx.coroutines.launch
 import org.example.launchertest.domain.LauncherInteractor
 import org.example.launchertest.ui.model.LauncherApp
 import org.example.launchertest.widgets.LauncherWidgetController
+import org.example.launchertest.widgets.WidgetStack
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.ui.graphics.toArgb
 
@@ -98,7 +99,7 @@ fun LauncherHomeRoute(
         factory = LauncherHomeViewModelFactory(interactor),
     )
     val state by vm.uiState.collectAsStateWithLifecycle()
-    val widgetIds by widgetController.widgetIds.collectAsStateWithLifecycle()
+    val widgetStacks by widgetController.widgetStacks.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
 
     val density = LocalDensity.current
@@ -116,7 +117,7 @@ fun LauncherHomeRoute(
 
     LauncherHomeScreen(
         state = state,
-        widgetIds = widgetIds,
+        widgetStacks = widgetStacks,
         listState = listState,
         categoryPinOffsetPx = categoryPinOffsetPx,
         onQueryChanged = vm::onQueryChanged,
@@ -128,9 +129,10 @@ fun LauncherHomeRoute(
         onUnhideApp = vm::onUnhideApp,
         onReorderFavorites = vm::onFavoriteOrderChanged,
         onLetterSelected = vm::onLetterSelected,
-        onAddWidget = widgetController::addWidget,
+        onAddWidget = widgetController::addWidgetToNewStack,
+        onAddWidgetToStack = widgetController::addWidgetToStack,
         onRemoveWidget = widgetController::removeWidget,
-        onReorderWidgets = widgetController::reorderWidgets,
+        onReorderWidgetStacks = widgetController::reorderWidgetStacks,
         createWidgetView = widgetController::createWidgetView,
     )
 }
@@ -139,7 +141,7 @@ fun LauncherHomeRoute(
 @Composable
 private fun LauncherHomeScreen(
     state: LauncherHomeUiState,
-    widgetIds: List<Int>,
+    widgetStacks: List<WidgetStack>,
     listState: androidx.compose.foundation.lazy.LazyListState,
     categoryPinOffsetPx: Int,
     onQueryChanged: (String) -> Unit,
@@ -152,8 +154,9 @@ private fun LauncherHomeScreen(
     onReorderFavorites: (List<org.example.launchertest.ui.model.LauncherApp>) -> Unit,
     onLetterSelected: (Char) -> Unit,
     onAddWidget: () -> Unit,
+    onAddWidgetToStack: (Int) -> Unit,
     onRemoveWidget: (Int) -> Unit,
-    onReorderWidgets: (List<Int>) -> Unit,
+    onReorderWidgetStacks: (List<WidgetStack>) -> Unit,
     createWidgetView: (Int) -> android.appwidget.AppWidgetHostView?,
 ) {
     val scrubbingLetter = remember { mutableStateOf<Char?>(null) }
@@ -182,7 +185,7 @@ private fun LauncherHomeScreen(
             coroutineScope.launch {
                 listState.scrollToItem(
                     index = if (state.listLayout.favorites.isNotEmpty()) {
-                        favoritesHeaderIndex(widgetIds.size)
+                        favoritesHeaderIndex(widgetStacks.size)
                     } else {
                         FirstHomeContentIndex
                     },
@@ -268,7 +271,7 @@ private fun LauncherHomeScreen(
             ) { mode ->
                 AppListPanel(
                     listLayout = state.listLayout,
-                    widgetIds = widgetIds,
+                    widgetStacks = widgetStacks,
                     scrubbingLetter = scrubbingLetter,
                     isScrubbing = isScrubbing,
                     isHiddenMode = state.isHiddenMode,
@@ -283,8 +286,9 @@ private fun LauncherHomeScreen(
                     onUnhideApp = onUnhideApp,
                     onReorderFavorites = onReorderFavorites,
                     onAddWidget = onAddWidget,
+                    onAddWidgetToStack = onAddWidgetToStack,
                     onRemoveWidget = onRemoveWidget,
-                    onReorderWidgets = onReorderWidgets,
+                    onReorderWidgetStacks = onReorderWidgetStacks,
                     createWidgetView = createWidgetView,
                     modifier = Modifier.fillMaxSize(),
                 )

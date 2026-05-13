@@ -13,6 +13,8 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,6 +28,7 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -60,6 +63,7 @@ import androidx.compose.ui.zIndex
 import kotlinx.coroutines.launch
 import org.example.launchertest.ui.home.shared.rememberAppIcon
 import org.example.launchertest.ui.model.LauncherApp
+import org.example.launchertest.widgets.WidgetStack
 
 /**
  * The favorites panel: widgets + favorite app rows, all in a vertically scrollable column
@@ -72,7 +76,7 @@ import org.example.launchertest.ui.model.LauncherApp
 @Composable
 fun FavoritesPanel(
     favorites: List<LauncherApp>,
-    widgetIds: List<Int>,
+    widgetStacks: List<WidgetStack>,
     favAlpha: Float,
     isSearchActive: Boolean,
     isHiddenMode: Boolean,
@@ -82,8 +86,9 @@ fun FavoritesPanel(
     onReorderFavorites: (List<LauncherApp>) -> Unit,
     onSearchActivated: () -> Unit,
     onAddWidget: () -> Unit,
+    onAddWidgetToStack: (Int) -> Unit,
     onRemoveWidget: (Int) -> Unit,
-    onReorderWidgets: (List<Int>) -> Unit,
+    onReorderWidgetStacks: (List<WidgetStack>) -> Unit,
     createWidgetView: (Int) -> AppWidgetHostView?,
     modifier: Modifier = Modifier,
 ) {
@@ -103,12 +108,12 @@ fun FavoritesPanel(
     var activeDragOffsetY by remember { mutableFloatStateOf(0f) }
     val rowMetrics = remember { mutableStateMapOf<String, FavoriteRowMetrics>() }
     val orderedFavorites = remember { mutableStateListOf<LauncherApp>() }
-    var activeDragWidgetId by remember { mutableIntStateOf(-1) }
+    var activeDragWidgetStackId by remember { mutableIntStateOf(-1) }
     var activeDragWidgetStartIndex by remember { mutableIntStateOf(-1) }
     var activeDragWidgetTargetIndex by remember { mutableIntStateOf(-1) }
     var activeDragWidgetOffsetY by remember { mutableFloatStateOf(0f) }
     val widgetRowMetrics = remember { mutableStateMapOf<Int, FavoriteRowMetrics>() }
-    val orderedWidgetIds = remember { mutableStateListOf<Int>() }
+    val orderedWidgetStacks = remember { mutableStateListOf<WidgetStack>() }
 
     LaunchedEffect(favorites) {
         val incomingById = favorites.associateBy(::favoriteComponentId)
@@ -119,12 +124,13 @@ fun FavoritesPanel(
         orderedFavorites.addAll(kept + appended)
     }
 
-    LaunchedEffect(widgetIds) {
-        val incomingIds = widgetIds.toSet()
-        val kept = orderedWidgetIds.filter { it in incomingIds }
-        val appended = widgetIds.filter { it !in orderedWidgetIds.toSet() }
-        orderedWidgetIds.clear()
-        orderedWidgetIds.addAll(kept + appended)
+    LaunchedEffect(widgetStacks) {
+        val incomingById = widgetStacks.associateBy(::widgetStackId)
+        val currentIds = orderedWidgetStacks.map(::widgetStackId)
+        val kept = currentIds.mapNotNull(incomingById::get)
+        val appended = widgetStacks.filter { widgetStackId(it) !in currentIds.toSet() }
+        orderedWidgetStacks.clear()
+        orderedWidgetStacks.addAll(kept + appended)
     }
 
     fun persistFavoriteOrder() {
@@ -132,7 +138,7 @@ fun FavoritesPanel(
     }
 
     fun persistWidgetOrder() {
-        onReorderWidgets(orderedWidgetIds.toList())
+        onReorderWidgetStacks(orderedWidgetStacks.toList())
     }
 
     fun clearDragState() {
@@ -166,44 +172,44 @@ fun FavoritesPanel(
     }
 
     fun clearWidgetDragState() {
-        activeDragWidgetId = -1
+        activeDragWidgetStackId = -1
         activeDragWidgetStartIndex = -1
         activeDragWidgetTargetIndex = -1
         activeDragWidgetOffsetY = 0f
     }
 
     fun commitWidgetDragReorderIfNeeded() {
-        val activeWidgetId = activeDragWidgetId
-        if (activeWidgetId == -1 || activeDragWidgetTargetIndex == -1) {
+        val activeStackId = activeDragWidgetStackId
+        if (activeStackId == -1 || activeDragWidgetTargetIndex == -1) {
             clearWidgetDragState()
             return
         }
 
-        val currentIndex = orderedWidgetIds.indexOf(activeWidgetId)
+        val currentIndex = orderedWidgetStacks.indexOfFirst { stack -> widgetStackId(stack) == activeStackId }
 
         if (currentIndex != -1 &&
             currentIndex != activeDragWidgetTargetIndex &&
-            activeDragWidgetTargetIndex in orderedWidgetIds.indices
+            activeDragWidgetTargetIndex in orderedWidgetStacks.indices
         ) {
-            val moved = orderedWidgetIds.removeAt(currentIndex)
-            orderedWidgetIds.add(activeDragWidgetTargetIndex, moved)
+            val moved = orderedWidgetStacks.removeAt(currentIndex)
+            orderedWidgetStacks.add(activeDragWidgetTargetIndex, moved)
             persistWidgetOrder()
         }
 
         clearWidgetDragState()
     }
 
-    fun updateWidgetDragTarget(appWidgetId: Int) {
+    fun updateWidgetDragTarget(stackId: Int) {
         val startIndex = activeDragWidgetStartIndex
-        if (startIndex !in orderedWidgetIds.indices) return
+        if (startIndex !in orderedWidgetStacks.indices) return
 
-        val activeMetrics = widgetRowMetrics[appWidgetId] ?: return
+        val activeMetrics = widgetRowMetrics[stackId] ?: return
         val draggedCenterY = activeMetrics.centerY + activeDragWidgetOffsetY
         var targetIndex = startIndex
 
-        if (activeDragWidgetOffsetY > 0f && startIndex < orderedWidgetIds.lastIndex) {
-            for (index in (startIndex + 1)..orderedWidgetIds.lastIndex) {
-                val candidateId = orderedWidgetIds[index]
+        if (activeDragWidgetOffsetY > 0f && startIndex < orderedWidgetStacks.lastIndex) {
+            for (index in (startIndex + 1)..orderedWidgetStacks.lastIndex) {
+                val candidateId = widgetStackId(orderedWidgetStacks[index])
                 val metrics = widgetRowMetrics[candidateId] ?: continue
                 val replaceThresholdY = metrics.topY +
                     (metrics.height * FAVORITES_REORDER_SWAP_FRACTION_OF_ROW)
@@ -214,7 +220,7 @@ fun FavoritesPanel(
             }
         } else if (activeDragWidgetOffsetY < 0f && startIndex > 0) {
             for (index in (startIndex - 1) downTo 0) {
-                val candidateId = orderedWidgetIds[index]
+                val candidateId = widgetStackId(orderedWidgetStacks[index])
                 val metrics = widgetRowMetrics[candidateId] ?: continue
                 val replaceThresholdY = metrics.topY +
                     (metrics.height * (1f - FAVORITES_REORDER_SWAP_FRACTION_OF_ROW))
@@ -366,12 +372,13 @@ fun FavoritesPanel(
         ) {
             Spacer(modifier = Modifier.height(FAVORITES_PANEL_TOP_MARGIN_DP.dp))
 
-            orderedWidgetIds.forEach { appWidgetId ->
-                key(appWidgetId) {
-                    val index = orderedWidgetIds.indexOf(appWidgetId)
-                    val activeRowHeight = widgetRowMetrics[activeDragWidgetId]?.height.orZero()
+            orderedWidgetStacks.forEach { widgetStack ->
+                val stackId = widgetStackId(widgetStack)
+                key(stackId) {
+                    val index = orderedWidgetStacks.indexOfFirst { stack -> widgetStackId(stack) == stackId }
+                    val activeRowHeight = widgetRowMetrics[activeDragWidgetStackId]?.height.orZero()
                     val laneShiftY = when {
-                        activeDragWidgetId == -1 || index == -1 -> 0f
+                        activeDragWidgetStackId == -1 || index == -1 -> 0f
                         index == activeDragWidgetStartIndex -> 0f
                         activeDragWidgetStartIndex < activeDragWidgetTargetIndex &&
                             index in (activeDragWidgetStartIndex + 1)..activeDragWidgetTargetIndex -> -activeRowHeight
@@ -381,44 +388,48 @@ fun FavoritesPanel(
                     }
 
                     if (widgetReorderMode) {
-                        ReorderableWidgetRow(
-                            appWidgetId = appWidgetId,
-                            isActiveDrag = activeDragWidgetId == appWidgetId,
-                            dragOffsetY = if (activeDragWidgetId == appWidgetId) {
+                        ReorderableWidgetStackRow(
+                            widgetStack = widgetStack,
+                            stackIndex = index,
+                            isActiveDrag = activeDragWidgetStackId == stackId,
+                            dragOffsetY = if (activeDragWidgetStackId == stackId) {
                                 activeDragWidgetOffsetY
                             } else {
                                 0f
                             },
                             laneShiftY = laneShiftY,
                             createWidgetView = createWidgetView,
+                            onAddWidgetToStack = onAddWidgetToStack,
                             onRemoveWidget = onRemoveWidget,
                             onDragStart = {
-                                val freshIndex = orderedWidgetIds.indexOf(appWidgetId)
-                                if (freshIndex == -1) return@ReorderableWidgetRow
+                                val freshIndex = orderedWidgetStacks.indexOfFirst { stack ->
+                                    widgetStackId(stack) == stackId
+                                }
+                                if (freshIndex == -1) return@ReorderableWidgetStackRow
 
-                                activeDragWidgetId = appWidgetId
+                                activeDragWidgetStackId = stackId
                                 activeDragWidgetStartIndex = freshIndex
                                 activeDragWidgetTargetIndex = freshIndex
                                 activeDragWidgetOffsetY = 0f
                             },
                             onDragDelta = { deltaY ->
-                                if (activeDragWidgetId != appWidgetId) return@ReorderableWidgetRow
+                                if (activeDragWidgetStackId != stackId) return@ReorderableWidgetStackRow
                                 activeDragWidgetOffsetY += deltaY
-                                updateWidgetDragTarget(appWidgetId)
+                                updateWidgetDragTarget(stackId)
                             },
                             onDragEnd = {
-                                if (activeDragWidgetId == appWidgetId) {
+                                if (activeDragWidgetStackId == stackId) {
                                     commitWidgetDragReorderIfNeeded()
                                 }
                             },
                             onMeasured = { metrics ->
-                                widgetRowMetrics[appWidgetId] = metrics
+                                widgetRowMetrics[stackId] = metrics
                             },
                             modifier = Modifier.graphicsLayer { alpha = favAlpha },
                         )
                     } else {
-                        WidgetRow(
-                            appWidgetId = appWidgetId,
+                        WidgetStackRow(
+                            widgetStack = widgetStack,
                             createWidgetView = createWidgetView,
                             modifier = Modifier.graphicsLayer { alpha = favAlpha },
                         )
@@ -426,7 +437,7 @@ fun FavoritesPanel(
                 }
             }
 
-            if (orderedWidgetIds.isNotEmpty()) {
+            if (orderedWidgetStacks.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(ADD_WIDGET_BOTTOM_PADDING_DP.dp))
             }
 
@@ -511,7 +522,7 @@ fun FavoritesPanel(
                     }
                 }
                 Spacer(modifier = Modifier.height(APP_LIST_FAVORITES_BOTTOM_SPACER_DP.dp))
-            } else if (orderedWidgetIds.isEmpty()) {
+            } else if (orderedWidgetStacks.isEmpty()) {
                 Text(
                     text = "No favorites yet. Long-press any app and choose Favorite.",
                     modifier = Modifier
@@ -683,28 +694,17 @@ private fun SheetActionRow(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun WidgetRow(
-    appWidgetId: Int,
+private fun WidgetStackRow(
+    widgetStack: WidgetStack,
     createWidgetView: (Int) -> AppWidgetHostView?,
     modifier: Modifier = Modifier,
 ) {
-    Column(
+    WidgetStackContent(
+        widgetStack = widgetStack,
+        createWidgetView = createWidgetView,
         modifier = modifier
-            .fillMaxWidth()
-            .padding(
-                start = APP_WIDGET_ROW_START_PADDING_DP.dp,
-                end = APP_WIDGET_ROW_END_PADDING_DP.dp,
-                top = APP_WIDGET_ROW_TOP_PADDING_DP.dp,
-                bottom = APP_WIDGET_ROW_BOTTOM_PADDING_DP.dp,
-            ),
-    ) {
-        AndroidView(
-            factory = { context -> createWidgetView(appWidgetId) ?: FrameLayout(context) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = APP_WIDGET_MIN_HEIGHT_DP.dp),
-        )
-    }
+            .fillMaxWidth(),
+    )
 }
 
 @Composable
@@ -734,11 +734,11 @@ private fun AddWidgetEditRow(
             modifier = Modifier.padding(start = 12.dp),
         ) {
             Text(
-                text = "Add widget",
+                text = "Add stack",
                 style = MaterialTheme.typography.titleMedium,
             )
             Text(
-                text = "Place another widget above Favorites",
+                text = "Place a new widget stack above Favorites",
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f),
                 style = MaterialTheme.typography.bodyMedium,
             )
@@ -748,12 +748,14 @@ private fun AddWidgetEditRow(
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun ReorderableWidgetRow(
-    appWidgetId: Int,
+private fun ReorderableWidgetStackRow(
+    widgetStack: WidgetStack,
+    stackIndex: Int,
     isActiveDrag: Boolean,
     dragOffsetY: Float,
     laneShiftY: Float,
     createWidgetView: (Int) -> AppWidgetHostView?,
+    onAddWidgetToStack: (Int) -> Unit,
     onRemoveWidget: (Int) -> Unit,
     onDragStart: () -> Unit,
     onDragDelta: (Float) -> Unit,
@@ -762,6 +764,8 @@ private fun ReorderableWidgetRow(
     modifier: Modifier = Modifier,
 ) {
     var showContextMenu by remember { mutableStateOf(false) }
+    val pagerState = rememberPagerState(pageCount = { widgetStack.widgetIds.size })
+    val currentWidgetId = widgetStack.widgetIds.getOrNull(pagerState.currentPage)
     val settleSpec = spring<Float>(
         stiffness = FAVORITES_REORDER_SETTLE_STIFFNESS,
         dampingRatio = FAVORITES_REORDER_SETTLE_DAMPING,
@@ -810,7 +814,7 @@ private fun ReorderableWidgetRow(
                 onClick = {},
                 onLongClick = { showContextMenu = true },
             )
-            .pointerInput(appWidgetId) {
+            .pointerInput(widgetStack) {
                 detectDragGestures(
                     onDragStart = {
                         onDragStart()
@@ -838,11 +842,11 @@ private fun ReorderableWidgetRow(
                 bottom = APP_WIDGET_ROW_BOTTOM_PADDING_DP.dp,
             ),
     ) {
-        AndroidView(
-            factory = { context -> createWidgetView(appWidgetId) ?: FrameLayout(context) },
-            modifier = Modifier
-                .fillMaxWidth()
-                .heightIn(min = APP_WIDGET_MIN_HEIGHT_DP.dp),
+        WidgetStackContent(
+            widgetStack = widgetStack,
+            createWidgetView = createWidgetView,
+            pagerState = pagerState,
+            modifier = Modifier.fillMaxWidth(),
         )
 
         EditDragHandle(
@@ -854,10 +858,20 @@ private fun ReorderableWidgetRow(
 
         WidgetEditButton(
             text = "Delete",
-            onClick = { onRemoveWidget(appWidgetId) },
+            onClick = {
+                currentWidgetId?.let(onRemoveWidget)
+            },
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(end = 12.dp, bottom = 12.dp),
+        )
+
+        WidgetEditButton(
+            text = "+",
+            onClick = { onAddWidgetToStack(stackIndex) },
+            modifier = Modifier
+                .align(Alignment.BottomStart)
+                .padding(start = 12.dp, bottom = 12.dp),
         )
 
         DropdownMenu(
@@ -868,9 +882,70 @@ private fun ReorderableWidgetRow(
                 text = { Text("Remove widget") },
                 onClick = {
                     showContextMenu = false
-                    onRemoveWidget(appWidgetId)
+                    currentWidgetId?.let(onRemoveWidget)
                 },
             )
+            DropdownMenuItem(
+                text = { Text("Add widget to stack") },
+                onClick = {
+                    showContextMenu = false
+                    onAddWidgetToStack(stackIndex)
+                },
+            )
+        }
+    }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun WidgetStackContent(
+    widgetStack: WidgetStack,
+    createWidgetView: (Int) -> AppWidgetHostView?,
+    modifier: Modifier = Modifier,
+    pagerState: androidx.compose.foundation.pager.PagerState = rememberPagerState(
+        pageCount = { widgetStack.widgetIds.size },
+    ),
+) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = modifier.padding(
+            start = APP_WIDGET_ROW_START_PADDING_DP.dp,
+            end = APP_WIDGET_ROW_END_PADDING_DP.dp,
+            top = APP_WIDGET_ROW_TOP_PADDING_DP.dp,
+            bottom = APP_WIDGET_ROW_BOTTOM_PADDING_DP.dp,
+        ),
+    ) {
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxWidth(),
+        ) { page ->
+            val appWidgetId = widgetStack.widgetIds[page]
+            AndroidView(
+                factory = { context -> createWidgetView(appWidgetId) ?: FrameLayout(context) },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = APP_WIDGET_MIN_HEIGHT_DP.dp),
+            )
+        }
+
+        if (widgetStack.widgetIds.size > 1) {
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(6.dp),
+                modifier = Modifier.padding(top = 8.dp),
+            ) {
+                widgetStack.widgetIds.forEachIndexed { index, _ ->
+                    Box(
+                        modifier = Modifier
+                            .size(if (pagerState.currentPage == index) 7.dp else 5.dp)
+                            .background(
+                                color = Color.White.copy(
+                                    alpha = if (pagerState.currentPage == index) 0.82f else 0.38f,
+                                ),
+                                shape = CircleShape,
+                            ),
+                    )
+                }
+            }
         }
     }
 }
@@ -1025,5 +1100,7 @@ private data class FavoriteRowMetrics(
 }
 
 private fun favoriteComponentId(app: LauncherApp): String = "${app.packageName}/${app.activityName}"
+
+private fun widgetStackId(stack: WidgetStack): Int = stack.widgetIds.firstOrNull() ?: -1
 
 private fun Float?.orZero(): Float = this ?: 0f

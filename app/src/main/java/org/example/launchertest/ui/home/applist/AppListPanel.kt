@@ -38,6 +38,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.example.launchertest.ui.home.shared.rememberAppIcon
 import org.example.launchertest.ui.model.LauncherApp
+import org.example.launchertest.widgets.WidgetStack
 
 /**
  * Extension to erase content at the edges using a gradient mask.
@@ -52,7 +53,7 @@ fun Modifier.fadingEdge(brush: Brush): Modifier = this
 @Composable
 fun AppListPanel(
     listLayout: AppListLayout,
-    widgetIds: List<Int>,
+    widgetStacks: List<WidgetStack>,
     scrubbingLetter: State<Char?>,
     isScrubbing: State<Boolean>,
     isHiddenMode: Boolean,
@@ -67,8 +68,9 @@ fun AppListPanel(
     onUnhideApp: (LauncherApp) -> Unit,
     onReorderFavorites: (List<LauncherApp>) -> Unit,
     onAddWidget: () -> Unit,
+    onAddWidgetToStack: (Int) -> Unit,
     onRemoveWidget: (Int) -> Unit,
-    onReorderWidgets: (List<Int>) -> Unit,
+    onReorderWidgetStacks: (List<WidgetStack>) -> Unit,
     createWidgetView: (Int) -> AppWidgetHostView?,
     modifier: Modifier = Modifier,
 ) {
@@ -159,7 +161,7 @@ fun AppListPanel(
                 item(key = "favorites_panel") {
                     FavoritesPanel(
                         favorites = favorites,
-                        widgetIds = widgetIds,
+                        widgetStacks = widgetStacks,
                         favAlpha = favAlpha,
                         isSearchActive = isSearchActive,
                         isHiddenMode = isHiddenMode,
@@ -169,8 +171,9 @@ fun AppListPanel(
                         onReorderFavorites = onReorderFavorites,
                         onSearchActivated = onSearchActivated,
                         onAddWidget = onAddWidget,
+                        onAddWidgetToStack = onAddWidgetToStack,
                         onRemoveWidget = onRemoveWidget,
-                        onReorderWidgets = onReorderWidgets,
+                        onReorderWidgetStacks = onReorderWidgetStacks,
                         createWidgetView = createWidgetView,
                         modifier = Modifier.fillParentMaxHeight(),
                     )

@@ -1,4 +1,4 @@
-package org.example.launchertest.ui.home
+package org.example.launchertest.ui.home.azrail
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue

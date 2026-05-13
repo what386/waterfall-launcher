@@ -39,8 +39,8 @@ class AppListLayoutTest {
 
         assertEquals(2, layout.favorites.size)
         assertEquals(1, layout.letterJumpTargets['A'])
-        assertEquals(2, layout.letterJumpTargets['B'])
-        assertEquals(3, layout.letterJumpTargets['C'])
+        assertEquals(3, layout.letterJumpTargets['B'])
+        assertEquals(2, layout.letterJumpTargets['C'])
         assertEquals(5, layout.letterJumpTargets['D'])
     }
 

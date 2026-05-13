@@ -30,14 +30,21 @@ class LauncherWidgetController(
         initialValue = emptyList(),
     )
 
+    val widgetStacks: StateFlow<List<WidgetStack>> = preferencesRepository.widgetStacks.stateIn(
+        scope = scope,
+        started = SharingStarted.Eagerly,
+        initialValue = emptyList(),
+    )
+
     private val configureWidgetLauncher = activity.registerForActivityResult(
         ActivityResultContracts.StartActivityForResult(),
     ) { result ->
         val appWidgetId = pendingConfigureWidgetId ?: return@registerForActivityResult
         pendingConfigureWidgetId = null
         if (result.resultCode == Activity.RESULT_OK) {
-            scope.launch { preferencesRepository.addWidgetId(appWidgetId) }
+            persistPickedWidget(appWidgetId)
         } else {
+            pendingWidgetStackIndex = null
             appWidgetHost.deleteAppWidgetId(appWidgetId)
         }
     }
@@ -51,6 +58,7 @@ class LauncherWidgetController(
         pendingPickWidgetId = null
 
         if (result.resultCode != Activity.RESULT_OK) {
+            pendingWidgetStackIndex = null
             appWidgetHost.deleteAppWidgetId(appWidgetId)
             return@registerForActivityResult
         }
@@ -65,12 +73,13 @@ class LauncherWidgetController(
                 },
             )
         } else {
-            scope.launch { preferencesRepository.addWidgetId(appWidgetId) }
+            persistPickedWidget(appWidgetId)
         }
     }
 
     private var pendingPickWidgetId: Int? = null
     private var pendingConfigureWidgetId: Int? = null
+    private var pendingWidgetStackIndex: Int? = null
 
     fun startListening() {
         appWidgetHost.startListening()
@@ -81,6 +90,20 @@ class LauncherWidgetController(
     }
 
     fun addWidget() {
+        addWidgetToNewStack()
+    }
+
+    fun addWidgetToNewStack() {
+        pendingWidgetStackIndex = null
+        launchWidgetPicker()
+    }
+
+    fun addWidgetToStack(stackIndex: Int) {
+        pendingWidgetStackIndex = stackIndex
+        launchWidgetPicker()
+    }
+
+    private fun launchWidgetPicker() {
         val appWidgetId = appWidgetHost.allocateAppWidgetId()
         pendingPickWidgetId = appWidgetId
         pickWidgetLauncher.launch(
@@ -88,6 +111,18 @@ class LauncherWidgetController(
                 putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
             },
         )
+    }
+
+    private fun persistPickedWidget(appWidgetId: Int) {
+        val stackIndex = pendingWidgetStackIndex
+        pendingWidgetStackIndex = null
+        scope.launch {
+            if (stackIndex == null) {
+                preferencesRepository.addWidgetId(appWidgetId)
+            } else {
+                preferencesRepository.addWidgetIdToStack(appWidgetId, stackIndex)
+            }
+        }
     }
 
     fun removeWidget(appWidgetId: Int) {
@@ -100,6 +135,12 @@ class LauncherWidgetController(
     fun reorderWidgets(appWidgetIds: List<Int>) {
         scope.launch {
             preferencesRepository.setWidgetIds(appWidgetIds)
+        }
+    }
+
+    fun reorderWidgetStacks(stacks: List<WidgetStack>) {
+        scope.launch {
+            preferencesRepository.setWidgetStacks(stacks)
         }
     }
 
