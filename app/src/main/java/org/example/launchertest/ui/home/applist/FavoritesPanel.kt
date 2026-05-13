@@ -845,7 +845,7 @@ private fun ReorderableWidgetRow(
                 .heightIn(min = APP_WIDGET_MIN_HEIGHT_DP.dp),
         )
 
-        WidgetHandle(
+        EditDragHandle(
             text = "↕",
             modifier = Modifier
                 .align(Alignment.TopEnd)
@@ -876,7 +876,7 @@ private fun ReorderableWidgetRow(
 }
 
 @Composable
-private fun WidgetHandle(
+private fun EditDragHandle(
     text: String,
     modifier: Modifier = Modifier,
 ) {
@@ -1011,6 +1011,11 @@ private fun ReorderableFavoriteRow(
             style = MaterialTheme.typography.headlineSmall.copy(
                 fontSize = MaterialTheme.typography.headlineSmall.fontSize * APP_ROW_TEXT_SCALE,
             ),
+            modifier = Modifier.weight(1f),
+        )
+
+        EditDragHandle(
+            text = "↕",
         )
     }
 }
