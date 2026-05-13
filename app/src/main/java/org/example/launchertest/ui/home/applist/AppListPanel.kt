@@ -14,11 +14,13 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -26,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.*
+import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -103,6 +106,20 @@ fun AppListPanel(
                         detectVerticalDragGestures { _, dragAmount ->
                             if (!listState.canScrollForward && dragAmount < -dragThresholdPx) {
                                 onSearchActivated()
+                            }
+                        }
+                    }
+                }
+                .pointerInput(isHiddenMode, showFavoritesOnly, isSearchActive) {
+                    if (isHiddenMode && !showFavoritesOnly && !isSearchActive) {
+                        awaitEachGesture {
+                            val down = awaitFirstDown(
+                                requireUnconsumed = false,
+                                pass = PointerEventPass.Final,
+                            )
+                            val up = waitForUpOrCancellation(pass = PointerEventPass.Final)
+                            if (up != null && !down.isConsumed && !up.isConsumed) {
+                                onHiddenModeChanged(false)
                             }
                         }
                     }
