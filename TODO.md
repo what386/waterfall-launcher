@@ -5,9 +5,6 @@
 
 ## Tasks
 
-- [ ] behavior: widget stacks (swipe to change widgets in a carousel)
-      @created 2026-05-13 17:19
-
 - [ ] settings page
       @created 2026-05-13 17:32
 
@@ -32,4 +29,8 @@
 - [x] feat: drag-and-drop favorite reordering
       @created 2026-05-10 02:41
       @completed 2026-05-13 17:33
+
+- [x] behavior: widget stacks (swipe to change widgets in a carousel)
+      @created 2026-05-13 17:19
+      @completed 2026-05-13 18:10
 
