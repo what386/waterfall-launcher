@@ -613,7 +613,12 @@ fun FavoritesPanel(
                 containerColor = MaterialTheme.colorScheme.surface,
                 contentColor = MaterialTheme.colorScheme.onSurface,
             ) {
-                SettingsSheet()
+                SettingsSheet(
+                    onBackClicked = {
+                        showSettingsSheet = false
+                        showPanelMenu = true
+                    },
+                )
             }
         }
     }
@@ -689,7 +694,9 @@ private fun FavoritesOptionsSheet(
 }
 
 @Composable
-private fun SettingsSheet() {
+private fun SettingsSheet(
+    onBackClicked: () -> Unit,
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -699,6 +706,13 @@ private fun SettingsSheet() {
             text = "Settings",
             style = MaterialTheme.typography.titleMedium,
             modifier = Modifier.padding(bottom = 8.dp),
+        )
+
+        SheetActionRow(
+            icon = "‹",
+            title = "Back",
+            subtitle = "Return to Favorites",
+            onClick = onBackClicked,
         )
     }
 }
