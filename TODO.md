@@ -20,3 +20,6 @@
 - [ ] allow hide statusbar
       @created 2026-05-13 17:32
 
+- [ ] allow hide iconsr
+      @created 2026-05-13 17:32
+
