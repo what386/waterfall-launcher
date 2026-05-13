@@ -21,5 +21,23 @@ dependencyResolutionManagement {
     }
 }
 
+val localPropertiesFile = file("local.properties")
+if (!localPropertiesFile.exists()) {
+    val userHome = System.getProperty("user.home")
+    val candidateSdkDirs = listOfNotNull(
+        System.getenv("ANDROID_HOME"),
+        System.getenv("ANDROID_SDK_ROOT"),
+        userHome?.let { "$it/Android/Sdk" },
+        userHome?.let { "$it/Library/Android/sdk" },
+        userHome?.let { "$it/AppData/Local/Android/Sdk" },
+    )
+
+    candidateSdkDirs
+        .firstOrNull { file(it).isDirectory }
+        ?.let { sdkDir ->
+            localPropertiesFile.writeText("sdk.dir=${sdkDir.replace("\\", "\\\\")}\n")
+        }
+}
+
 rootProject.name = "launcher-test"
 include(":app")
