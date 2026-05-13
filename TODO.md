@@ -20,9 +20,6 @@
 - [ ] fix cutoff on many favorites
       @created 2026-05-13 19:57
 
-- [ ] make home button return to favorites menu
-      @created 2026-05-13 20:03
-
 
 ## Completed
 
