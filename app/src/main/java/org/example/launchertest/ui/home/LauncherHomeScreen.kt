@@ -109,6 +109,7 @@ fun LauncherHomeRoute(
     val state by vm.uiState.collectAsStateWithLifecycle()
     val widgetStacks by widgetController.widgetStacks.collectAsStateWithLifecycle()
     val listState = rememberLazyListState()
+    val context = LocalContext.current
 
     val density = LocalDensity.current
     val categoryPinOffsetPx = with(density) { APP_LIST_CATEGORY_PIN_OFFSET_DP.dp.toPx() }.toInt()
@@ -138,6 +139,9 @@ fun LauncherHomeRoute(
         onReorderFavorites = vm::onFavoriteOrderChanged,
         onHideStatusBarChanged = vm::onHideStatusBarChanged,
         onHideAppIconsChanged = vm::onHideAppIconsChanged,
+        onRestartLauncher = {
+            context.findActivity()?.recreate()
+        },
         onLetterSelected = vm::onLetterSelected,
         onAddWidget = widgetController::addWidgetToNewStack,
         onAddWidgetToStack = widgetController::addWidgetToStack,
@@ -165,6 +169,7 @@ private fun LauncherHomeScreen(
     onReorderFavorites: (List<org.example.launchertest.ui.model.LauncherApp>) -> Unit,
     onHideStatusBarChanged: (Boolean) -> Unit,
     onHideAppIconsChanged: (Boolean) -> Unit,
+    onRestartLauncher: () -> Unit,
     onLetterSelected: (Char) -> Unit,
     onAddWidget: () -> Unit,
     onAddWidgetToStack: (Int) -> Unit,
@@ -321,6 +326,7 @@ private fun LauncherHomeScreen(
                     settings = state.settings,
                     onHideStatusBarChanged = onHideStatusBarChanged,
                     onHideAppIconsChanged = onHideAppIconsChanged,
+                    onRestartLauncher = onRestartLauncher,
                     createWidgetView = createWidgetView,
                     getWidgetMinHeightDp = getWidgetMinHeightDp,
                     modifier = Modifier.fillMaxSize(),

@@ -63,6 +63,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.zIndex
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.example.launchertest.data.LauncherSettings
 import org.example.launchertest.ui.home.shared.rememberAppIcon
@@ -97,6 +98,7 @@ fun FavoritesPanel(
     settings: LauncherSettings,
     onHideStatusBarChanged: (Boolean) -> Unit,
     onHideAppIconsChanged: (Boolean) -> Unit,
+    onRestartLauncher: () -> Unit,
     createWidgetView: (Int) -> AppWidgetHostView?,
     getWidgetMinHeightDp: (Int) -> Int?,
     modifier: Modifier = Modifier,
@@ -108,6 +110,8 @@ fun FavoritesPanel(
     val searchTriggerPx = with(density) { APP_LIST_SEARCH_DRAG_THRESHOLD_DP.dp.toPx() }
     var showPanelMenu by remember { mutableStateOf(false) }
     var showSettingsSheet by remember { mutableStateOf(false) }
+    var hideStatusBarAtSettingsOpen by remember { mutableStateOf<Boolean?>(null) }
+    var hideStatusBarSettingsDraft by remember { mutableStateOf<Boolean?>(null) }
     var reorderMode by remember { mutableStateOf(false) }
     var widgetReorderMode by remember { mutableStateOf(false) }
     var didTriggerSearchDuringDrag by remember { mutableStateOf(false) }
@@ -149,6 +153,30 @@ fun FavoritesPanel(
 
     fun persistWidgetOrder() {
         onReorderWidgetStacks(orderedWidgetStacks.toList())
+    }
+
+    fun openSettingsSheet() {
+        hideStatusBarAtSettingsOpen = settings.hideStatusBar
+        hideStatusBarSettingsDraft = settings.hideStatusBar
+        showPanelMenu = false
+        showSettingsSheet = true
+    }
+
+    fun closeSettingsSheet(reopenFavorites: Boolean) {
+        val didHideStatusBarChange = hideStatusBarAtSettingsOpen != null &&
+            hideStatusBarAtSettingsOpen != hideStatusBarSettingsDraft
+
+        showSettingsSheet = false
+        hideStatusBarAtSettingsOpen = null
+        hideStatusBarSettingsDraft = null
+        showPanelMenu = reopenFavorites
+
+        if (didHideStatusBarChange) {
+            scope.launch {
+                delay(250)
+                onRestartLauncher()
+            }
+        }
     }
 
     fun clearDragState() {
@@ -607,8 +635,7 @@ fun FavoritesPanel(
                         }
                     },
                     onSettingsClicked = {
-                        showPanelMenu = false
-                        showSettingsSheet = true
+                        openSettingsSheet()
                     },
                 )
             }
@@ -616,17 +643,21 @@ fun FavoritesPanel(
 
         if (showSettingsSheet) {
             ModalBottomSheet(
-                onDismissRequest = { showSettingsSheet = false },
+                onDismissRequest = { closeSettingsSheet(reopenFavorites = false) },
                 containerColor = MaterialTheme.colorScheme.surface,
                 contentColor = MaterialTheme.colorScheme.onSurface,
             ) {
                 SettingsSheet(
-                    settings = settings,
-                    onHideStatusBarChanged = onHideStatusBarChanged,
+                    settings = settings.copy(
+                        hideStatusBar = hideStatusBarSettingsDraft ?: settings.hideStatusBar,
+                    ),
+                    onHideStatusBarChanged = { enabled ->
+                        hideStatusBarSettingsDraft = enabled
+                        onHideStatusBarChanged(enabled)
+                    },
                     onHideAppIconsChanged = onHideAppIconsChanged,
                     onBackClicked = {
-                        showSettingsSheet = false
-                        showPanelMenu = true
+                        closeSettingsSheet(reopenFavorites = true)
                     },
                 )
             }
@@ -730,7 +761,7 @@ private fun SettingsSheet(
 
         SettingsToggleRow(
             title = "Hide the statusbar",
-            subtitle = "Use the full screen for the launcher",
+            subtitle = "Restarts the launcher when Settings closes",
             checked = settings.hideStatusBar,
             onCheckedChange = onHideStatusBarChanged,
         )
