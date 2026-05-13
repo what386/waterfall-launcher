@@ -14,3 +14,6 @@
 - [ ] behavior: widget stacks (swipe to change widgets in a carousel)
       @created 2026-05-13 17:19
 
+- [ ] settings page
+      @created 2026-05-13 17:32
+
