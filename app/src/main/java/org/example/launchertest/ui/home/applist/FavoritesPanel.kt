@@ -852,6 +852,14 @@ private fun ReorderableWidgetRow(
                 .padding(top = 12.dp, end = 12.dp),
         )
 
+        WidgetEditButton(
+            text = "Delete",
+            onClick = { onRemoveWidget(appWidgetId) },
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 12.dp, bottom = 12.dp),
+        )
+
         DropdownMenu(
             expanded = showContextMenu,
             onDismissRequest = { showContextMenu = false },
@@ -882,6 +890,26 @@ private fun WidgetHandle(
                 shape = MaterialTheme.shapes.medium,
             )
             .padding(horizontal = 10.dp, vertical = 5.dp),
+    )
+}
+
+@Composable
+private fun WidgetEditButton(
+    text: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Text(
+        text = text,
+        color = Color.White,
+        style = MaterialTheme.typography.labelLarge,
+        modifier = modifier
+            .background(
+                color = Color.Black.copy(alpha = 0.58f),
+                shape = MaterialTheme.shapes.medium,
+            )
+            .clickable(onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 7.dp),
     )
 }
 
