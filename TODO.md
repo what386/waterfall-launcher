@@ -29,3 +29,6 @@
 - [ ] icon pack support?
       @created 2026-05-13 17:33
 
+- [ ] change font
+      @created 2026-05-13 17:33
+
