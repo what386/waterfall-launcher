@@ -17,9 +17,6 @@
 - [ ] make font options render in the font they are
       @created 2026-05-13 19:55
 
-- [ ] fix behavior on phones with home buttons
-      @created 2026-05-13 19:55
-
 - [ ] fix cutoff on many favorites
       @created 2026-05-13 19:57
 
@@ -58,4 +55,8 @@
       @created 2026-05-13 17:33
       @completed 2026-05-13 19:00
       @completed_version 1.1.0
+
+- [x] fix behavior on phones with home buttons
+      @created 2026-05-13 19:55
+      @completed 2026-05-13 20:34
 
