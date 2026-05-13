@@ -4,6 +4,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import org.example.launchertest.data.AppRepository
 import org.example.launchertest.data.LauncherPreferencesRepository
+import org.example.launchertest.data.LauncherSettings
 import org.example.launchertest.ui.model.LauncherApp
 
 class LauncherInteractor(
@@ -11,6 +12,8 @@ class LauncherInteractor(
     private val preferencesRepository: LauncherPreferencesRepository,
 ) {
     fun favoriteOrderFlow(): Flow<List<String>> = preferencesRepository.favoriteOrder
+
+    fun settingsFlow(): Flow<LauncherSettings> = preferencesRepository.settings
 
     fun launcherAppsFlow(
         query: Flow<String>,
@@ -49,6 +52,14 @@ class LauncherInteractor(
 
     suspend fun setFavoriteOrder(componentIds: List<String>) {
         preferencesRepository.setFavoriteOrder(componentIds)
+    }
+
+    suspend fun setHideStatusBar(enabled: Boolean) {
+        preferencesRepository.setHideStatusBar(enabled)
+    }
+
+    suspend fun setHideAppIcons(enabled: Boolean) {
+        preferencesRepository.setHideAppIcons(enabled)
     }
 
 }

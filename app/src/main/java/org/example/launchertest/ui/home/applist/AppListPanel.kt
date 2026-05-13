@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.example.launchertest.data.LauncherSettings
 import org.example.launchertest.ui.home.shared.rememberAppIcon
 import org.example.launchertest.ui.model.LauncherApp
 import org.example.launchertest.widgets.WidgetStack
@@ -71,6 +72,9 @@ fun AppListPanel(
     onAddWidgetToStack: (Int) -> Unit,
     onRemoveWidget: (Int) -> Unit,
     onReorderWidgetStacks: (List<WidgetStack>) -> Unit,
+    settings: LauncherSettings,
+    onHideStatusBarChanged: (Boolean) -> Unit,
+    onHideAppIconsChanged: (Boolean) -> Unit,
     createWidgetView: (Int) -> AppWidgetHostView?,
     getWidgetMinHeightDp: (Int) -> Int?,
     modifier: Modifier = Modifier,
@@ -175,6 +179,9 @@ fun AppListPanel(
                         onAddWidgetToStack = onAddWidgetToStack,
                         onRemoveWidget = onRemoveWidget,
                         onReorderWidgetStacks = onReorderWidgetStacks,
+                        settings = settings,
+                        onHideStatusBarChanged = onHideStatusBarChanged,
+                        onHideAppIconsChanged = onHideAppIconsChanged,
                         createWidgetView = createWidgetView,
                         getWidgetMinHeightDp = getWidgetMinHeightDp,
                         modifier = Modifier.fillParentMaxHeight(),
@@ -219,6 +226,7 @@ fun AppListPanel(
                         onToggleFavorite = onToggleFavorite,
                         onHideApp = onHideApp,
                         onUnhideApp = onUnhideApp,
+                        hideAppIcons = settings.hideAppIcons,
                         modifier = rowModifier,
                     )
                 }
@@ -281,10 +289,11 @@ internal fun AppRow(
     onToggleFavorite: (LauncherApp) -> Unit,
     onHideApp: (LauncherApp) -> Unit,
     onUnhideApp: (LauncherApp) -> Unit,
+    hideAppIcons: Boolean,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
-    val icon = rememberAppIcon(app.packageName)
+    val icon = if (hideAppIcons) null else rememberAppIcon(app.packageName)
     var showMenu by remember { mutableStateOf(false) }
     var isLaunching by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()

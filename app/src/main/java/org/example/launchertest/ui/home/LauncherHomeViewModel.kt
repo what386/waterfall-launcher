@@ -15,6 +15,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import org.example.launchertest.data.LauncherSettings
 import org.example.launchertest.domain.LauncherInteractor
 import org.example.launchertest.domain.componentId
 import org.example.launchertest.ui.model.LauncherApp
@@ -28,6 +29,7 @@ class LauncherHomeViewModel(
     private val isHiddenMode = MutableStateFlow(false)
     private val apps = interactor.launcherAppsFlow(query, isHiddenMode)
     private val favoriteOrder = interactor.favoriteOrderFlow()
+    private val settings = interactor.settingsFlow()
 
     private val _jumpToTarget = MutableSharedFlow<Int>(
         extraBufferCapacity = 1,
@@ -35,7 +37,7 @@ class LauncherHomeViewModel(
     )
     val jumpToTarget: SharedFlow<Int> = _jumpToTarget
 
-    val uiState: StateFlow<LauncherHomeUiState> = combine(
+    private val baseUiState = combine(
         query,
         isSearchActive,
         isHiddenMode,
@@ -49,6 +51,13 @@ class LauncherHomeViewModel(
             isHiddenMode = hiddenMode,
             listLayout = listLayout,
         )
+    }
+
+    val uiState: StateFlow<LauncherHomeUiState> = combine(
+        baseUiState,
+        settings,
+    ) { state, launcherSettings ->
+        state.copy(settings = launcherSettings)
     }.stateIn(
         scope = viewModelScope,
         started = SharingStarted.WhileSubscribed(5_000),
@@ -83,6 +92,14 @@ class LauncherHomeViewModel(
         }
     }
 
+    fun onHideStatusBarChanged(enabled: Boolean) {
+        viewModelScope.launch { interactor.setHideStatusBar(enabled) }
+    }
+
+    fun onHideAppIconsChanged(enabled: Boolean) {
+        viewModelScope.launch { interactor.setHideAppIcons(enabled) }
+    }
+
 }
 
 data class LauncherHomeUiState(
@@ -94,6 +111,7 @@ data class LauncherHomeUiState(
         apps = emptyList(),
         letterJumpTargets = emptyMap(),
     ),
+    val settings: LauncherSettings = LauncherSettings(),
 )
 
 class LauncherHomeViewModelFactory(

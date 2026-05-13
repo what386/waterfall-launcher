@@ -37,6 +37,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -63,6 +64,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.zIndex
 import kotlinx.coroutines.launch
+import org.example.launchertest.data.LauncherSettings
 import org.example.launchertest.ui.home.shared.rememberAppIcon
 import org.example.launchertest.ui.model.LauncherApp
 import org.example.launchertest.widgets.WidgetStack
@@ -92,6 +94,9 @@ fun FavoritesPanel(
     onAddWidgetToStack: (Int) -> Unit,
     onRemoveWidget: (Int) -> Unit,
     onReorderWidgetStacks: (List<WidgetStack>) -> Unit,
+    settings: LauncherSettings,
+    onHideStatusBarChanged: (Boolean) -> Unit,
+    onHideAppIconsChanged: (Boolean) -> Unit,
     createWidgetView: (Int) -> AppWidgetHostView?,
     getWidgetMinHeightDp: (Int) -> Int?,
     modifier: Modifier = Modifier,
@@ -491,6 +496,7 @@ fun FavoritesPanel(
 
                             ReorderableFavoriteRow(
                                 app = app,
+                                hideAppIcons = settings.hideAppIcons,
                                 isActiveDrag = activeDragComponentId == componentId,
                                 dragOffsetY = if (activeDragComponentId == componentId) {
                                     activeDragOffsetY
@@ -532,6 +538,7 @@ fun FavoritesPanel(
                                 onToggleFavorite = onToggleFavorite,
                                 onHideApp = onHideApp,
                                 onUnhideApp = {},
+                                hideAppIcons = settings.hideAppIcons,
                                 modifier = Modifier.graphicsLayer { alpha = favAlpha },
                             )
                         }
@@ -614,6 +621,9 @@ fun FavoritesPanel(
                 contentColor = MaterialTheme.colorScheme.onSurface,
             ) {
                 SettingsSheet(
+                    settings = settings,
+                    onHideStatusBarChanged = onHideStatusBarChanged,
+                    onHideAppIconsChanged = onHideAppIconsChanged,
                     onBackClicked = {
                         showSettingsSheet = false
                         showPanelMenu = true
@@ -695,6 +705,9 @@ private fun FavoritesOptionsSheet(
 
 @Composable
 private fun SettingsSheet(
+    settings: LauncherSettings,
+    onHideStatusBarChanged: (Boolean) -> Unit,
+    onHideAppIconsChanged: (Boolean) -> Unit,
     onBackClicked: () -> Unit,
 ) {
     Column(
@@ -713,6 +726,56 @@ private fun SettingsSheet(
             title = "Back",
             subtitle = "Return to Favorites",
             onClick = onBackClicked,
+        )
+
+        SettingsToggleRow(
+            title = "Hide the statusbar",
+            subtitle = "Use the full screen for the launcher",
+            checked = settings.hideStatusBar,
+            onCheckedChange = onHideStatusBarChanged,
+        )
+
+        SettingsToggleRow(
+            title = "Hide app icons",
+            subtitle = "Show app names without icons",
+            checked = settings.hideAppIcons,
+            onCheckedChange = onHideAppIconsChanged,
+        )
+    }
+}
+
+@Composable
+private fun SettingsToggleRow(
+    title: String,
+    subtitle: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onCheckedChange(!checked) }
+            .padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(
+            modifier = Modifier.weight(1f),
+        ) {
+            Text(
+                text = title,
+                color = MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Text(
+                text = subtitle,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
+
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
         )
     }
 }
@@ -1187,6 +1250,7 @@ private fun EditDragHandle(
 @Composable
 private fun ReorderableFavoriteRow(
     app: LauncherApp,
+    hideAppIcons: Boolean,
     isActiveDrag: Boolean,
     dragOffsetY: Float,
     laneShiftY: Float,
@@ -1196,7 +1260,7 @@ private fun ReorderableFavoriteRow(
     onMeasured: (FavoriteRowMetrics) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val icon = rememberAppIcon(app.packageName)
+    val icon = if (hideAppIcons) null else rememberAppIcon(app.packageName)
 
     val settleSpec = spring<Float>(
         stiffness = FAVORITES_REORDER_SETTLE_STIFFNESS,

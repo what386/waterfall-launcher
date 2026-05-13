@@ -23,7 +23,8 @@ class LauncherPreferencesRepository(
     private val hiddenKey = stringSetPreferencesKey("hidden_components")
     private val widgetIdsKey = stringPreferencesKey("widget_ids")
     private val widgetStacksKey = stringPreferencesKey("widget_stacks")
-    private val settingsReservedKey = booleanPreferencesKey("settings_reserved")
+    private val hideStatusBarKey = booleanPreferencesKey("hide_status_bar")
+    private val hideAppIconsKey = booleanPreferencesKey("hide_app_icons")
 
     val favorites: Flow<Set<String>> = context.launcherPrefs.data.map { prefs ->
         prefs[favoritesKey] ?: emptySet()
@@ -52,7 +53,8 @@ class LauncherPreferencesRepository(
 
     val settings: Flow<LauncherSettings> = context.launcherPrefs.data.map { prefs ->
         LauncherSettings(
-            reserved = prefs[settingsReservedKey] ?: false,
+            hideStatusBar = prefs[hideStatusBarKey] ?: false,
+            hideAppIcons = prefs[hideAppIconsKey] ?: false,
         )
     }
 
@@ -143,6 +145,18 @@ class LauncherPreferencesRepository(
     suspend fun setWidgetStacks(stacks: List<WidgetStack>) {
         context.launcherPrefs.edit { prefs ->
             prefs.setWidgetStacks(stacks)
+        }
+    }
+
+    suspend fun setHideStatusBar(enabled: Boolean) {
+        context.launcherPrefs.edit { prefs ->
+            prefs[hideStatusBarKey] = enabled
+        }
+    }
+
+    suspend fun setHideAppIcons(enabled: Boolean) {
+        context.launcherPrefs.edit { prefs ->
+            prefs[hideAppIconsKey] = enabled
         }
     }
 

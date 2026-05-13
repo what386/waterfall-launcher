@@ -6,10 +6,13 @@ import org.example.launchertest.ui.home.azrail.AzRailPanel
 import org.example.launchertest.ui.home.azrail.buildRailLetters
 import org.example.launchertest.ui.home.azrail.isFavoritesRailItem
 
+import android.app.Activity
 import android.app.WallpaperManager
 import android.content.ComponentName
 import android.content.Context
+import android.content.ContextWrapper
 import android.content.Intent
+import android.view.WindowManager
 import android.widget.ImageView
 import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
@@ -37,6 +40,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -46,12 +50,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 import org.example.launchertest.domain.LauncherInteractor
 import org.example.launchertest.ui.model.LauncherApp
 import org.example.launchertest.widgets.LauncherWidgetController
@@ -128,6 +136,8 @@ fun LauncherHomeRoute(
         onHideApp = vm::onHideApp,
         onUnhideApp = vm::onUnhideApp,
         onReorderFavorites = vm::onFavoriteOrderChanged,
+        onHideStatusBarChanged = vm::onHideStatusBarChanged,
+        onHideAppIconsChanged = vm::onHideAppIconsChanged,
         onLetterSelected = vm::onLetterSelected,
         onAddWidget = widgetController::addWidgetToNewStack,
         onAddWidgetToStack = widgetController::addWidgetToStack,
@@ -153,6 +163,8 @@ private fun LauncherHomeScreen(
     onHideApp: (org.example.launchertest.ui.model.LauncherApp) -> Unit,
     onUnhideApp: (org.example.launchertest.ui.model.LauncherApp) -> Unit,
     onReorderFavorites: (List<org.example.launchertest.ui.model.LauncherApp>) -> Unit,
+    onHideStatusBarChanged: (Boolean) -> Unit,
+    onHideAppIconsChanged: (Boolean) -> Unit,
     onLetterSelected: (Char) -> Unit,
     onAddWidget: () -> Unit,
     onAddWidgetToStack: (Int) -> Unit,
@@ -165,11 +177,26 @@ private fun LauncherHomeScreen(
     val isScrubbing = remember { mutableStateOf(false) }
     val selectedRailItem = remember { mutableStateOf(buildRailLetters(emptyMap()).first()) }
     val context = LocalContext.current
+    val view = LocalView.current
     var isRailDragging by remember { mutableStateOf(false) }
 
     var contentMode by remember { mutableStateOf(HomeContentMode.Favorites) }
 
     val coroutineScope = rememberCoroutineScope()
+
+    SideEffect {
+        val window = view.context.findActivity()?.window ?: return@SideEffect
+        val controller = WindowInsetsControllerCompat(window, view)
+        if (state.settings.hideStatusBar) {
+            window.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+            controller.hide(WindowInsetsCompat.Type.statusBars())
+        } else {
+            window.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
+            controller.show(WindowInsetsCompat.Type.statusBars())
+        }
+        controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+    }
 
     val railLetters = remember(state.isHiddenMode, state.listLayout.letterJumpTargets) {
         buildRailLetters(state.listLayout.letterJumpTargets)
@@ -291,6 +318,9 @@ private fun LauncherHomeScreen(
                     onAddWidgetToStack = onAddWidgetToStack,
                     onRemoveWidget = onRemoveWidget,
                     onReorderWidgetStacks = onReorderWidgetStacks,
+                    settings = state.settings,
+                    onHideStatusBarChanged = onHideStatusBarChanged,
+                    onHideAppIconsChanged = onHideAppIconsChanged,
                     createWidgetView = createWidgetView,
                     getWidgetMinHeightDp = getWidgetMinHeightDp,
                     modifier = Modifier.fillMaxSize(),
@@ -387,6 +417,14 @@ private const val FirstHomeContentIndex = 1
 private const val SEARCH_AUTO_OPEN_MIN_QUERY_LENGTH = 3
 
 private fun favoritesHeaderIndex(widgetCount: Int): Int = widgetCount + 2
+
+private tailrec fun Context.findActivity(): Activity? {
+    return when (this) {
+        is Activity -> this
+        is ContextWrapper -> baseContext.findActivity()
+        else -> null
+    }
+}
 
 private fun launchApp(
     context: Context,
