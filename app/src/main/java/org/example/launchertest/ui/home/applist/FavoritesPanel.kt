@@ -1,6 +1,10 @@
 package org.example.launchertest.ui.home.applist
 
 import android.appwidget.AppWidgetHostView
+import android.view.MotionEvent
+import android.view.View
+import android.view.ViewConfiguration
+import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
@@ -62,6 +66,7 @@ import kotlinx.coroutines.launch
 import org.example.launchertest.ui.home.shared.rememberAppIcon
 import org.example.launchertest.ui.model.LauncherApp
 import org.example.launchertest.widgets.WidgetStack
+import kotlin.math.hypot
 
 /**
  * The favorites panel: widgets + favorite app rows, all in a vertically scrollable column
@@ -712,6 +717,7 @@ private fun WidgetStackRow(
         createWidgetView = createWidgetView,
         getWidgetMinHeightDp = getWidgetMinHeightDp,
         showAddPlaceholder = false,
+        onWidgetHoldRelease = null,
         modifier = modifier
             .fillMaxWidth(),
     )
@@ -775,8 +781,13 @@ private fun ReorderableWidgetStackRow(
     modifier: Modifier = Modifier,
 ) {
     var showContextMenu by remember { mutableStateOf(false) }
+    var dragDistancePx by remember { mutableFloatStateOf(0f) }
     val pagerState = rememberPagerState(pageCount = { widgetStack.widgetIds.size + 1 })
     val currentWidgetId = widgetStack.widgetIds.getOrNull(pagerState.currentPage)
+    val density = LocalDensity.current
+    val contextMenuDragThresholdPx = with(density) {
+        WIDGET_CONTEXT_MENU_DRAG_THRESHOLD_DP.dp.toPx()
+    }
     val settleSpec = spring<Float>(
         stiffness = FAVORITES_REORDER_SETTLE_STIFFNESS,
         dampingRatio = FAVORITES_REORDER_SETTLE_DAMPING,
@@ -819,30 +830,25 @@ private fun ReorderableWidgetStackRow(
                     )
                 )
             }
-            .combinedClickable(
-                interactionSource = remember { MutableInteractionSource() },
-                indication = null,
-                onClick = {},
-                onLongClick = {
-                    if (currentWidgetId != null) {
-                        showContextMenu = true
-                    }
-                },
-            )
-            .pointerInput(widgetStack) {
-                detectVerticalDragGestures(
+            .pointerInput(widgetStack, currentWidgetId, contextMenuDragThresholdPx) {
+                detectDragGesturesAfterLongPress(
                     onDragStart = {
+                        dragDistancePx = 0f
                         onDragStart()
                     },
                     onDragEnd = {
+                        if (dragDistancePx < contextMenuDragThresholdPx && currentWidgetId != null) {
+                            showContextMenu = true
+                        }
                         onDragEnd()
                     },
                     onDragCancel = {
                         onDragEnd()
                     },
-                    onVerticalDrag = { change, dragAmount ->
+                    onDrag = { change, dragAmount ->
                         change.consume()
-                        onDragDelta(dragAmount)
+                        dragDistancePx += dragAmount.getDistance()
+                        onDragDelta(dragAmount.y)
                     },
                 )
             }
@@ -863,6 +869,7 @@ private fun ReorderableWidgetStackRow(
             getWidgetMinHeightDp = getWidgetMinHeightDp,
             showAddPlaceholder = true,
             onAddWidgetToStack = { onAddWidgetToStack(stackIndex) },
+            onWidgetHoldRelease = { showContextMenu = true },
             pagerState = pagerState,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -874,24 +881,12 @@ private fun ReorderableWidgetStackRow(
                 .padding(top = 12.dp, end = 12.dp),
         )
 
-        if (currentWidgetId != null) {
-            WidgetEditButton(
-                text = "Delete",
-                onClick = {
-                    currentWidgetId.let(onRemoveWidget)
-                },
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(end = 12.dp, bottom = 12.dp),
-            )
-        }
-
         DropdownMenu(
             expanded = showContextMenu,
             onDismissRequest = { showContextMenu = false },
         ) {
             DropdownMenuItem(
-                text = { Text("Remove widget") },
+                text = { Text("Remove") },
                 onClick = {
                     showContextMenu = false
                     currentWidgetId?.let(onRemoveWidget)
@@ -909,6 +904,7 @@ private fun WidgetStackContent(
     getWidgetMinHeightDp: (Int) -> Int?,
     showAddPlaceholder: Boolean,
     onAddWidgetToStack: (() -> Unit)? = null,
+    onWidgetHoldRelease: (() -> Unit)?,
     modifier: Modifier = Modifier,
     pagerState: androidx.compose.foundation.pager.PagerState = rememberPagerState(
         pageCount = { widgetStack.widgetIds.size },
@@ -939,6 +935,13 @@ private fun WidgetStackContent(
             if (appWidgetId != null) {
                 AndroidView(
                     factory = { context -> createWidgetView(appWidgetId) ?: FrameLayout(context) },
+                    update = { view ->
+                        installWidgetHoldReleaseMenu(
+                            view = view,
+                            enabled = onWidgetHoldRelease != null,
+                            onHoldRelease = onWidgetHoldRelease,
+                        )
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(stackHeightDp.dp),
@@ -1007,6 +1010,110 @@ private fun AddWidgetToStackPlaceholder(
     }
 }
 
+private fun installWidgetHoldReleaseMenu(
+    view: View,
+    enabled: Boolean,
+    onHoldRelease: (() -> Unit)?,
+) {
+    if (!enabled || onHoldRelease == null) {
+        clearWidgetHoldReleaseMenu(view)
+        return
+    }
+
+    view.setOnLongClickListener { true }
+    view.setOnTouchListener(
+        WidgetHoldReleaseTouchListener(
+            onHoldRelease = onHoldRelease,
+        ),
+    )
+
+    if (view is ViewGroup) {
+        for (index in 0 until view.childCount) {
+            installWidgetHoldReleaseMenu(
+                view = view.getChildAt(index),
+                enabled = true,
+                onHoldRelease = onHoldRelease,
+            )
+        }
+    }
+}
+
+private fun clearWidgetHoldReleaseMenu(view: View) {
+    view.setOnLongClickListener(null)
+    view.setOnTouchListener(null)
+
+    if (view is ViewGroup) {
+        for (index in 0 until view.childCount) {
+            clearWidgetHoldReleaseMenu(view.getChildAt(index))
+        }
+    }
+}
+
+private class WidgetHoldReleaseTouchListener(
+    private val onHoldRelease: () -> Unit,
+) : View.OnTouchListener {
+    private var downX = 0f
+    private var downY = 0f
+    private var longPressReached = false
+    private var cancelled = false
+    private var longPressRunnable: Runnable? = null
+
+    override fun onTouch(view: View, event: MotionEvent): Boolean {
+        when (event.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                downX = event.x
+                downY = event.y
+                longPressReached = false
+                cancelled = false
+                longPressRunnable = Runnable {
+                    longPressReached = true
+                }.also { runnable ->
+                    view.postDelayed(runnable, ViewConfiguration.getLongPressTimeout().toLong())
+                }
+                return false
+            }
+
+            MotionEvent.ACTION_MOVE -> {
+                val distance = hypot(
+                    (event.x - downX).toDouble(),
+                    (event.y - downY).toDouble(),
+                ).toFloat()
+                if (distance > view.context.scaledTouchSlopForWidgets()) {
+                    cancelled = true
+                    cancelLongPressRunnable(view)
+                }
+                return longPressReached && !cancelled
+            }
+
+            MotionEvent.ACTION_UP -> {
+                val shouldOpenMenu = longPressReached && !cancelled
+                cancelLongPressRunnable(view)
+                if (shouldOpenMenu) {
+                    onHoldRelease()
+                    return true
+                }
+                return false
+            }
+
+            MotionEvent.ACTION_CANCEL -> {
+                cancelLongPressRunnable(view)
+                return false
+            }
+        }
+
+        return false
+    }
+
+    private fun cancelLongPressRunnable(view: View) {
+        longPressRunnable?.let(view::removeCallbacks)
+        longPressRunnable = null
+    }
+}
+
+private fun android.content.Context.scaledTouchSlopForWidgets(): Float {
+    return ViewConfiguration.get(this).scaledTouchSlop.toFloat()
+}
+
 @Composable
 private fun EditDragHandle(
     text: String,
@@ -1018,26 +1125,6 @@ private fun EditDragHandle(
         style = MaterialTheme.typography.headlineMedium,
         modifier = modifier
             .padding(horizontal = 6.dp),
-    )
-}
-
-@Composable
-private fun WidgetEditButton(
-    text: String,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Text(
-        text = text,
-        color = Color.White,
-        style = MaterialTheme.typography.labelLarge,
-        modifier = modifier
-            .background(
-                color = Color.Black.copy(alpha = 0.58f),
-                shape = MaterialTheme.shapes.medium,
-            )
-            .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 7.dp),
     )
 }
 
