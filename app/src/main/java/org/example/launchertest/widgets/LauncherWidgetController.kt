@@ -155,6 +155,10 @@ class LauncherWidgetController(
         }
     }
 
+    fun getWidgetMinHeightDp(appWidgetId: Int): Int? {
+        return appWidgetManager.getAppWidgetInfo(appWidgetId)?.minHeight
+    }
+
     companion object {
         private const val WidgetHostId = 2048
     }

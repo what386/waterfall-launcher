@@ -23,7 +23,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -90,6 +89,7 @@ fun FavoritesPanel(
     onRemoveWidget: (Int) -> Unit,
     onReorderWidgetStacks: (List<WidgetStack>) -> Unit,
     createWidgetView: (Int) -> AppWidgetHostView?,
+    getWidgetMinHeightDp: (Int) -> Int?,
     modifier: Modifier = Modifier,
 ) {
     val scrollState = rememberScrollState()
@@ -399,6 +399,7 @@ fun FavoritesPanel(
                             },
                             laneShiftY = laneShiftY,
                             createWidgetView = createWidgetView,
+                            getWidgetMinHeightDp = getWidgetMinHeightDp,
                             onAddWidgetToStack = onAddWidgetToStack,
                             onRemoveWidget = onRemoveWidget,
                             onDragStart = {
@@ -431,6 +432,7 @@ fun FavoritesPanel(
                         WidgetStackRow(
                             widgetStack = widgetStack,
                             createWidgetView = createWidgetView,
+                            getWidgetMinHeightDp = getWidgetMinHeightDp,
                             modifier = Modifier.graphicsLayer { alpha = favAlpha },
                         )
                     }
@@ -697,11 +699,13 @@ private fun SheetActionRow(
 private fun WidgetStackRow(
     widgetStack: WidgetStack,
     createWidgetView: (Int) -> AppWidgetHostView?,
+    getWidgetMinHeightDp: (Int) -> Int?,
     modifier: Modifier = Modifier,
 ) {
     WidgetStackContent(
         widgetStack = widgetStack,
         createWidgetView = createWidgetView,
+        getWidgetMinHeightDp = getWidgetMinHeightDp,
         modifier = modifier
             .fillMaxWidth(),
     )
@@ -755,6 +759,7 @@ private fun ReorderableWidgetStackRow(
     dragOffsetY: Float,
     laneShiftY: Float,
     createWidgetView: (Int) -> AppWidgetHostView?,
+    getWidgetMinHeightDp: (Int) -> Int?,
     onAddWidgetToStack: (Int) -> Unit,
     onRemoveWidget: (Int) -> Unit,
     onDragStart: () -> Unit,
@@ -845,6 +850,7 @@ private fun ReorderableWidgetStackRow(
         WidgetStackContent(
             widgetStack = widgetStack,
             createWidgetView = createWidgetView,
+            getWidgetMinHeightDp = getWidgetMinHeightDp,
             pagerState = pagerState,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -901,11 +907,20 @@ private fun ReorderableWidgetStackRow(
 private fun WidgetStackContent(
     widgetStack: WidgetStack,
     createWidgetView: (Int) -> AppWidgetHostView?,
+    getWidgetMinHeightDp: (Int) -> Int?,
     modifier: Modifier = Modifier,
     pagerState: androidx.compose.foundation.pager.PagerState = rememberPagerState(
         pageCount = { widgetStack.widgetIds.size },
     ),
 ) {
+    val stackHeightDp = remember(widgetStack, getWidgetMinHeightDp) {
+        widgetStack.widgetIds
+            .mapNotNull(getWidgetMinHeightDp)
+            .maxOrNull()
+            ?.coerceAtLeast(APP_WIDGET_MIN_HEIGHT_DP.toInt())
+            ?: APP_WIDGET_MIN_HEIGHT_DP.toInt()
+    }
+
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier.padding(
@@ -924,7 +939,7 @@ private fun WidgetStackContent(
                 factory = { context -> createWidgetView(appWidgetId) ?: FrameLayout(context) },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .heightIn(min = APP_WIDGET_MIN_HEIGHT_DP.dp),
+                    .height(stackHeightDp.dp),
             )
         }
 

@@ -72,6 +72,7 @@ fun AppListPanel(
     onRemoveWidget: (Int) -> Unit,
     onReorderWidgetStacks: (List<WidgetStack>) -> Unit,
     createWidgetView: (Int) -> AppWidgetHostView?,
+    getWidgetMinHeightDp: (Int) -> Int?,
     modifier: Modifier = Modifier,
 ) {
     val apps = listLayout.apps
@@ -175,6 +176,7 @@ fun AppListPanel(
                         onRemoveWidget = onRemoveWidget,
                         onReorderWidgetStacks = onReorderWidgetStacks,
                         createWidgetView = createWidgetView,
+                        getWidgetMinHeightDp = getWidgetMinHeightDp,
                         modifier = Modifier.fillParentMaxHeight(),
                     )
                 }

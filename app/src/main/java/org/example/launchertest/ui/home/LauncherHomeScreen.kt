@@ -134,6 +134,7 @@ fun LauncherHomeRoute(
         onRemoveWidget = widgetController::removeWidget,
         onReorderWidgetStacks = widgetController::reorderWidgetStacks,
         createWidgetView = widgetController::createWidgetView,
+        getWidgetMinHeightDp = widgetController::getWidgetMinHeightDp,
     )
 }
 
@@ -158,6 +159,7 @@ private fun LauncherHomeScreen(
     onRemoveWidget: (Int) -> Unit,
     onReorderWidgetStacks: (List<WidgetStack>) -> Unit,
     createWidgetView: (Int) -> android.appwidget.AppWidgetHostView?,
+    getWidgetMinHeightDp: (Int) -> Int?,
 ) {
     val scrubbingLetter = remember { mutableStateOf<Char?>(null) }
     val isScrubbing = remember { mutableStateOf(false) }
@@ -290,6 +292,7 @@ private fun LauncherHomeScreen(
                     onRemoveWidget = onRemoveWidget,
                     onReorderWidgetStacks = onReorderWidgetStacks,
                     createWidgetView = createWidgetView,
+                    getWidgetMinHeightDp = getWidgetMinHeightDp,
                     modifier = Modifier.fillMaxSize(),
                 )
             }
