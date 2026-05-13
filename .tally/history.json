@@ -38,5 +38,15 @@
       "completed_at": "2026-05-13T18:53:21.887079534Z"
     },
     "version": null
+  },
+  {
+    "change": {
+      "description": "allow hide iconsr",
+      "priority": "Medium",
+      "tags": [],
+      "commit": null,
+      "completed_at": "2026-05-13T18:53:23.366051241Z"
+    },
+    "version": null
   }
 ]

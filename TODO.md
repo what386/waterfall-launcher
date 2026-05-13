@@ -5,9 +5,6 @@
 
 ## Tasks
 
-- [ ] allow hide iconsr
-      @created 2026-05-13 17:32
-
 - [ ] gesture bar?
       @created 2026-05-13 17:32
 
@@ -36,6 +33,10 @@
       @completed 2026-05-13 18:42
 
 - [x] allow hide statusbar
+      @created 2026-05-13 17:32
+      @completed 2026-05-13 18:53
+
+- [x] allow hide iconsr
       @created 2026-05-13 17:32
       @completed 2026-05-13 18:53
 
