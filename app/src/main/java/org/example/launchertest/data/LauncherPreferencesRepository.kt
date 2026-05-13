@@ -71,6 +71,14 @@ class LauncherPreferencesRepository(
         }
     }
 
+    suspend fun unhideApp(componentId: String) {
+        context.launcherPrefs.edit { prefs ->
+            val hidden = prefs[hiddenKey]?.toMutableSet() ?: mutableSetOf()
+            hidden.remove(componentId)
+            prefs[hiddenKey] = hidden
+        }
+    }
+
     suspend fun setFavoriteOrder(componentIds: List<String>) {
         context.launcherPrefs.edit { prefs ->
             prefs[favoriteOrderKey] = componentIds.dedupComponentIds().joinToString(",")

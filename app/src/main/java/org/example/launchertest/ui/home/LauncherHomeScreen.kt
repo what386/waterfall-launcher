@@ -122,8 +122,10 @@ fun LauncherHomeRoute(
         onQueryChanged = vm::onQueryChanged,
         onSearchActivated = vm::onSearchActivated,
         onSearchDismissed = vm::onSearchDismissed,
+        onHiddenModeChanged = vm::onHiddenModeChanged,
         onToggleFavorite = vm::onToggleFavorite,
         onHideApp = vm::onHideApp,
+        onUnhideApp = vm::onUnhideApp,
         onReorderFavorites = vm::onFavoriteOrderChanged,
         onLetterSelected = vm::onLetterSelected,
         onAddWidget = widgetController::addWidget,
@@ -142,8 +144,10 @@ private fun LauncherHomeScreen(
     onQueryChanged: (String) -> Unit,
     onSearchActivated: () -> Unit,
     onSearchDismissed: () -> Unit,
+    onHiddenModeChanged: (Boolean) -> Unit,
     onToggleFavorite: (org.example.launchertest.ui.model.LauncherApp) -> Unit,
     onHideApp: (org.example.launchertest.ui.model.LauncherApp) -> Unit,
+    onUnhideApp: (org.example.launchertest.ui.model.LauncherApp) -> Unit,
     onReorderFavorites: (List<org.example.launchertest.ui.model.LauncherApp>) -> Unit,
     onLetterSelected: (Char) -> Unit,
     onAddWidget: () -> Unit,
@@ -201,8 +205,19 @@ private fun LauncherHomeScreen(
         }
     }
 
+    fun setHiddenMode(enabled: Boolean) {
+        onHiddenModeChanged(enabled)
+        contentMode = if (enabled) HomeContentMode.Apps else HomeContentMode.Favorites
+        scrubbingLetter.value = null
+        isScrubbing.value = false
+
+        coroutineScope.launch {
+            listState.scrollToItem(index = 0)
+        }
+    }
+
     fun dismissSearch() {
-        contentMode = HomeContentMode.Favorites
+        contentMode = if (state.isHiddenMode) HomeContentMode.Apps else HomeContentMode.Favorites
         scrubbingLetter.value = null
         isScrubbing.value = false
         onSearchDismissed()
@@ -253,13 +268,16 @@ private fun LauncherHomeScreen(
                     widgetIds = widgetIds,
                     scrubbingLetter = scrubbingLetter,
                     isScrubbing = isScrubbing,
+                    isHiddenMode = state.isHiddenMode,
                     showFavoritesOnly = mode == HomeContentMode.Favorites,
                     isSearchActive = mode == HomeContentMode.Search,
                     listState = listState,
                     categoryPinOffsetPx = categoryPinOffsetPx,
                     onSearchActivated = ::activateSearch,
+                    onHiddenModeChanged = ::setHiddenMode,
                     onToggleFavorite = onToggleFavorite,
                     onHideApp = onHideApp,
+                    onUnhideApp = onUnhideApp,
                     onReorderFavorites = onReorderFavorites,
                     onAddWidget = onAddWidget,
                     onRemoveWidget = onRemoveWidget,

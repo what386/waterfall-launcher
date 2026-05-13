@@ -25,7 +25,8 @@ class LauncherHomeViewModel(
 
     private val query = MutableStateFlow("")
     private val isSearchActive = MutableStateFlow(false)
-    private val apps = interactor.launcherAppsFlow(query)
+    private val isHiddenMode = MutableStateFlow(false)
+    private val apps = interactor.launcherAppsFlow(query, isHiddenMode)
     private val favoriteOrder = interactor.favoriteOrderFlow()
 
     private val _jumpToTarget = MutableSharedFlow<Int>(
@@ -37,13 +38,15 @@ class LauncherHomeViewModel(
     val uiState: StateFlow<LauncherHomeUiState> = combine(
         query,
         isSearchActive,
+        isHiddenMode,
         apps,
         favoriteOrder,
-    ) { search, searchActive, launcherApps, storedFavoriteOrder ->
+    ) { search, searchActive, hiddenMode, launcherApps, storedFavoriteOrder ->
         val listLayout = buildAppListLayout(launcherApps, storedFavoriteOrder)
         LauncherHomeUiState(
             query = search,
             isSearchActive = searchActive,
+            isHiddenMode = hiddenMode,
             listLayout = listLayout,
         )
     }.stateIn(
@@ -55,6 +58,7 @@ class LauncherHomeViewModel(
     fun onQueryChanged(newQuery: String) { query.value = newQuery }
     fun onSearchActivated() { isSearchActive.value = true }
     fun onSearchDismissed() { isSearchActive.value = false; query.value = "" }
+    fun onHiddenModeChanged(enabled: Boolean) { isHiddenMode.value = enabled }
 
     fun onLetterSelected(letter: Char) {
         val targetIndex = uiState.value.listLayout.letterJumpTargets[letter] ?: return
@@ -69,6 +73,10 @@ class LauncherHomeViewModel(
         viewModelScope.launch { interactor.hideApp(app) }
     }
 
+    fun onUnhideApp(app: LauncherApp) {
+        viewModelScope.launch { interactor.unhideApp(app) }
+    }
+
     fun onFavoriteOrderChanged(orderedFavorites: List<LauncherApp>) {
         viewModelScope.launch {
             interactor.setFavoriteOrder(orderedFavorites.map { it.componentId() })
@@ -80,6 +88,7 @@ class LauncherHomeViewModel(
 data class LauncherHomeUiState(
     val query: String = "",
     val isSearchActive: Boolean = false,
+    val isHiddenMode: Boolean = false,
     val listLayout: AppListLayout = AppListLayout(
         favorites = emptyList(),
         apps = emptyList(),

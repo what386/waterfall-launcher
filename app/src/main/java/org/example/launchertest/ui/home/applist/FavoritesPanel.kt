@@ -70,8 +70,10 @@ fun FavoritesPanel(
     widgetIds: List<Int>,
     favAlpha: Float,
     isSearchActive: Boolean,
+    isHiddenMode: Boolean,
     onToggleFavorite: (LauncherApp) -> Unit,
     onHideApp: (LauncherApp) -> Unit,
+    onHiddenModeChanged: (Boolean) -> Unit,
     onReorderFavorites: (List<LauncherApp>) -> Unit,
     onSearchActivated: () -> Unit,
     onAddWidget: () -> Unit,
@@ -196,6 +198,10 @@ fun FavoritesPanel(
         Column(
             modifier = Modifier
                 .fillMaxHeight()
+                .padding(
+                    start = APP_LIST_CONTENT_START_PADDING_DP.dp,
+                    end = APP_LIST_CONTENT_END_PADDING_DP.dp,
+                )
                 .offset(y = (-FAVORITES_CENTER_BIAS_UP_DP).dp)
                 .graphicsLayer { translationY = overscrollOffset.value }
                 .pointerInput(reorderMode) {
@@ -340,8 +346,10 @@ fun FavoritesPanel(
                             AppRow(
                                 app = app,
                                 isFavorite = true,
+                                isHiddenMode = false,
                                 onToggleFavorite = onToggleFavorite,
                                 onHideApp = onHideApp,
+                                onUnhideApp = {},
                                 modifier = Modifier.graphicsLayer { alpha = favAlpha },
                             )
                         }
@@ -366,6 +374,18 @@ fun FavoritesPanel(
             expanded = showPanelMenu,
             onDismissRequest = { showPanelMenu = false },
         ) {
+            DropdownMenuItem(
+                text = { Text(if (isHiddenMode) "Exit unhide mode" else "Unhide mode") },
+                onClick = {
+                    showPanelMenu = false
+                    if (reorderMode) {
+                        reorderMode = false
+                        commitDragReorderIfNeeded()
+                    }
+                    onHiddenModeChanged(!isHiddenMode)
+                },
+            )
+
             DropdownMenuItem(
                 text = { Text("Add widget") },
                 onClick = {

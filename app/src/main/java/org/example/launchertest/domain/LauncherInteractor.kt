@@ -12,14 +12,17 @@ class LauncherInteractor(
 ) {
     fun favoriteOrderFlow(): Flow<List<String>> = preferencesRepository.favoriteOrder
 
-    fun launcherAppsFlow(query: Flow<String>): Flow<List<LauncherApp>> {
+    fun launcherAppsFlow(
+        query: Flow<String>,
+        hiddenMode: Flow<Boolean>,
+    ): Flow<List<LauncherApp>> {
         val allApps = appRepository.loadLauncherApps()
-        return combine(preferencesRepository.favorites, preferencesRepository.hiddenApps, query) {
-                favorites, hiddenApps, rawQuery ->
+        return combine(preferencesRepository.favorites, preferencesRepository.hiddenApps, query, hiddenMode) {
+                favorites, hiddenApps, rawQuery, isHiddenMode ->
             val normalizedQuery = rawQuery.trim().lowercase()
             allApps
                 .asSequence()
-                .filter { app -> app.componentId() !in hiddenApps }
+                .filter { app -> (app.componentId() in hiddenApps) == isHiddenMode }
                 .map { app ->
                     val componentId = app.componentId()
                     app.copy(isFavorite = componentId in favorites)
@@ -38,6 +41,10 @@ class LauncherInteractor(
 
     suspend fun hideApp(app: LauncherApp) {
         preferencesRepository.hideApp(app.componentId())
+    }
+
+    suspend fun unhideApp(app: LauncherApp) {
+        preferencesRepository.unhideApp(app.componentId())
     }
 
     suspend fun setFavoriteOrder(componentIds: List<String>) {

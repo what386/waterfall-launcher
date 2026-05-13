@@ -52,13 +52,16 @@ fun AppListPanel(
     widgetIds: List<Int>,
     scrubbingLetter: State<Char?>,
     isScrubbing: State<Boolean>,
+    isHiddenMode: Boolean,
     showFavoritesOnly: Boolean,
     isSearchActive: Boolean,
     listState: LazyListState,
     categoryPinOffsetPx: Int,
     onSearchActivated: () -> Unit,
+    onHiddenModeChanged: (Boolean) -> Unit,
     onToggleFavorite: (LauncherApp) -> Unit,
     onHideApp: (LauncherApp) -> Unit,
+    onUnhideApp: (LauncherApp) -> Unit,
     onReorderFavorites: (List<LauncherApp>) -> Unit,
     onAddWidget: () -> Unit,
     onRemoveWidget: (Int) -> Unit,
@@ -106,13 +109,21 @@ fun AppListPanel(
                 },
             state = listState,
             contentPadding = PaddingValues(
-                start = APP_LIST_CONTENT_START_PADDING_DP.dp,
+                start = if (showFavoritesOnly) {
+                    0.dp
+                } else {
+                    APP_LIST_CONTENT_START_PADDING_DP.dp
+                },
                 top = if (isSearchActive) {
                     APP_LIST_SEARCH_TOP_PADDING_DP.dp
                 } else {
                     APP_LIST_CONTENT_TOP_PADDING_DP.dp
                 },
-                end = APP_LIST_CONTENT_END_PADDING_DP.dp,
+                end = if (showFavoritesOnly) {
+                    0.dp
+                } else {
+                    APP_LIST_CONTENT_END_PADDING_DP.dp
+                },
                 bottom = if (isSearchActive) {
                     APP_LIST_SEARCH_BOTTOM_PADDING_DP.dp
                 } else {
@@ -133,8 +144,10 @@ fun AppListPanel(
                         widgetIds = widgetIds,
                         favAlpha = favAlpha,
                         isSearchActive = isSearchActive,
+                        isHiddenMode = isHiddenMode,
                         onToggleFavorite = onToggleFavorite,
                         onHideApp = onHideApp,
+                        onHiddenModeChanged = onHiddenModeChanged,
                         onReorderFavorites = onReorderFavorites,
                         onSearchActivated = onSearchActivated,
                         onAddWidget = onAddWidget,
@@ -146,6 +159,12 @@ fun AppListPanel(
             }
 
             if (!showFavoritesOnly) {
+                if (isHiddenMode) {
+                    item(key = "hidden_mode_indicator") {
+                        HiddenModeIndicator()
+                    }
+                }
+
                 itemsIndexed(
                     items = apps,
                     key = { _, app -> app.packageName + app.activityName },
@@ -172,8 +191,10 @@ fun AppListPanel(
                     AppRow(
                         app = app,
                         isFavorite = false,
+                        isHiddenMode = isHiddenMode,
                         onToggleFavorite = onToggleFavorite,
                         onHideApp = onHideApp,
+                        onUnhideApp = onUnhideApp,
                         modifier = rowModifier,
                     )
                 }
@@ -205,13 +226,35 @@ internal fun bucketFor(label: String): Char {
     return if (first in 'A'..'Z') first else '#'
 }
 
+@Composable
+private fun HiddenModeIndicator() {
+    Surface(
+        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.86f),
+        contentColor = Color.White,
+        shape = MaterialTheme.shapes.medium,
+        modifier = Modifier.padding(
+            start = APP_ROW_HORIZONTAL_PADDING_DP.dp,
+            end = APP_ROW_HORIZONTAL_PADDING_DP.dp,
+            bottom = 18.dp,
+        ),
+    ) {
+        Text(
+            text = "HIDDEN APPS",
+            style = MaterialTheme.typography.labelMedium,
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+        )
+    }
+}
+
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 internal fun AppRow(
     app: LauncherApp,
     isFavorite: Boolean,
+    isHiddenMode: Boolean,
     onToggleFavorite: (LauncherApp) -> Unit,
     onHideApp: (LauncherApp) -> Unit,
+    onUnhideApp: (LauncherApp) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -343,10 +386,14 @@ internal fun AppRow(
             )
 
             DropdownMenuItem(
-                text = { Text("Hide") },
+                text = { Text(if (isHiddenMode) "Unhide" else "Hide") },
                 onClick = {
                     showMenu = false
-                    onHideApp(app)
+                    if (isHiddenMode) {
+                        onUnhideApp(app)
+                    } else {
+                        onHideApp(app)
+                    }
                 },
             )
         }
