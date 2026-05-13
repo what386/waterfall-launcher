@@ -20,6 +20,9 @@
 - [ ] option to change font
       @created 2026-05-13 17:33
 
+- [ ] greeter screen idea
+      @created 2026-05-13 18:53
+
 
 ## Completed
 
