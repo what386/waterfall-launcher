@@ -885,7 +885,7 @@ private fun EditDragHandle(
         color = Color.White.copy(alpha = 0.84f),
         style = MaterialTheme.typography.headlineMedium,
         modifier = modifier
-            .padding(horizontal = 10.dp, vertical = 4.dp),
+            .padding(horizontal = 6.dp),
     )
 }
 
