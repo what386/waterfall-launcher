@@ -6,6 +6,7 @@ import org.example.launchertest.ui.model.LauncherApp
 
 class AppRepository(
     private val packageManager: PackageManager,
+    private val selfPackageName: String,
 ) {
     fun loadLauncherApps(): List<LauncherApp> {
         val intent = Intent(Intent.ACTION_MAIN).apply {
@@ -25,6 +26,7 @@ class AppRepository(
                     activityName = activityInfo.name,
                 )
             }
+            .filterNot { it.packageName == selfPackageName }
             .distinctBy { it.packageName to it.activityName }
             .sortedBy { it.label.lowercase() }
             .toList()

@@ -24,7 +24,10 @@ class MainActivity : ComponentActivity() {
         // Request high refresh rate (120Hz)
         setHighRefreshRate()
 
-        val appRepository = AppRepository(packageManager)
+        val appRepository = AppRepository(
+            packageManager = packageManager,
+            selfPackageName = packageName,
+        )
         val preferencesRepository = LauncherPreferencesRepository(applicationContext)
         val interactor = LauncherInteractor(appRepository, preferencesRepository)
         widgetController = LauncherWidgetController(this, preferencesRepository, lifecycleScope)
