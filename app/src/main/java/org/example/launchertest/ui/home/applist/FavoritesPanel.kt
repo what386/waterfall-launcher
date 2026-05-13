@@ -430,6 +430,14 @@ fun FavoritesPanel(
                 Spacer(modifier = Modifier.height(ADD_WIDGET_BOTTOM_PADDING_DP.dp))
             }
 
+            if (widgetReorderMode) {
+                AddWidgetEditRow(
+                    onClick = onAddWidget,
+                    modifier = Modifier.graphicsLayer { alpha = favAlpha },
+                )
+                Spacer(modifier = Modifier.height(ADD_WIDGET_BOTTOM_PADDING_DP.dp))
+            }
+
             if (favorites.isNotEmpty()) {
                 SectionHeader(
                     text = "FAVORITES",
@@ -527,7 +535,6 @@ fun FavoritesPanel(
                     isHiddenMode = isHiddenMode,
                     reorderMode = reorderMode,
                     widgetReorderMode = widgetReorderMode,
-                    hasWidgets = widgetIds.isNotEmpty(),
                     hasFavorites = orderedFavorites.isNotEmpty(),
                     onHiddenModeClicked = {
                         showPanelMenu = false
@@ -540,30 +547,6 @@ fun FavoritesPanel(
                             commitWidgetDragReorderIfNeeded()
                         }
                         onHiddenModeChanged(!isHiddenMode)
-                    },
-                    onAddWidgetClicked = {
-                        showPanelMenu = false
-                        if (reorderMode) {
-                            reorderMode = false
-                            commitDragReorderIfNeeded()
-                        }
-                        if (widgetReorderMode) {
-                            widgetReorderMode = false
-                            commitWidgetDragReorderIfNeeded()
-                        }
-                        onAddWidget()
-                    },
-                    onClearWidgetsClicked = {
-                        showPanelMenu = false
-                        if (reorderMode) {
-                            reorderMode = false
-                            commitDragReorderIfNeeded()
-                        }
-                        if (widgetReorderMode) {
-                            widgetReorderMode = false
-                            commitWidgetDragReorderIfNeeded()
-                        }
-                        widgetIds.toList().forEach(onRemoveWidget)
                     },
                     onReorderWidgetsClicked = {
                         showPanelMenu = false
@@ -600,11 +583,8 @@ private fun FavoritesOptionsSheet(
     isHiddenMode: Boolean,
     reorderMode: Boolean,
     widgetReorderMode: Boolean,
-    hasWidgets: Boolean,
     hasFavorites: Boolean,
     onHiddenModeClicked: () -> Unit,
-    onAddWidgetClicked: () -> Unit,
-    onClearWidgetsClicked: () -> Unit,
     onReorderWidgetsClicked: () -> Unit,
     onReorderFavoritesClicked: () -> Unit,
 ) {
@@ -632,32 +612,16 @@ private fun FavoritesOptionsSheet(
         )
 
         SheetActionRow(
-            icon = "+",
-            title = "Add widget",
-            subtitle = "Place a widget above Favorites",
-            onClick = onAddWidgetClicked,
+            icon = "↕",
+            title = if (widgetReorderMode) "Done editing widgets" else "Edit widgets",
+            subtitle = if (widgetReorderMode) {
+                "Save widget order and removals"
+            } else {
+                "Reorder, remove, or add widgets"
+            },
+            active = widgetReorderMode,
+            onClick = onReorderWidgetsClicked,
         )
-
-        if (hasWidgets) {
-            SheetActionRow(
-                icon = "↕",
-                title = if (widgetReorderMode) "Done reordering widgets" else "Reorder widgets",
-                subtitle = if (widgetReorderMode) {
-                    "Save the current widget order"
-                } else {
-                    "Drag widgets into a custom order"
-                },
-                active = widgetReorderMode,
-                onClick = onReorderWidgetsClicked,
-            )
-
-            SheetActionRow(
-                icon = "−",
-                title = "Clear all widgets",
-                subtitle = "Remove every widget from Favorites",
-                onClick = onClearWidgetsClicked,
-            )
-        }
 
         if (hasFavorites) {
             SheetActionRow(
@@ -740,6 +704,45 @@ private fun WidgetRow(
                 .fillMaxWidth()
                 .heightIn(min = APP_WIDGET_MIN_HEIGHT_DP.dp),
         )
+    }
+}
+
+@Composable
+private fun AddWidgetEditRow(
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(
+                start = APP_WIDGET_ROW_START_PADDING_DP.dp,
+                end = APP_WIDGET_ROW_END_PADDING_DP.dp,
+                top = APP_WIDGET_ROW_TOP_PADDING_DP.dp,
+                bottom = APP_WIDGET_ROW_BOTTOM_PADDING_DP.dp,
+            ),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = "+",
+            color = MaterialTheme.colorScheme.primary,
+            style = MaterialTheme.typography.headlineSmall,
+            modifier = Modifier.size(40.dp),
+        )
+        Column(
+            modifier = Modifier.padding(start = 12.dp),
+        ) {
+            Text(
+                text = "Add widget",
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Text(
+                text = "Place another widget above Favorites",
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f),
+                style = MaterialTheme.typography.bodyMedium,
+            )
+        }
     }
 }
 
