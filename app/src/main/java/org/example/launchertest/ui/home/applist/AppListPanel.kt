@@ -68,6 +68,7 @@ fun AppListPanel(
     onReorderFavorites: (List<LauncherApp>) -> Unit,
     onAddWidget: () -> Unit,
     onRemoveWidget: (Int) -> Unit,
+    onReorderWidgets: (List<Int>) -> Unit,
     createWidgetView: (Int) -> AppWidgetHostView?,
     modifier: Modifier = Modifier,
 ) {
@@ -169,6 +170,7 @@ fun AppListPanel(
                         onSearchActivated = onSearchActivated,
                         onAddWidget = onAddWidget,
                         onRemoveWidget = onRemoveWidget,
+                        onReorderWidgets = onReorderWidgets,
                         createWidgetView = createWidgetView,
                         modifier = Modifier.fillParentMaxHeight(),
                     )

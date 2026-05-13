@@ -130,6 +130,7 @@ fun LauncherHomeRoute(
         onLetterSelected = vm::onLetterSelected,
         onAddWidget = widgetController::addWidget,
         onRemoveWidget = widgetController::removeWidget,
+        onReorderWidgets = widgetController::reorderWidgets,
         createWidgetView = widgetController::createWidgetView,
     )
 }
@@ -152,6 +153,7 @@ private fun LauncherHomeScreen(
     onLetterSelected: (Char) -> Unit,
     onAddWidget: () -> Unit,
     onRemoveWidget: (Int) -> Unit,
+    onReorderWidgets: (List<Int>) -> Unit,
     createWidgetView: (Int) -> android.appwidget.AppWidgetHostView?,
 ) {
     val scrubbingLetter = remember { mutableStateOf<Char?>(null) }
@@ -282,6 +284,7 @@ private fun LauncherHomeScreen(
                     onReorderFavorites = onReorderFavorites,
                     onAddWidget = onAddWidget,
                     onRemoveWidget = onRemoveWidget,
+                    onReorderWidgets = onReorderWidgets,
                     createWidgetView = createWidgetView,
                     modifier = Modifier.fillMaxSize(),
                 )

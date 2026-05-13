@@ -97,6 +97,12 @@ class LauncherWidgetController(
         }
     }
 
+    fun reorderWidgets(appWidgetIds: List<Int>) {
+        scope.launch {
+            preferencesRepository.setWidgetIds(appWidgetIds)
+        }
+    }
+
     fun createWidgetView(appWidgetId: Int): AppWidgetHostView? {
         val providerInfo = appWidgetManager.getAppWidgetInfo(appWidgetId) ?: return null
         return appWidgetHost.createView(activity, appWidgetId, providerInfo).apply {

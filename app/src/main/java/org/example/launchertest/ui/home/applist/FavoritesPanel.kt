@@ -9,6 +9,7 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
@@ -26,6 +27,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -53,6 +56,7 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.compose.ui.zIndex
 import kotlinx.coroutines.launch
 import org.example.launchertest.ui.home.shared.rememberAppIcon
 import org.example.launchertest.ui.model.LauncherApp
@@ -79,6 +83,7 @@ fun FavoritesPanel(
     onSearchActivated: () -> Unit,
     onAddWidget: () -> Unit,
     onRemoveWidget: (Int) -> Unit,
+    onReorderWidgets: (List<Int>) -> Unit,
     createWidgetView: (Int) -> AppWidgetHostView?,
     modifier: Modifier = Modifier,
 ) {
@@ -89,6 +94,7 @@ fun FavoritesPanel(
     val searchTriggerPx = with(density) { APP_LIST_SEARCH_DRAG_THRESHOLD_DP.dp.toPx() }
     var showPanelMenu by remember { mutableStateOf(false) }
     var reorderMode by remember { mutableStateOf(false) }
+    var widgetReorderMode by remember { mutableStateOf(false) }
     var didTriggerSearchDuringDrag by remember { mutableStateOf(false) }
     val panelInteractionSource = remember { MutableInteractionSource() }
     var activeDragComponentId by remember { mutableStateOf<String?>(null) }
@@ -97,6 +103,12 @@ fun FavoritesPanel(
     var activeDragOffsetY by remember { mutableFloatStateOf(0f) }
     val rowMetrics = remember { mutableStateMapOf<String, FavoriteRowMetrics>() }
     val orderedFavorites = remember { mutableStateListOf<LauncherApp>() }
+    var activeDragWidgetId by remember { mutableIntStateOf(-1) }
+    var activeDragWidgetStartIndex by remember { mutableIntStateOf(-1) }
+    var activeDragWidgetTargetIndex by remember { mutableIntStateOf(-1) }
+    var activeDragWidgetOffsetY by remember { mutableFloatStateOf(0f) }
+    val widgetRowMetrics = remember { mutableStateMapOf<Int, FavoriteRowMetrics>() }
+    val orderedWidgetIds = remember { mutableStateListOf<Int>() }
 
     LaunchedEffect(favorites) {
         val incomingById = favorites.associateBy(::favoriteComponentId)
@@ -107,8 +119,20 @@ fun FavoritesPanel(
         orderedFavorites.addAll(kept + appended)
     }
 
+    LaunchedEffect(widgetIds) {
+        val incomingIds = widgetIds.toSet()
+        val kept = orderedWidgetIds.filter { it in incomingIds }
+        val appended = widgetIds.filter { it !in orderedWidgetIds.toSet() }
+        orderedWidgetIds.clear()
+        orderedWidgetIds.addAll(kept + appended)
+    }
+
     fun persistFavoriteOrder() {
         onReorderFavorites(orderedFavorites.toList())
+    }
+
+    fun persistWidgetOrder() {
+        onReorderWidgets(orderedWidgetIds.toList())
     }
 
     fun clearDragState() {
@@ -139,6 +163,69 @@ fun FavoritesPanel(
         }
 
         clearDragState()
+    }
+
+    fun clearWidgetDragState() {
+        activeDragWidgetId = -1
+        activeDragWidgetStartIndex = -1
+        activeDragWidgetTargetIndex = -1
+        activeDragWidgetOffsetY = 0f
+    }
+
+    fun commitWidgetDragReorderIfNeeded() {
+        val activeWidgetId = activeDragWidgetId
+        if (activeWidgetId == -1 || activeDragWidgetTargetIndex == -1) {
+            clearWidgetDragState()
+            return
+        }
+
+        val currentIndex = orderedWidgetIds.indexOf(activeWidgetId)
+
+        if (currentIndex != -1 &&
+            currentIndex != activeDragWidgetTargetIndex &&
+            activeDragWidgetTargetIndex in orderedWidgetIds.indices
+        ) {
+            val moved = orderedWidgetIds.removeAt(currentIndex)
+            orderedWidgetIds.add(activeDragWidgetTargetIndex, moved)
+            persistWidgetOrder()
+        }
+
+        clearWidgetDragState()
+    }
+
+    fun updateWidgetDragTarget(appWidgetId: Int) {
+        val startIndex = activeDragWidgetStartIndex
+        if (startIndex !in orderedWidgetIds.indices) return
+
+        val activeMetrics = widgetRowMetrics[appWidgetId] ?: return
+        val draggedCenterY = activeMetrics.centerY + activeDragWidgetOffsetY
+        var targetIndex = startIndex
+
+        if (activeDragWidgetOffsetY > 0f && startIndex < orderedWidgetIds.lastIndex) {
+            for (index in (startIndex + 1)..orderedWidgetIds.lastIndex) {
+                val candidateId = orderedWidgetIds[index]
+                val metrics = widgetRowMetrics[candidateId] ?: continue
+                val replaceThresholdY = metrics.topY +
+                    (metrics.height * FAVORITES_REORDER_SWAP_FRACTION_OF_ROW)
+
+                if (draggedCenterY >= replaceThresholdY) {
+                    targetIndex = index
+                }
+            }
+        } else if (activeDragWidgetOffsetY < 0f && startIndex > 0) {
+            for (index in (startIndex - 1) downTo 0) {
+                val candidateId = orderedWidgetIds[index]
+                val metrics = widgetRowMetrics[candidateId] ?: continue
+                val replaceThresholdY = metrics.topY +
+                    (metrics.height * (1f - FAVORITES_REORDER_SWAP_FRACTION_OF_ROW))
+
+                if (draggedCenterY <= replaceThresholdY) {
+                    targetIndex = index
+                }
+            }
+        }
+
+        activeDragWidgetTargetIndex = targetIndex
     }
 
     fun updateDragTarget(componentId: String) {
@@ -186,6 +273,13 @@ fun FavoritesPanel(
                             commitDragReorderIfNeeded()
                         }
                     }
+                } else if (widgetReorderMode) {
+                    Modifier.pointerInput(widgetReorderMode) {
+                        detectTapGestures {
+                            widgetReorderMode = false
+                            commitWidgetDragReorderIfNeeded()
+                        }
+                    }
                 } else {
                     Modifier.combinedClickable(
                         interactionSource = panelInteractionSource,
@@ -205,8 +299,8 @@ fun FavoritesPanel(
                 )
                 .offset(y = (-FAVORITES_CENTER_BIAS_UP_DP).dp)
                 .graphicsLayer { translationY = overscrollOffset.value }
-                .pointerInput(reorderMode) {
-                    if (reorderMode) return@pointerInput
+                .pointerInput(reorderMode, widgetReorderMode) {
+                    if (reorderMode || widgetReorderMode) return@pointerInput
                     detectVerticalDragGestures(
                         onDragEnd = {
                             didTriggerSearchDuringDrag = false
@@ -272,15 +366,67 @@ fun FavoritesPanel(
         ) {
             Spacer(modifier = Modifier.height(FAVORITES_PANEL_TOP_MARGIN_DP.dp))
 
-            widgetIds.forEach { appWidgetId ->
-                WidgetRow(
-                    appWidgetId = appWidgetId,
-                    createWidgetView = createWidgetView,
-                    modifier = Modifier.graphicsLayer { alpha = favAlpha },
-                )
+            orderedWidgetIds.forEach { appWidgetId ->
+                key(appWidgetId) {
+                    val index = orderedWidgetIds.indexOf(appWidgetId)
+                    val activeRowHeight = widgetRowMetrics[activeDragWidgetId]?.height.orZero()
+                    val laneShiftY = when {
+                        activeDragWidgetId == -1 || index == -1 -> 0f
+                        index == activeDragWidgetStartIndex -> 0f
+                        activeDragWidgetStartIndex < activeDragWidgetTargetIndex &&
+                            index in (activeDragWidgetStartIndex + 1)..activeDragWidgetTargetIndex -> -activeRowHeight
+                        activeDragWidgetStartIndex > activeDragWidgetTargetIndex &&
+                            index in activeDragWidgetTargetIndex until activeDragWidgetStartIndex -> activeRowHeight
+                        else -> 0f
+                    }
+
+                    if (widgetReorderMode) {
+                        ReorderableWidgetRow(
+                            appWidgetId = appWidgetId,
+                            isActiveDrag = activeDragWidgetId == appWidgetId,
+                            dragOffsetY = if (activeDragWidgetId == appWidgetId) {
+                                activeDragWidgetOffsetY
+                            } else {
+                                0f
+                            },
+                            laneShiftY = laneShiftY,
+                            createWidgetView = createWidgetView,
+                            onRemoveWidget = onRemoveWidget,
+                            onDragStart = {
+                                val freshIndex = orderedWidgetIds.indexOf(appWidgetId)
+                                if (freshIndex == -1) return@ReorderableWidgetRow
+
+                                activeDragWidgetId = appWidgetId
+                                activeDragWidgetStartIndex = freshIndex
+                                activeDragWidgetTargetIndex = freshIndex
+                                activeDragWidgetOffsetY = 0f
+                            },
+                            onDragDelta = { deltaY ->
+                                if (activeDragWidgetId != appWidgetId) return@ReorderableWidgetRow
+                                activeDragWidgetOffsetY += deltaY
+                                updateWidgetDragTarget(appWidgetId)
+                            },
+                            onDragEnd = {
+                                if (activeDragWidgetId == appWidgetId) {
+                                    commitWidgetDragReorderIfNeeded()
+                                }
+                            },
+                            onMeasured = { metrics ->
+                                widgetRowMetrics[appWidgetId] = metrics
+                            },
+                            modifier = Modifier.graphicsLayer { alpha = favAlpha },
+                        )
+                    } else {
+                        WidgetRow(
+                            appWidgetId = appWidgetId,
+                            createWidgetView = createWidgetView,
+                            modifier = Modifier.graphicsLayer { alpha = favAlpha },
+                        )
+                    }
+                }
             }
 
-            if (widgetIds.isNotEmpty()) {
+            if (orderedWidgetIds.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(ADD_WIDGET_BOTTOM_PADDING_DP.dp))
             }
 
@@ -357,7 +503,7 @@ fun FavoritesPanel(
                     }
                 }
                 Spacer(modifier = Modifier.height(APP_LIST_FAVORITES_BOTTOM_SPACER_DP.dp))
-            } else if (widgetIds.isEmpty()) {
+            } else if (orderedWidgetIds.isEmpty()) {
                 Text(
                     text = "No favorites yet. Long-press any app and choose Favorite.",
                     modifier = Modifier
@@ -380,6 +526,7 @@ fun FavoritesPanel(
                 FavoritesOptionsSheet(
                     isHiddenMode = isHiddenMode,
                     reorderMode = reorderMode,
+                    widgetReorderMode = widgetReorderMode,
                     hasWidgets = widgetIds.isNotEmpty(),
                     hasFavorites = orderedFavorites.isNotEmpty(),
                     onHiddenModeClicked = {
@@ -387,6 +534,10 @@ fun FavoritesPanel(
                         if (reorderMode) {
                             reorderMode = false
                             commitDragReorderIfNeeded()
+                        }
+                        if (widgetReorderMode) {
+                            widgetReorderMode = false
+                            commitWidgetDragReorderIfNeeded()
                         }
                         onHiddenModeChanged(!isHiddenMode)
                     },
@@ -396,6 +547,10 @@ fun FavoritesPanel(
                             reorderMode = false
                             commitDragReorderIfNeeded()
                         }
+                        if (widgetReorderMode) {
+                            widgetReorderMode = false
+                            commitWidgetDragReorderIfNeeded()
+                        }
                         onAddWidget()
                     },
                     onClearWidgetsClicked = {
@@ -404,10 +559,30 @@ fun FavoritesPanel(
                             reorderMode = false
                             commitDragReorderIfNeeded()
                         }
+                        if (widgetReorderMode) {
+                            widgetReorderMode = false
+                            commitWidgetDragReorderIfNeeded()
+                        }
                         widgetIds.toList().forEach(onRemoveWidget)
+                    },
+                    onReorderWidgetsClicked = {
+                        showPanelMenu = false
+                        if (reorderMode) {
+                            reorderMode = false
+                            commitDragReorderIfNeeded()
+                        }
+                        val nextMode = !widgetReorderMode
+                        widgetReorderMode = nextMode
+                        if (!nextMode) {
+                            commitWidgetDragReorderIfNeeded()
+                        }
                     },
                     onReorderFavoritesClicked = {
                         showPanelMenu = false
+                        if (widgetReorderMode) {
+                            widgetReorderMode = false
+                            commitWidgetDragReorderIfNeeded()
+                        }
                         val nextMode = !reorderMode
                         reorderMode = nextMode
                         if (!nextMode) {
@@ -424,11 +599,13 @@ fun FavoritesPanel(
 private fun FavoritesOptionsSheet(
     isHiddenMode: Boolean,
     reorderMode: Boolean,
+    widgetReorderMode: Boolean,
     hasWidgets: Boolean,
     hasFavorites: Boolean,
     onHiddenModeClicked: () -> Unit,
     onAddWidgetClicked: () -> Unit,
     onClearWidgetsClicked: () -> Unit,
+    onReorderWidgetsClicked: () -> Unit,
     onReorderFavoritesClicked: () -> Unit,
 ) {
     Column(
@@ -462,6 +639,18 @@ private fun FavoritesOptionsSheet(
         )
 
         if (hasWidgets) {
+            SheetActionRow(
+                icon = "↕",
+                title = if (widgetReorderMode) "Done reordering widgets" else "Reorder widgets",
+                subtitle = if (widgetReorderMode) {
+                    "Save the current widget order"
+                } else {
+                    "Drag widgets into a custom order"
+                },
+                active = widgetReorderMode,
+                onClick = onReorderWidgetsClicked,
+            )
+
             SheetActionRow(
                 icon = "−",
                 title = "Clear all widgets",
@@ -552,6 +741,145 @@ private fun WidgetRow(
                 .heightIn(min = APP_WIDGET_MIN_HEIGHT_DP.dp),
         )
     }
+}
+
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun ReorderableWidgetRow(
+    appWidgetId: Int,
+    isActiveDrag: Boolean,
+    dragOffsetY: Float,
+    laneShiftY: Float,
+    createWidgetView: (Int) -> AppWidgetHostView?,
+    onRemoveWidget: (Int) -> Unit,
+    onDragStart: () -> Unit,
+    onDragDelta: (Float) -> Unit,
+    onDragEnd: () -> Unit,
+    onMeasured: (FavoriteRowMetrics) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var showContextMenu by remember { mutableStateOf(false) }
+    val settleSpec = spring<Float>(
+        stiffness = FAVORITES_REORDER_SETTLE_STIFFNESS,
+        dampingRatio = FAVORITES_REORDER_SETTLE_DAMPING,
+    )
+    val activeScale by animateFloatAsState(
+        targetValue = if (isActiveDrag) FAVORITES_REORDER_ACTIVE_SCALE else 1f,
+        animationSpec = settleSpec,
+        label = "widgetReorderScale",
+    )
+    val activeTint by animateFloatAsState(
+        targetValue = if (isActiveDrag) FAVORITES_REORDER_ACTIVE_TINT_ALPHA else 0f,
+        animationSpec = settleSpec,
+        label = "widgetReorderTint",
+    )
+    val animatedTranslationY by animateFloatAsState(
+        targetValue = dragOffsetY + laneShiftY,
+        animationSpec = settleSpec,
+        label = "widgetReorderTranslationY",
+    )
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .zIndex(if (isActiveDrag) 1f else 0f)
+            .graphicsLayer {
+                translationY = animatedTranslationY
+                scaleX = activeScale
+                scaleY = activeScale
+                shadowElevation = if (isActiveDrag) {
+                    FAVORITES_REORDER_ACTIVE_SHADOW_Y_DP.dp.toPx()
+                } else {
+                    0f
+                }
+            }
+            .onGloballyPositioned { coordinates ->
+                onMeasured(
+                    FavoriteRowMetrics(
+                        topY = coordinates.positionInParent().y,
+                        height = coordinates.size.height.toFloat(),
+                    )
+                )
+            }
+            .combinedClickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = {},
+                onLongClick = { showContextMenu = true },
+            )
+            .pointerInput(appWidgetId) {
+                detectDragGestures(
+                    onDragStart = {
+                        onDragStart()
+                    },
+                    onDragEnd = {
+                        onDragEnd()
+                    },
+                    onDragCancel = {
+                        onDragEnd()
+                    },
+                    onDrag = { change, dragAmount ->
+                        change.consume()
+                        onDragDelta(dragAmount.y)
+                    },
+                )
+            }
+            .background(
+                color = Color.White.copy(alpha = activeTint),
+                shape = MaterialTheme.shapes.medium,
+            )
+            .padding(
+                start = APP_WIDGET_ROW_START_PADDING_DP.dp,
+                end = APP_WIDGET_ROW_END_PADDING_DP.dp,
+                top = APP_WIDGET_ROW_TOP_PADDING_DP.dp,
+                bottom = APP_WIDGET_ROW_BOTTOM_PADDING_DP.dp,
+            ),
+    ) {
+        AndroidView(
+            factory = { context -> createWidgetView(appWidgetId) ?: FrameLayout(context) },
+            modifier = Modifier
+                .fillMaxWidth()
+                .heightIn(min = APP_WIDGET_MIN_HEIGHT_DP.dp),
+        )
+
+        WidgetHandle(
+            text = "↕",
+            modifier = Modifier
+                .align(Alignment.TopEnd)
+                .padding(top = 12.dp, end = 12.dp),
+        )
+
+        DropdownMenu(
+            expanded = showContextMenu,
+            onDismissRequest = { showContextMenu = false },
+        ) {
+            DropdownMenuItem(
+                text = { Text("Remove widget") },
+                onClick = {
+                    showContextMenu = false
+                    onRemoveWidget(appWidgetId)
+                },
+            )
+        }
+    }
+}
+
+@Composable
+private fun WidgetHandle(
+    text: String,
+    modifier: Modifier = Modifier,
+) {
+    Text(
+        text = text,
+        color = Color.White,
+        style = MaterialTheme.typography.titleMedium,
+        modifier = modifier
+            .background(
+                color = Color.Black.copy(alpha = 0.52f),
+                shape = MaterialTheme.shapes.medium,
+            )
+            .padding(horizontal = 10.dp, vertical = 5.dp),
+    )
 }
 
 @OptIn(ExperimentalFoundationApi::class)

@@ -102,6 +102,12 @@ class LauncherPreferencesRepository(
         }
     }
 
+    suspend fun setWidgetIds(appWidgetIds: List<Int>) {
+        context.launcherPrefs.edit { prefs ->
+            prefs[widgetIdsKey] = appWidgetIds.distinct().joinToString(",")
+        }
+    }
+
     private fun String?.toWidgetIdList(): List<Int> {
         return this
             ?.split(",")
