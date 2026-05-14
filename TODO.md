@@ -17,6 +17,9 @@
 - [ ] add api to get screen size to adjust dimensions
       @created 2026-05-14 17:57
 
+- [ ] make home button return user to favorites menu
+      @created 2026-05-14 18:03
+
 
 ## Completed
 
