@@ -2,7 +2,7 @@ default:
     just --list
 
 fmt:
-    ktfmt --kotlinlang-style .
+    ./gradlew ktlintFormat
 
 lint:
     ktfmt --kotlinlang-style --dry-run . | diff - /dev/null
