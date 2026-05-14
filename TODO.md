@@ -65,4 +65,5 @@
 - [x] fix cutoff on many favorites
       @created 2026-05-13 19:57
       @completed 2026-05-14 00:42
+      @completed_version 1.2.0
 
