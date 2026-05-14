@@ -1,4 +1,4 @@
-# TODO — launcher-test v1.1.0
+# TODO — launcher-test v1.2.0
 
 @created: 2026-05-08
 @modified: 2026-05-14
@@ -53,12 +53,15 @@
 - [x] fix behavior on phones with home buttons
       @created 2026-05-13 19:55
       @completed 2026-05-13 20:34
+      @completed_version 1.2.0
 
 - [x] make font options render in the font they are
       @created 2026-05-13 19:55
       @completed 2026-05-14 00:23
+      @completed_version 1.2.0
 
 - [x] more fonts
       @created 2026-05-14 00:24
       @completed 2026-05-14 00:24
+      @completed_version 1.2.0
 
