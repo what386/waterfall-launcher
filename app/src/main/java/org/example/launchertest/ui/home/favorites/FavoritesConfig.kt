@@ -1,4 +1,4 @@
-package org.example.launchertest.ui.home.applist
+package org.example.launchertest.ui.home.favorites
 
 internal const val FAVORITES_CENTER_BIAS_UP_DP = 44f
 

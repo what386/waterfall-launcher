@@ -1,4 +1,4 @@
-package org.example.launchertest.ui.home.applist
+package org.example.launchertest.ui.home.favorites
 
 import android.appwidget.AppWidgetHostView
 import android.view.MotionEvent
@@ -68,6 +68,19 @@ import kotlinx.coroutines.launch
 import org.example.launchertest.data.HomeRowNavigationMode
 import org.example.launchertest.data.LauncherFont
 import org.example.launchertest.data.LauncherSettings
+import org.example.launchertest.ui.home.shared.AppRow
+import org.example.launchertest.ui.home.shared.HOME_LIST_CONTENT_END_PADDING_DP
+import org.example.launchertest.ui.home.shared.HOME_LIST_CONTENT_START_PADDING_DP
+import org.example.launchertest.ui.home.shared.HOME_LIST_SEARCH_DRAG_THRESHOLD_DP
+import org.example.launchertest.ui.home.shared.HOME_LIST_SECTION_HEADER_BOTTOM_PADDING_DP
+import org.example.launchertest.ui.home.shared.HOME_LIST_SECTION_HEADER_TOP_PADDING_DP
+import org.example.launchertest.ui.home.shared.HOME_ROW_CONTENT_SCALE
+import org.example.launchertest.ui.home.shared.HOME_ROW_FAVORITE_ICON_SIZE_DP
+import org.example.launchertest.ui.home.shared.HOME_ROW_HORIZONTAL_PADDING_DP
+import org.example.launchertest.ui.home.shared.HOME_ROW_ICON_SPACING_DP
+import org.example.launchertest.ui.home.shared.HOME_ROW_TEXT_SCALE
+import org.example.launchertest.ui.home.shared.HOME_ROW_VERTICAL_PADDING_DP
+import org.example.launchertest.ui.home.shared.SectionHeader
 import org.example.launchertest.ui.home.shared.rememberAppIcon
 import org.example.launchertest.ui.model.LauncherApp
 import org.example.launchertest.widgets.WidgetStack
@@ -113,7 +126,7 @@ fun FavoritesPanel(
     val overscrollOffset = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
-    val overscrollTriggerPx = with(density) { APP_LIST_SEARCH_DRAG_THRESHOLD_DP.dp.toPx() }
+    val overscrollTriggerPx = with(density) { HOME_LIST_SEARCH_DRAG_THRESHOLD_DP.dp.toPx() }
     var showPanelMenu by remember { mutableStateOf(false) }
     var showSettingsSheet by remember { mutableStateOf(false) }
     var showFontSheet by remember { mutableStateOf(false) }
@@ -375,8 +388,8 @@ fun FavoritesPanel(
             modifier = Modifier
                 .fillMaxHeight()
                 .padding(
-                    start = APP_LIST_CONTENT_START_PADDING_DP.dp,
-                    end = APP_LIST_CONTENT_END_PADDING_DP.dp,
+                    start = HOME_LIST_CONTENT_START_PADDING_DP.dp,
+                    end = HOME_LIST_CONTENT_END_PADDING_DP.dp,
                 )
                 .offset(y = (-FAVORITES_CENTER_BIAS_UP_DP).dp)
                 .graphicsLayer { translationY = overscrollOffset.value }
@@ -539,12 +552,12 @@ fun FavoritesPanel(
                     topPaddingDp = if (orderedWidgetStacks.isNotEmpty()) {
                         0f
                     } else {
-                        APP_LIST_SECTION_HEADER_TOP_PADDING_DP
+                        HOME_LIST_SECTION_HEADER_TOP_PADDING_DP
                     },
                     bottomPaddingDp = if (orderedWidgetStacks.isNotEmpty()) {
                         0f
                     } else {
-                        APP_LIST_SECTION_HEADER_BOTTOM_PADDING_DP
+                        HOME_LIST_SECTION_HEADER_BOTTOM_PADDING_DP
                     },
                     modifier = Modifier.graphicsLayer { alpha = favAlpha },
                 )
@@ -623,8 +636,8 @@ fun FavoritesPanel(
                     text = "No favorites yet. Long-press any app and choose Favorite.",
                     modifier = Modifier
                         .padding(
-                            horizontal = APP_ROW_HORIZONTAL_PADDING_DP.dp,
-                            vertical = APP_ROW_VERTICAL_PADDING_DP.dp,
+                            horizontal = HOME_ROW_HORIZONTAL_PADDING_DP.dp,
+                            vertical = HOME_ROW_VERTICAL_PADDING_DP.dp,
                         )
                         .graphicsLayer { alpha = favAlpha * 0.78f },
                     style = MaterialTheme.typography.bodyMedium,
@@ -1542,24 +1555,24 @@ private fun ReorderableFavoriteRow(
                 shape = MaterialTheme.shapes.medium,
             )
             .padding(
-                horizontal = APP_ROW_HORIZONTAL_PADDING_DP.dp,
-                vertical = APP_ROW_VERTICAL_PADDING_DP.dp,
+                horizontal = HOME_ROW_HORIZONTAL_PADDING_DP.dp,
+                vertical = HOME_ROW_VERTICAL_PADDING_DP.dp,
             ),
-        horizontalArrangement = Arrangement.spacedBy((APP_ROW_ICON_SPACING_DP * APP_ROW_CONTENT_SCALE).dp),
+        horizontalArrangement = Arrangement.spacedBy((HOME_ROW_ICON_SPACING_DP * HOME_ROW_CONTENT_SCALE).dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (icon != null) {
             androidx.compose.foundation.Image(
                 bitmap = icon,
                 contentDescription = null,
-                modifier = Modifier.size((APP_ROW_FAVORITE_ICON_SIZE_DP * APP_ROW_CONTENT_SCALE).dp),
+                modifier = Modifier.size((HOME_ROW_FAVORITE_ICON_SIZE_DP * HOME_ROW_CONTENT_SCALE).dp),
             )
         }
 
         Text(
             text = app.label,
             style = MaterialTheme.typography.headlineSmall.copy(
-                fontSize = MaterialTheme.typography.headlineSmall.fontSize * APP_ROW_TEXT_SCALE,
+                fontSize = MaterialTheme.typography.headlineSmall.fontSize * HOME_ROW_TEXT_SCALE,
             ),
             modifier = Modifier.weight(1f),
         )
