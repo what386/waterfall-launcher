@@ -1,6 +1,16 @@
 # Changelog — launcher-test
 
-*Generated on 2026-05-13*
+*Generated on 2026-05-14*
+
+## 1.2.0 — 2026-05-14
+
+### Changes
+
+- fix behavior on phones with home buttons
+- make font options render in the font they are
+- more fonts
+- fix cutoff on many favorites
+
 
 ## 1.1.0 — 2026-05-13
 
