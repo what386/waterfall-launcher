@@ -17,9 +17,6 @@
 - [ ] fix cutoff on many favorites
       @created 2026-05-13 19:57
 
-- [ ] more fonts
-      @created 2026-05-14 00:24
-
 
 ## Completed
 
@@ -60,4 +57,8 @@
 - [x] make font options render in the font they are
       @created 2026-05-13 19:55
       @completed 2026-05-14 00:23
+
+- [x] more fonts
+      @created 2026-05-14 00:24
+      @completed 2026-05-14 00:24
 
