@@ -1,7 +1,7 @@
 # TODO — launcher-test v1.1.0
 
 @created: 2026-05-08
-@modified: 2026-05-13
+@modified: 2026-05-14
 
 ## Tasks
 
@@ -13,9 +13,6 @@
 
 - [ ] greeter screen idea
       @created 2026-05-13 18:53
-
-- [ ] make font options render in the font they are
-      @created 2026-05-13 19:55
 
 - [ ] fix cutoff on many favorites
       @created 2026-05-13 19:57
@@ -56,4 +53,8 @@
 - [x] fix behavior on phones with home buttons
       @created 2026-05-13 19:55
       @completed 2026-05-13 20:34
+
+- [x] make font options render in the font they are
+      @created 2026-05-13 19:55
+      @completed 2026-05-14 00:23
 
