@@ -54,8 +54,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.input.pointer.pointerInput
@@ -128,6 +128,7 @@ fun FavoritesPanel(
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
     val overscrollTriggerPx = with(density) { HOME_LIST_SEARCH_DRAG_THRESHOLD_DP.dp.toPx() }
+    val hasScrollableContent = scrollState.maxValue > 0
     var showPanelMenu by remember { mutableStateOf(false) }
     var showSettingsSheet by remember { mutableStateOf(false) }
     var showFontSheet by remember { mutableStateOf(false) }
@@ -392,7 +393,13 @@ fun FavoritesPanel(
                     start = HOME_LIST_CONTENT_START_PADDING_DP.dp,
                     end = HOME_LIST_CONTENT_END_PADDING_DP.dp,
                 )
-                .offset(y = (-FAVORITES_CENTER_BIAS_UP_DP).dp)
+                .offset(
+                    y = if (hasScrollableContent) {
+                        0.dp
+                    } else {
+                        (-FAVORITES_CENTER_BIAS_UP_DP).dp
+                    },
+                )
                 .graphicsLayer { translationY = overscrollOffset.value }
                 .pointerInput(reorderMode, widgetReorderMode) {
                     if (reorderMode || widgetReorderMode) return@pointerInput
@@ -468,7 +475,11 @@ fun FavoritesPanel(
                     )
                 }
                 .verticalScroll(scrollState, enabled = false),
-            verticalArrangement = Arrangement.Center,
+            verticalArrangement = if (hasScrollableContent) {
+                Arrangement.Top
+            } else {
+                Arrangement.Center
+            },
         ) {
             Spacer(modifier = Modifier.height(FAVORITES_PANEL_TOP_MARGIN_DP.dp))
 
@@ -631,7 +642,15 @@ fun FavoritesPanel(
                         }
                     }
                 }
-                Spacer(modifier = Modifier.height(APP_LIST_FAVORITES_BOTTOM_SPACER_DP.dp))
+                Spacer(
+                    modifier = Modifier.height(
+                        if (hasScrollableContent) {
+                            0.dp
+                        } else {
+                            APP_LIST_FAVORITES_BOTTOM_SPACER_DP.dp
+                        },
+                    ),
+                )
             } else if (orderedWidgetStacks.isEmpty()) {
                 Text(
                     text = "No favorites yet. Long-press any app and choose Favorite.",

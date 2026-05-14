@@ -141,6 +141,8 @@ fun AppListPanel(
                 },
                 top = if (isSearchActive) {
                     APP_LIST_SEARCH_TOP_PADDING_DP.dp
+                } else if (showFavoritesOnly) {
+                    0.dp
                 } else {
                     APP_LIST_CONTENT_TOP_PADDING_DP.dp
                 },
@@ -151,6 +153,8 @@ fun AppListPanel(
                 },
                 bottom = if (isSearchActive) {
                     APP_LIST_SEARCH_BOTTOM_PADDING_DP.dp
+                } else if (showFavoritesOnly) {
+                    0.dp
                 } else {
                     APP_LIST_CONTENT_BOTTOM_PADDING_DP.dp
                 },

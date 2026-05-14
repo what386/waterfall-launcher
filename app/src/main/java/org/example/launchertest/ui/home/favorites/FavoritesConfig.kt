@@ -13,7 +13,7 @@ internal const val APP_WIDGET_MIN_HEIGHT_DP = 120f
 internal const val ADD_WIDGET_START_PADDING_DP = 12f
 internal const val ADD_WIDGET_TOP_PADDING_DP = 4f
 internal const val ADD_WIDGET_BOTTOM_PADDING_DP = 8f
-internal const val FAVORITES_PANEL_TOP_MARGIN_DP = 120f
+internal const val FAVORITES_PANEL_TOP_MARGIN_DP = 88f
 
 internal const val FAVORITES_OVERSCROLL_RESISTANCE = 0.2f
 internal const val FAVORITES_OVERSCROLL_SPRING_STIFFNESS = 300f
