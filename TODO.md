@@ -17,6 +17,9 @@
 - [ ] fix cutoff on many favorites
       @created 2026-05-13 19:57
 
+- [ ] more fonts
+      @created 2026-05-14 00:24
+
 
 ## Completed
 
