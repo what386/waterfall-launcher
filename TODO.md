@@ -1,4 +1,4 @@
-# TODO — launcher-test v1.2.0
+# TODO — launcher-test
 
 @created: 2026-05-08
 @modified: 2026-05-14
@@ -13,6 +13,9 @@
 
 - [ ] greeter screen idea
       @created 2026-05-13 18:53
+
+- [ ] add api to get screen size to adjust dimensions
+      @created 2026-05-14 17:57
 
 
 ## Completed
