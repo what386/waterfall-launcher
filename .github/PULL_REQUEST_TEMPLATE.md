@@ -6,9 +6,9 @@
 
 List what you ran and on which platform(s).
 
-- [ ] `gofmt -l .` (or `go fmt ./...`)
-- [ ] `go vet ./...`
-- [ ] `go test ./...`
+- [ ] `./gradlew ktlintCheck`
+- [ ] `./gradlew lint`
+- [ ] `./gradlew test`
 
 ## Checklist
 
