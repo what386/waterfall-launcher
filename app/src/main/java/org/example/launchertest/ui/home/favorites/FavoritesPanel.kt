@@ -82,6 +82,7 @@ import org.example.launchertest.ui.home.shared.HOME_ROW_TEXT_SCALE
 import org.example.launchertest.ui.home.shared.HOME_ROW_VERTICAL_PADDING_DP
 import org.example.launchertest.ui.home.shared.SectionHeader
 import org.example.launchertest.ui.home.shared.rememberAppIcon
+import org.example.launchertest.ui.theme.toPreviewFontFamily
 import org.example.launchertest.ui.model.LauncherApp
 import org.example.launchertest.widgets.WidgetStack
 import kotlin.math.hypot
@@ -958,9 +959,9 @@ private fun FontSheet(
         )
 
         LauncherFont.entries.forEach { font ->
-            SheetActionRow(
+            FontOptionRow(
                 icon = if (font == selectedFont) "✓" else " ",
-                title = font.displayName,
+                font = font,
                 subtitle = if (font == LauncherFont.System) {
                     "Use Android's default font"
                 } else {
@@ -968,6 +969,49 @@ private fun FontSheet(
                 },
                 active = font == selectedFont,
                 onClick = { onFontSelected(font) },
+            )
+        }
+    }
+}
+
+@Composable
+private fun FontOptionRow(
+    icon: String,
+    font: LauncherFont,
+    subtitle: String,
+    active: Boolean = false,
+    onClick: () -> Unit,
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .padding(vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(
+            text = icon,
+            color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.size(40.dp),
+        )
+
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(start = 12.dp),
+        ) {
+            Text(
+                text = font.displayName,
+                color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                style = MaterialTheme.typography.titleMedium.copy(
+                    fontFamily = font.toPreviewFontFamily(),
+                ),
+            )
+            Text(
+                text = subtitle,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f),
+                style = MaterialTheme.typography.bodyMedium,
             )
         }
     }

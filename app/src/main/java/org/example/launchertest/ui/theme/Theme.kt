@@ -47,6 +47,10 @@ private fun TextStyle.withFontFamily(fontFamily: FontFamily): TextStyle {
     return copy(fontFamily = fontFamily)
 }
 
+internal fun LauncherFont.toPreviewFontFamily(): FontFamily {
+    return toFontFamily() ?: FontFamily.Default
+}
+
 private fun LauncherFont.toFontFamily(): FontFamily? {
     return when (this) {
         LauncherFont.System -> null
