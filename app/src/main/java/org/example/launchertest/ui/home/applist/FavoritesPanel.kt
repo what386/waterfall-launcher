@@ -93,6 +93,7 @@ fun FavoritesPanel(
     onHiddenModeChanged: (Boolean) -> Unit,
     onReorderFavorites: (List<LauncherApp>) -> Unit,
     onSearchActivated: () -> Unit,
+    onAppListActivated: () -> Unit,
     onAddWidget: () -> Unit,
     onAddWidgetToStack: (Int) -> Unit,
     onRemoveWidget: (Int) -> Unit,
@@ -112,7 +113,7 @@ fun FavoritesPanel(
     val overscrollOffset = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
-    val searchTriggerPx = with(density) { APP_LIST_SEARCH_DRAG_THRESHOLD_DP.dp.toPx() }
+    val overscrollTriggerPx = with(density) { APP_LIST_SEARCH_DRAG_THRESHOLD_DP.dp.toPx() }
     var showPanelMenu by remember { mutableStateOf(false) }
     var showSettingsSheet by remember { mutableStateOf(false) }
     var showFontSheet by remember { mutableStateOf(false) }
@@ -122,6 +123,7 @@ fun FavoritesPanel(
     var reorderMode by remember { mutableStateOf(false) }
     var widgetReorderMode by remember { mutableStateOf(false) }
     var didTriggerSearchDuringDrag by remember { mutableStateOf(false) }
+    var didTriggerAppListDuringDrag by remember { mutableStateOf(false) }
     val panelInteractionSource = remember { MutableInteractionSource() }
     var activeDragComponentId by remember { mutableStateOf<String?>(null) }
     var activeDragStartIndex by remember { mutableIntStateOf(-1) }
@@ -383,6 +385,7 @@ fun FavoritesPanel(
                     detectVerticalDragGestures(
                         onDragEnd = {
                             didTriggerSearchDuringDrag = false
+                            didTriggerAppListDuringDrag = false
                             scope.launch {
                                 overscrollOffset.animateTo(
                                     targetValue = 0f,
@@ -395,6 +398,7 @@ fun FavoritesPanel(
                         },
                         onDragCancel = {
                             didTriggerSearchDuringDrag = false
+                            didTriggerAppListDuringDrag = false
                             scope.launch {
                                 overscrollOffset.animateTo(
                                     targetValue = 0f,
@@ -430,10 +434,19 @@ fun FavoritesPanel(
                                         !didTriggerSearchDuringDrag &&
                                         atTop &&
                                         dragAmount > 0f &&
-                                        nextOverscroll >= searchTriggerPx
+                                        nextOverscroll >= overscrollTriggerPx
                                     ) {
                                         didTriggerSearchDuringDrag = true
                                         onSearchActivated()
+                                    }
+                                    if (!isSearchActive &&
+                                        !didTriggerAppListDuringDrag &&
+                                        atBottom &&
+                                        dragAmount < 0f &&
+                                        nextOverscroll <= -overscrollTriggerPx
+                                    ) {
+                                        didTriggerAppListDuringDrag = true
+                                        onAppListActivated()
                                     }
                                 }
                             }

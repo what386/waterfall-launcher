@@ -135,6 +135,7 @@ fun LauncherHomeRoute(
             categoryPinOffsetPx = categoryPinOffsetPx,
             onQueryChanged = vm::onQueryChanged,
             onSearchActivated = vm::onSearchActivated,
+            onAppListActivated = vm::onSearchDismissed,
             onSearchDismissed = vm::onSearchDismissed,
             onHiddenModeChanged = vm::onHiddenModeChanged,
             onToggleFavorite = vm::onToggleFavorite,
@@ -169,6 +170,7 @@ private fun LauncherHomeScreen(
     categoryPinOffsetPx: Int,
     onQueryChanged: (String) -> Unit,
     onSearchActivated: () -> Unit,
+    onAppListActivated: () -> Unit,
     onSearchDismissed: () -> Unit,
     onHiddenModeChanged: (Boolean) -> Unit,
     onToggleFavorite: (org.example.launchertest.ui.model.LauncherApp) -> Unit,
@@ -256,6 +258,17 @@ private fun LauncherHomeScreen(
         }
     }
 
+    fun activateAppList() {
+        contentMode = HomeContentMode.Apps
+        scrubbingLetter.value = null
+        isScrubbing.value = false
+        onAppListActivated()
+
+        coroutineScope.launch {
+            listState.scrollToItem(index = 0)
+        }
+    }
+
     fun setHiddenMode(enabled: Boolean) {
         onHiddenModeChanged(enabled)
         contentMode = if (enabled) HomeContentMode.Apps else HomeContentMode.Favorites
@@ -325,6 +338,7 @@ private fun LauncherHomeScreen(
                     listState = listState,
                     categoryPinOffsetPx = categoryPinOffsetPx,
                     onSearchActivated = ::activateSearch,
+                    onAppListActivated = ::activateAppList,
                     onHiddenModeChanged = ::setHiddenMode,
                     onToggleFavorite = onToggleFavorite,
                     onHideApp = onHideApp,
