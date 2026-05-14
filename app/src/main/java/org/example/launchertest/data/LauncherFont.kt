@@ -6,9 +6,13 @@ enum class LauncherFont(
 ) {
     System("system", "System"),
     SansSerif("sans_serif", "Sans Serif"),
+    SansSerifCondensed("sans_serif_condensed", "Sans Serif Condensed"),
+    SansSerifMedium("sans_serif_medium", "Sans Serif Medium"),
     Serif("serif", "Serif"),
     Monospace("monospace", "Monospace"),
     Cursive("cursive", "Cursive"),
+    Casual("casual", "Casual"),
+    SmallCaps("small_caps", "Small Caps"),
     ;
 
     companion object {

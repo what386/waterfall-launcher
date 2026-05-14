@@ -1,5 +1,6 @@
 package org.example.launchertest.ui.theme
 
+import android.graphics.Typeface
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
@@ -55,8 +56,20 @@ private fun LauncherFont.toFontFamily(): FontFamily? {
     return when (this) {
         LauncherFont.System -> null
         LauncherFont.SansSerif -> FontFamily.SansSerif
+        LauncherFont.SansSerifCondensed -> FontFamily(
+            Typeface.create("sans-serif-condensed", Typeface.NORMAL),
+        )
+        LauncherFont.SansSerifMedium -> FontFamily(
+            Typeface.create("sans-serif-medium", Typeface.NORMAL),
+        )
         LauncherFont.Serif -> FontFamily.Serif
         LauncherFont.Monospace -> FontFamily.Monospace
         LauncherFont.Cursive -> FontFamily.Cursive
+        LauncherFont.Casual -> FontFamily(
+            Typeface.create("casual", Typeface.NORMAL),
+        )
+        LauncherFont.SmallCaps -> FontFamily(
+            Typeface.create("sans-serif-smallcaps", Typeface.NORMAL),
+        )
     }
 }
