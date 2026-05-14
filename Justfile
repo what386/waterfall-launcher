@@ -61,6 +61,6 @@ refresh-release:
     just install-release
 
 gen-release:
-    rm dist/waterfall-launcher.apk
+    rm dist/waterfall-launcher.apk || true
     just build-release
     just dist
