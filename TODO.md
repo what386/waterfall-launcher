@@ -14,9 +14,6 @@
 - [ ] greeter screen idea
       @created 2026-05-13 18:53
 
-- [ ] fix cutoff on many favorites
-      @created 2026-05-13 19:57
-
 
 ## Completed
 
@@ -64,4 +61,8 @@
       @created 2026-05-14 00:24
       @completed 2026-05-14 00:24
       @completed_version 1.2.0
+
+- [x] fix cutoff on many favorites
+      @created 2026-05-13 19:57
+      @completed 2026-05-14 00:42
 
