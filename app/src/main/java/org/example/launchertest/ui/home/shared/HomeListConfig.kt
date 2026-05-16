@@ -1,7 +1,5 @@
 package org.example.launchertest.ui.home.shared
 
-internal const val HOME_LIST_CONTENT_START_PADDING_DP = 28f
-internal const val HOME_LIST_CONTENT_END_PADDING_DP = 40f
 internal const val HOME_LIST_SEARCH_DRAG_THRESHOLD_DP = 18f
 
 internal const val HOME_LIST_SECTION_HEADER_START_PADDING_DP = 20f

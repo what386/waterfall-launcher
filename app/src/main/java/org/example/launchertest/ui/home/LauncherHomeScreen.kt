@@ -1,7 +1,6 @@
 package org.example.launchertest.ui.home
 
 import org.example.launchertest.ui.home.applist.AppListPanel
-import org.example.launchertest.ui.home.applist.APP_LIST_CATEGORY_PIN_OFFSET_DP
 import org.example.launchertest.ui.home.azrail.AzRailPanel
 import org.example.launchertest.ui.home.azrail.buildRailLetters
 import org.example.launchertest.ui.home.azrail.isFavoritesRailItem
@@ -26,12 +25,16 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.ui.graphics.Color
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.shape.CircleShape
@@ -116,26 +119,13 @@ fun LauncherHomeRoute(
     val listState = rememberLazyListState()
     val context = LocalContext.current
 
-    val density = LocalDensity.current
-    val categoryPinOffsetPx = with(density) { APP_LIST_CATEGORY_PIN_OFFSET_DP.dp.toPx() }.toInt()
-
-    LaunchedEffect(categoryPinOffsetPx, listState, vm) {
-        vm.jumpToTarget.collectLatest { targetIndex ->
-            // Negative offset pins the selected category below the top edge.
-            listState.scrollToItem(
-                index = targetIndex,
-                scrollOffset = -categoryPinOffsetPx,
-            )
-        }
-    }
-
     LauncherTheme(font = state.settings.font) {
         LauncherHomeScreen(
             state = state,
             widgetStacks = widgetStacks,
             homeIntentPressCount = homeIntentPressCount.collectAsStateWithLifecycle().value,
             listState = listState,
-            categoryPinOffsetPx = categoryPinOffsetPx,
+            jumpToTarget = vm.jumpToTarget,
             onQueryChanged = vm::onQueryChanged,
             onSearchActivated = vm::onSearchActivated,
             onAppListActivated = vm::onSearchDismissed,
@@ -171,7 +161,7 @@ private fun LauncherHomeScreen(
     widgetStacks: List<WidgetStack>,
     homeIntentPressCount: Int,
     listState: androidx.compose.foundation.lazy.LazyListState,
-    categoryPinOffsetPx: Int,
+    jumpToTarget: kotlinx.coroutines.flow.Flow<Int>,
     onQueryChanged: (String) -> Unit,
     onSearchActivated: () -> Unit,
     onAppListActivated: () -> Unit,
@@ -200,6 +190,7 @@ private fun LauncherHomeScreen(
     val selectedRailItem = remember { mutableStateOf(buildRailLetters(emptyMap()).first()) }
     val context = LocalContext.current
     val view = LocalView.current
+    val density = LocalDensity.current
     var isRailDragging by remember { mutableStateOf(false) }
 
     var contentMode by remember { mutableStateOf(HomeContentMode.Favorites) }
@@ -225,7 +216,10 @@ private fun LauncherHomeScreen(
             .filterNot { state.isHiddenMode && isFavoritesRailItem(it) }
     }
 
-    fun selectRailItem(item: Char) {
+    fun selectRailItem(
+        item: Char,
+        categoryPinOffsetPx: Int,
+    ) {
         selectedRailItem.value = item
 
         if (isFavoritesRailItem(item)) {
@@ -291,7 +285,7 @@ private fun LauncherHomeScreen(
         onSearchDismissed()
     }
 
-    fun returnToFavoritesMenu() {
+    fun returnToFavoritesMenu(categoryPinOffsetPx: Int) {
         if (state.isSearchActive) {
             onSearchDismissed()
         }
@@ -341,20 +335,53 @@ private fun LauncherHomeScreen(
         launchBestSearchMatch()
     }
 
-    LaunchedEffect(homeIntentPressCount) {
-        if (homeIntentPressCount > 0) {
-            returnToFavoritesMenu()
-        }
-    }
-
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = Color.Transparent,
         contentColor = Color.White.copy(alpha = 0.92f)
     ) {
-        Box(
+        BoxWithConstraints(
             modifier = Modifier.fillMaxSize(),
         ) {
+            val statusBarTopDp = with(density) {
+                WindowInsets.statusBars.getTop(this).toDp().value
+            }
+            val navigationBarBottomDp = with(density) {
+                WindowInsets.navigationBars.getBottom(this).toDp().value
+            }
+            val layoutMetrics = remember(
+                maxWidth,
+                maxHeight,
+                statusBarTopDp,
+                navigationBarBottomDp,
+            ) {
+                calculateHomeLayoutMetrics(
+                    screenWidthDp = maxWidth.value,
+                    screenHeightDp = maxHeight.value,
+                    statusBarTopDp = statusBarTopDp,
+                    navigationBarBottomDp = navigationBarBottomDp,
+                )
+            }
+            val categoryPinOffsetPx = with(density) {
+                layoutMetrics.categoryPinOffsetDp.dp.toPx()
+            }.toInt()
+
+            LaunchedEffect(homeIntentPressCount, categoryPinOffsetPx) {
+                if (homeIntentPressCount > 0) {
+                    returnToFavoritesMenu(categoryPinOffsetPx)
+                }
+            }
+
+            LaunchedEffect(categoryPinOffsetPx, listState, jumpToTarget) {
+                jumpToTarget.collectLatest { targetIndex ->
+                    // Negative offset pins the selected category below the top edge.
+                    listState.scrollToItem(
+                        index = targetIndex,
+                        scrollOffset = -categoryPinOffsetPx,
+                    )
+                }
+            }
+
             AnimatedContent(
                 targetState = contentMode,
                 transitionSpec = {
@@ -372,6 +399,7 @@ private fun LauncherHomeScreen(
                     isSearchActive = mode == HomeContentMode.Search,
                     listState = listState,
                     categoryPinOffsetPx = categoryPinOffsetPx,
+                    layoutMetrics = layoutMetrics,
                     onSearchActivated = ::activateSearch,
                     onAppListActivated = ::activateAppList,
                     onHiddenModeChanged = ::setHiddenMode,
@@ -407,6 +435,7 @@ private fun LauncherHomeScreen(
                     onQueryChanged = onQueryChanged,
                     onSearchSubmitted = ::launchBestSearchMatch,
                     onKeyboardDismissed = ::dismissSearch,
+                    horizontalPaddingDp = layoutMetrics.searchFieldHorizontalPaddingDp,
                     modifier = Modifier
                         .padding(
                             horizontal = 0.dp,
@@ -423,14 +452,14 @@ private fun LauncherHomeScreen(
             ) {
                 AzRailPanel(
                     modifier = Modifier
-                        .offset(y = 95.dp)
-                        .fillMaxHeight(0.5f)
-                        .padding(end = 28.dp)
-                        .width(36.dp),
+                        .offset(y = layoutMetrics.railYOffsetDp.dp)
+                        .fillMaxHeight(layoutMetrics.railHeightFraction)
+                        .padding(end = layoutMetrics.railEndPaddingDp.dp)
+                        .width(layoutMetrics.railWidthDp.dp),
                     letters = railLetters,
                     onLetterSelected = {},
-                    onScrubStart = ::selectRailItem,
-                    onScrubMove = ::selectRailItem,
+                    onScrubStart = { item -> selectRailItem(item, categoryPinOffsetPx) },
+                    onScrubMove = { item -> selectRailItem(item, categoryPinOffsetPx) },
                     onScrubEnd = {
                         if (!isFavoritesRailItem(selectedRailItem.value)) {
                             scrubbingLetter.value = null
@@ -447,11 +476,11 @@ private fun LauncherHomeScreen(
                 Box(
                     modifier = Modifier
                         .align(Alignment.CenterEnd)
-                        .offset(y = (-105).dp)
-                        .padding(end = 28.dp)
-                        .width(36.dp)
-                        .fillMaxHeight(0.16f)
-                        .clickable { selectRailItem(railLetters.first()) },
+                        .offset(y = layoutMetrics.homeRailHitYOffsetDp.dp)
+                        .padding(end = layoutMetrics.railEndPaddingDp.dp)
+                        .width(layoutMetrics.railWidthDp.dp)
+                        .fillMaxHeight(layoutMetrics.homeRailHitHeightFraction)
+                        .clickable { selectRailItem(railLetters.first(), categoryPinOffsetPx) },
                 )
             }
 
@@ -461,7 +490,10 @@ private fun LauncherHomeScreen(
                 exit = fadeOut(),
                 modifier = Modifier
                     .align(Alignment.BottomEnd)
-                    .padding(end = 28.dp, bottom = 40.dp),
+                    .padding(
+                        end = layoutMetrics.searchButtonEndPaddingDp.dp,
+                        bottom = layoutMetrics.searchButtonBottomPaddingDp.dp,
+                    ),
             ) {
                 Surface(
                     shape = CircleShape,

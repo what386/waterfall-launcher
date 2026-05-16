@@ -33,6 +33,7 @@ fun SearchOverlay(
     onQueryChanged: (String) -> Unit,
     onSearchSubmitted: () -> Unit,
     onKeyboardDismissed: () -> Unit,
+    horizontalPaddingDp: Float,
     modifier: Modifier = Modifier,
 ) {
     val focusRequester = remember { FocusRequester() }
@@ -80,7 +81,7 @@ fun SearchOverlay(
             ),
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 28.dp, vertical = 12.dp)
+                .padding(horizontal = horizontalPaddingDp.dp, vertical = 12.dp)
                 .focusRequester(focusRequester),
         )
     }

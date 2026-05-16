@@ -26,10 +26,9 @@ import androidx.compose.ui.unit.dp
 import org.example.launchertest.data.HomeRowNavigationMode
 import org.example.launchertest.data.LauncherFont
 import org.example.launchertest.data.LauncherSettings
+import org.example.launchertest.ui.home.HomeLayoutMetrics
 import org.example.launchertest.ui.home.favorites.FavoritesPanel
 import org.example.launchertest.ui.home.shared.AppRow
-import org.example.launchertest.ui.home.shared.HOME_LIST_CONTENT_END_PADDING_DP
-import org.example.launchertest.ui.home.shared.HOME_LIST_CONTENT_START_PADDING_DP
 import org.example.launchertest.ui.home.shared.HOME_LIST_SEARCH_DRAG_THRESHOLD_DP
 import org.example.launchertest.ui.home.shared.HOME_ROW_HORIZONTAL_PADDING_DP
 import org.example.launchertest.ui.home.shared.SectionHeader
@@ -47,7 +46,7 @@ fun Modifier.fadingEdge(brush: Brush): Modifier = this
     }
 
 @Composable
-fun AppListPanel(
+internal fun AppListPanel(
     listLayout: AppListLayout,
     widgetStacks: List<WidgetStack>,
     scrubbingLetter: State<Char?>,
@@ -57,6 +56,7 @@ fun AppListPanel(
     isSearchActive: Boolean,
     listState: LazyListState,
     categoryPinOffsetPx: Int,
+    layoutMetrics: HomeLayoutMetrics,
     onSearchActivated: () -> Unit,
     onAppListActivated: () -> Unit,
     onHiddenModeChanged: (Boolean) -> Unit,
@@ -137,26 +137,26 @@ fun AppListPanel(
                 start = if (showFavoritesOnly) {
                     0.dp
                 } else {
-                    HOME_LIST_CONTENT_START_PADDING_DP.dp
+                    layoutMetrics.appListContentStartPaddingDp.dp
                 },
                 top = if (isSearchActive) {
-                    APP_LIST_SEARCH_TOP_PADDING_DP.dp
+                    layoutMetrics.appListSearchTopPaddingDp.dp
                 } else if (showFavoritesOnly) {
                     0.dp
                 } else {
-                    APP_LIST_CONTENT_TOP_PADDING_DP.dp
+                    layoutMetrics.appListContentTopPaddingDp.dp
                 },
                 end = if (showFavoritesOnly) {
                     0.dp
                 } else {
-                    HOME_LIST_CONTENT_END_PADDING_DP.dp
+                    layoutMetrics.appListContentEndPaddingDp.dp
                 },
                 bottom = if (isSearchActive) {
-                    APP_LIST_SEARCH_BOTTOM_PADDING_DP.dp
+                    layoutMetrics.appListSearchBottomPaddingDp.dp
                 } else if (showFavoritesOnly) {
                     0.dp
                 } else {
-                    APP_LIST_CONTENT_BOTTOM_PADDING_DP.dp
+                    layoutMetrics.appListContentBottomPaddingDp.dp
                 },
             ),
         ) {
@@ -193,6 +193,7 @@ fun AppListPanel(
                         onRestartLauncher = onRestartLauncher,
                         createWidgetView = createWidgetView,
                         getWidgetMinHeightDp = getWidgetMinHeightDp,
+                        layoutMetrics = layoutMetrics,
                         modifier = Modifier.fillParentMaxHeight(),
                     )
                 }

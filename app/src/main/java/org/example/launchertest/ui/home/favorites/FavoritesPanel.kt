@@ -68,9 +68,8 @@ import kotlinx.coroutines.launch
 import org.example.launchertest.data.HomeRowNavigationMode
 import org.example.launchertest.data.LauncherFont
 import org.example.launchertest.data.LauncherSettings
+import org.example.launchertest.ui.home.HomeLayoutMetrics
 import org.example.launchertest.ui.home.shared.AppRow
-import org.example.launchertest.ui.home.shared.HOME_LIST_CONTENT_END_PADDING_DP
-import org.example.launchertest.ui.home.shared.HOME_LIST_CONTENT_START_PADDING_DP
 import org.example.launchertest.ui.home.shared.HOME_LIST_SEARCH_DRAG_THRESHOLD_DP
 import org.example.launchertest.ui.home.shared.HOME_LIST_SECTION_HEADER_BOTTOM_PADDING_DP
 import org.example.launchertest.ui.home.shared.HOME_LIST_SECTION_HEADER_TOP_PADDING_DP
@@ -96,7 +95,7 @@ import kotlin.math.hypot
  */
 @OptIn(ExperimentalFoundationApi::class, ExperimentalMaterial3Api::class)
 @Composable
-fun FavoritesPanel(
+internal fun FavoritesPanel(
     favorites: List<LauncherApp>,
     widgetStacks: List<WidgetStack>,
     favAlpha: Float,
@@ -121,6 +120,7 @@ fun FavoritesPanel(
     onRestartLauncher: () -> Unit,
     createWidgetView: (Int) -> AppWidgetHostView?,
     getWidgetMinHeightDp: (Int) -> Int?,
+    layoutMetrics: HomeLayoutMetrics,
     modifier: Modifier = Modifier,
 ) {
     val scrollState = rememberScrollState()
@@ -390,14 +390,14 @@ fun FavoritesPanel(
             modifier = Modifier
                 .fillMaxHeight()
                 .padding(
-                    start = HOME_LIST_CONTENT_START_PADDING_DP.dp,
-                    end = HOME_LIST_CONTENT_END_PADDING_DP.dp,
+                    start = layoutMetrics.appListContentStartPaddingDp.dp,
+                    end = layoutMetrics.appListContentEndPaddingDp.dp,
                 )
                 .offset(
                     y = if (hasScrollableContent) {
                         0.dp
                     } else {
-                        (-FAVORITES_CENTER_BIAS_UP_DP).dp
+                        (-layoutMetrics.favoritesCenterBiasUpDp).dp
                     },
                 )
                 .graphicsLayer { translationY = overscrollOffset.value }
@@ -481,7 +481,7 @@ fun FavoritesPanel(
                 Arrangement.Center
             },
         ) {
-            Spacer(modifier = Modifier.height(FAVORITES_PANEL_TOP_MARGIN_DP.dp))
+            Spacer(modifier = Modifier.height(layoutMetrics.favoritesTopMarginDp.dp))
 
             orderedWidgetStacks.forEach { widgetStack ->
                 val stackId = widgetStackId(widgetStack)
