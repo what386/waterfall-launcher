@@ -40,8 +40,8 @@ internal fun calculateHomeLayoutMetrics(
     return HomeLayoutMetrics(
         categoryPinOffsetDp = scaleDp(340f, heightScale, min = 260f, max = 410f),
         railHeightFraction = (railHeightDp / usableHeightDp).coerceIn(0.38f, 0.58f),
-        railYOffsetDp = scaleDp(95f, heightScale, min = 62f, max = 120f),
-        homeRailHitYOffsetDp = -scaleDp(105f, heightScale, min = 72f, max = 132f),
+        railYOffsetDp = scaleDp(120f, heightScale, min = 84f, max = 148f),
+        homeRailHitYOffsetDp = -scaleDp(130f, heightScale, min = 94f, max = 158f),
         homeRailHitHeightFraction = (homeRailHitHeightDp / usableHeightDp).coerceIn(0.12f, 0.2f),
         railEndPaddingDp = scaleDp(28f, widthScale, min = 22f, max = 34f),
         railWidthDp = scaleDp(36f, widthScale, min = 34f, max = 40f),

@@ -15,8 +15,8 @@ class HomeLayoutMetricsTest {
         )
 
         assertEquals(340f, metrics.categoryPinOffsetDp, FLOAT_DELTA)
-        assertEquals(95f, metrics.railYOffsetDp, FLOAT_DELTA)
-        assertEquals(-105f, metrics.homeRailHitYOffsetDp, FLOAT_DELTA)
+        assertEquals(120f, metrics.railYOffsetDp, FLOAT_DELTA)
+        assertEquals(-130f, metrics.homeRailHitYOffsetDp, FLOAT_DELTA)
         assertEquals(28f, metrics.railEndPaddingDp, FLOAT_DELTA)
         assertEquals(40f, metrics.searchButtonBottomPaddingDp, FLOAT_DELTA)
         assertEquals(88f, metrics.favoritesTopMarginDp, FLOAT_DELTA)
@@ -33,7 +33,7 @@ class HomeLayoutMetricsTest {
         )
 
         assertTrue(metrics.categoryPinOffsetDp < 340f)
-        assertTrue(metrics.railYOffsetDp < 95f)
+        assertTrue(metrics.railYOffsetDp < 120f)
         assertTrue(metrics.favoritesTopMarginDp < 88f)
         assertTrue(metrics.favoritesCenterBiasUpDp < 44f)
         assertTrue(metrics.searchButtonBottomPaddingDp >= 44f)
@@ -50,7 +50,7 @@ class HomeLayoutMetricsTest {
 
         assertTrue(metrics.categoryPinOffsetDp > 340f)
         assertTrue(metrics.categoryPinOffsetDp <= 410f)
-        assertTrue(metrics.railYOffsetDp > 95f)
+        assertTrue(metrics.railYOffsetDp > 120f)
         assertTrue(metrics.favoritesTopMarginDp > 88f)
         assertTrue(metrics.favoritesTopMarginDp <= 112f)
     }
