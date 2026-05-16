@@ -55,6 +55,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import androidx.core.view.WindowCompat
@@ -105,6 +106,7 @@ private fun WallpaperBackground(
 fun LauncherHomeRoute(
     interactor: LauncherInteractor,
     widgetController: LauncherWidgetController,
+    homeIntentPressCount: StateFlow<Int>,
 ) {
     val vm: LauncherHomeViewModel = viewModel(
         factory = LauncherHomeViewModelFactory(interactor),
@@ -131,6 +133,7 @@ fun LauncherHomeRoute(
         LauncherHomeScreen(
             state = state,
             widgetStacks = widgetStacks,
+            homeIntentPressCount = homeIntentPressCount.collectAsStateWithLifecycle().value,
             listState = listState,
             categoryPinOffsetPx = categoryPinOffsetPx,
             onQueryChanged = vm::onQueryChanged,
@@ -166,6 +169,7 @@ fun LauncherHomeRoute(
 private fun LauncherHomeScreen(
     state: LauncherHomeUiState,
     widgetStacks: List<WidgetStack>,
+    homeIntentPressCount: Int,
     listState: androidx.compose.foundation.lazy.LazyListState,
     categoryPinOffsetPx: Int,
     onQueryChanged: (String) -> Unit,
@@ -287,6 +291,31 @@ private fun LauncherHomeScreen(
         onSearchDismissed()
     }
 
+    fun returnToFavoritesMenu() {
+        if (state.isSearchActive) {
+            onSearchDismissed()
+        }
+        if (state.isHiddenMode) {
+            onHiddenModeChanged(false)
+        }
+
+        contentMode = HomeContentMode.Favorites
+        selectedRailItem.value = buildRailLetters(state.listLayout.letterJumpTargets).first()
+        scrubbingLetter.value = null
+        isScrubbing.value = false
+
+        coroutineScope.launch {
+            listState.scrollToItem(
+                index = if (state.listLayout.favorites.isNotEmpty()) {
+                    favoritesHeaderIndex(widgetStacks.size)
+                } else {
+                    FirstHomeContentIndex
+                },
+                scrollOffset = -categoryPinOffsetPx,
+            )
+        }
+    }
+
     fun launchBestSearchMatch() {
         val app = state.listLayout.apps.firstOrNull() ?: return
         launchApp(context, app)
@@ -310,6 +339,12 @@ private fun LauncherHomeScreen(
         }
 
         launchBestSearchMatch()
+    }
+
+    LaunchedEffect(homeIntentPressCount) {
+        if (homeIntentPressCount > 0) {
+            returnToFavoritesMenu()
+        }
     }
 
     Surface(
