@@ -116,7 +116,8 @@ fun LauncherHomeRoute(
     )
     val state by vm.uiState.collectAsStateWithLifecycle()
     val widgetStacks by widgetController.widgetStacks.collectAsStateWithLifecycle()
-    val listState = rememberLazyListState()
+    val appListState = rememberLazyListState()
+    val favoritesListState = rememberLazyListState()
     val context = LocalContext.current
 
     LauncherTheme(font = state.settings.font) {
@@ -124,7 +125,8 @@ fun LauncherHomeRoute(
             state = state,
             widgetStacks = widgetStacks,
             homeIntentPressCount = homeIntentPressCount.collectAsStateWithLifecycle().value,
-            listState = listState,
+            appListState = appListState,
+            favoritesListState = favoritesListState,
             jumpToTarget = vm.jumpToTarget,
             onQueryChanged = vm::onQueryChanged,
             onSearchActivated = vm::onSearchActivated,
@@ -160,7 +162,8 @@ private fun LauncherHomeScreen(
     state: LauncherHomeUiState,
     widgetStacks: List<WidgetStack>,
     homeIntentPressCount: Int,
-    listState: androidx.compose.foundation.lazy.LazyListState,
+    appListState: androidx.compose.foundation.lazy.LazyListState,
+    favoritesListState: androidx.compose.foundation.lazy.LazyListState,
     jumpToTarget: kotlinx.coroutines.flow.Flow<Int>,
     onQueryChanged: (String) -> Unit,
     onSearchActivated: () -> Unit,
@@ -228,7 +231,7 @@ private fun LauncherHomeScreen(
             isScrubbing.value = false
 
             coroutineScope.launch {
-                listState.scrollToItem(
+                favoritesListState.scrollToItem(
                     index = if (state.listLayout.favorites.isNotEmpty()) {
                         favoritesHeaderIndex(widgetStacks.size)
                     } else {
@@ -252,7 +255,7 @@ private fun LauncherHomeScreen(
         onSearchActivated()
 
         coroutineScope.launch {
-            listState.scrollToItem(index = 0)
+            appListState.scrollToItem(index = 0)
         }
     }
 
@@ -263,7 +266,7 @@ private fun LauncherHomeScreen(
         onAppListActivated()
 
         coroutineScope.launch {
-            listState.scrollToItem(index = 0)
+            appListState.scrollToItem(index = 0)
         }
     }
 
@@ -274,7 +277,11 @@ private fun LauncherHomeScreen(
         isScrubbing.value = false
 
         coroutineScope.launch {
-            listState.scrollToItem(index = 0)
+            if (enabled) {
+                appListState.scrollToItem(index = 0)
+            } else {
+                favoritesListState.scrollToItem(index = 0)
+            }
         }
     }
 
@@ -299,7 +306,7 @@ private fun LauncherHomeScreen(
         isScrubbing.value = false
 
         coroutineScope.launch {
-            listState.scrollToItem(
+            favoritesListState.scrollToItem(
                 index = if (state.listLayout.favorites.isNotEmpty()) {
                     favoritesHeaderIndex(widgetStacks.size)
                 } else {
@@ -372,10 +379,10 @@ private fun LauncherHomeScreen(
                 }
             }
 
-            LaunchedEffect(categoryPinOffsetPx, listState, jumpToTarget) {
+            LaunchedEffect(categoryPinOffsetPx, appListState, jumpToTarget) {
                 jumpToTarget.collectLatest { targetIndex ->
                     // Negative offset pins the selected category below the top edge.
-                    listState.scrollToItem(
+                    appListState.scrollToItem(
                         index = targetIndex,
                         scrollOffset = -categoryPinOffsetPx,
                     )
@@ -397,7 +404,11 @@ private fun LauncherHomeScreen(
                     isHiddenMode = state.isHiddenMode,
                     showFavoritesOnly = mode == HomeContentMode.Favorites,
                     isSearchActive = mode == HomeContentMode.Search,
-                    listState = listState,
+                    listState = if (mode == HomeContentMode.Favorites) {
+                        favoritesListState
+                    } else {
+                        appListState
+                    },
                     categoryPinOffsetPx = categoryPinOffsetPx,
                     layoutMetrics = layoutMetrics,
                     onSearchActivated = ::activateSearch,
