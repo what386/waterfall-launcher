@@ -1,6 +1,14 @@
 # Changelog — launcher-test
 
-*Generated on 2026-05-14*
+*Generated on 2026-05-23*
+
+## 1.2.1 — 2026-05-23
+
+### Changes
+
+- add api to get screen size to adjust dimensions
+- bug: fix letter group alignment sometimes not working
+
 
 ## 1.2.0 — 2026-05-14
 
@@ -22,6 +30,5 @@
 - allow hide statusbar
 - allow hide iconsr
 - option to change font
-
 
 

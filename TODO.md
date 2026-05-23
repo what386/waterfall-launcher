@@ -17,14 +17,3 @@
 - [ ] make home button return user to favorites menu
       @created 2026-05-14 18:03
 
-
-## Completed
-
-- [x] add api to get screen size to adjust dimensions
-      @created 2026-05-14 17:57
-      @completed 2026-05-16 22:09
-
-- [x] bug: fix letter group alignment sometimes not working
-      @created 2026-05-23 16:57
-      @completed 2026-05-23 16:57
-
