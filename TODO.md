@@ -1,7 +1,7 @@
 # TODO — launcher-test
 
 @created: 2026-05-08
-@modified: 2026-05-16
+@modified: 2026-05-23
 
 ## Tasks
 
@@ -16,6 +16,9 @@
 
 - [ ] make home button return user to favorites menu
       @created 2026-05-14 18:03
+
+- [ ] bug: fix letter group alignment sometimes not working
+      @created 2026-05-23 16:57
 
 
 ## Completed
