@@ -1,7 +1,7 @@
 # TODO — launcher-test
 
 @created: 2026-05-08
-@modified: 2026-05-23
+@modified: 2026-06-03
 
 ## Tasks
 
@@ -16,4 +16,7 @@
 
 - [ ] make home button return user to favorites menu
       @created 2026-05-14 18:03
+
+- [ ] fix apps installing/uninstalling not updating the applist
+      @created 2026-06-03 19:19
 
