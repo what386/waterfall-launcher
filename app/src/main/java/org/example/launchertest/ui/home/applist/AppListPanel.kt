@@ -124,7 +124,7 @@ internal fun AppListPanel(
                 available: Offset,
                 source: NestedScrollSource,
             ): Offset {
-                if (available.y <= 0f) {
+                if (source != NestedScrollSource.UserInput || available.y <= 0f) {
                     reset()
                 }
                 return Offset.Zero
@@ -139,7 +139,11 @@ internal fun AppListPanel(
                 val isAtTop = listState.firstVisibleItemIndex == 0 &&
                     listState.firstVisibleItemScrollOffset == 0
 
-                if (!isNormalAppList || !isAtTop || available.y <= 0f) {
+                if (source != NestedScrollSource.UserInput ||
+                    !isNormalAppList ||
+                    !isAtTop ||
+                    available.y <= 0f
+                ) {
                     reset()
                     return Offset.Zero
                 }
