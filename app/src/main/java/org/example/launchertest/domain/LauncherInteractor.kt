@@ -74,6 +74,10 @@ class LauncherInteractor(
         preferencesRepository.setHideAppIcons(enabled)
     }
 
+    suspend fun setHideSearchButton(enabled: Boolean) {
+        preferencesRepository.setHideSearchButton(enabled)
+    }
+
     suspend fun setCleanHomeScreen(enabled: Boolean) {
         preferencesRepository.setCleanHomeScreen(enabled)
     }

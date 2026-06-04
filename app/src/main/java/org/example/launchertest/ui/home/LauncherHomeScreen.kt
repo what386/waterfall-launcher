@@ -34,6 +34,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.clickable
@@ -142,6 +143,7 @@ fun LauncherHomeRoute(
             onReorderFavorites = vm::onFavoriteOrderChanged,
             onHideStatusBarChanged = vm::onHideStatusBarChanged,
             onHideAppIconsChanged = vm::onHideAppIconsChanged,
+            onHideSearchButtonChanged = vm::onHideSearchButtonChanged,
             onCleanHomeScreenChanged = vm::onCleanHomeScreenChanged,
             onHomeRowNavigationModeChanged = vm::onHomeRowNavigationModeChanged,
             onFontChanged = vm::onFontChanged,
@@ -180,6 +182,7 @@ private fun LauncherHomeScreen(
     onReorderFavorites: (List<org.example.launchertest.ui.model.LauncherApp>) -> Unit,
     onHideStatusBarChanged: (Boolean) -> Unit,
     onHideAppIconsChanged: (Boolean) -> Unit,
+    onHideSearchButtonChanged: (Boolean) -> Unit,
     onCleanHomeScreenChanged: (Boolean) -> Unit,
     onHomeRowNavigationModeChanged: (HomeRowNavigationMode) -> Unit,
     onFontChanged: (LauncherFont) -> Unit,
@@ -376,6 +379,14 @@ private fun LauncherHomeScreen(
             val categoryPinOffsetPx = with(density) {
                 layoutMetrics.categoryPinOffsetDp.dp.toPx()
             }.toInt()
+            val searchButtonRailYOffsetDp = run {
+                val railHalfHeightDp = maxHeight.value * layoutMetrics.railHeightFraction / 2f
+                val buttonHalfHeightDp = layoutMetrics.searchButtonSizeDp / 2f
+                layoutMetrics.railYOffsetDp +
+                    railHalfHeightDp +
+                    layoutMetrics.searchButtonRailGapDp +
+                    buttonHalfHeightDp
+            }
 
             CompositionLocalProvider(LocalHomeLayoutMetrics provides layoutMetrics) {
                 LaunchedEffect(homeIntentPressCount) {
@@ -435,6 +446,7 @@ private fun LauncherHomeScreen(
                         settings = state.settings,
                         onHideStatusBarChanged = onHideStatusBarChanged,
                         onHideAppIconsChanged = onHideAppIconsChanged,
+                        onHideSearchButtonChanged = onHideSearchButtonChanged,
                         onCleanHomeScreenChanged = onCleanHomeScreenChanged,
                         onHomeRowNavigationModeChanged = onHomeRowNavigationModeChanged,
                         onFontChanged = onFontChanged,
@@ -512,14 +524,17 @@ private fun LauncherHomeScreen(
                 }
 
                 AnimatedVisibility(
-                    visible = contentMode == HomeContentMode.Apps && !state.isSearchActive && !isRailDragging,
+                    visible = contentMode == HomeContentMode.Apps &&
+                        !state.isSearchActive &&
+                        !isRailDragging &&
+                        !state.settings.hideSearchButton,
                     enter = fadeIn(),
                     exit = fadeOut(),
                     modifier = Modifier
-                        .align(Alignment.BottomEnd)
+                        .align(Alignment.CenterEnd)
+                        .offset(y = searchButtonRailYOffsetDp.dp)
                         .padding(
-                            end = layoutMetrics.searchButtonEndPaddingDp.dp,
-                            bottom = layoutMetrics.searchButtonBottomPaddingDp.dp,
+                            end = layoutMetrics.searchButtonEdgePaddingDp.dp,
                         ),
                 ) {
                     Surface(
@@ -528,17 +543,20 @@ private fun LauncherHomeScreen(
                         contentColor = Color.White,
                         tonalElevation = 0.dp,
                         shadowElevation = 0.dp,
-                        modifier = Modifier.clickable { activateSearch() },
+                        modifier = Modifier
+                            .size(layoutMetrics.searchButtonSizeDp.dp)
+                            .clickable { activateSearch() },
                     ) {
-                        Text(
-                            text = "\u2315",
-                            style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Medium,
-                            modifier = Modifier.padding(
-                                horizontal = layoutMetrics.searchButtonHorizontalPaddingDp.dp,
-                                vertical = layoutMetrics.searchButtonVerticalPaddingDp.dp,
-                            ),
-                        )
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier.fillMaxSize(),
+                        ) {
+                            Text(
+                                text = "\u2315",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Medium,
+                            )
+                        }
                     }
                 }
             }

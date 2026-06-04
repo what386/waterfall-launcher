@@ -108,6 +108,7 @@ internal fun FavoritesPanel(
     settings: LauncherSettings,
     onHideStatusBarChanged: (Boolean) -> Unit,
     onHideAppIconsChanged: (Boolean) -> Unit,
+    onHideSearchButtonChanged: (Boolean) -> Unit,
     onCleanHomeScreenChanged: (Boolean) -> Unit,
     onHomeRowNavigationModeChanged: (HomeRowNavigationMode) -> Unit,
     onFontChanged: (LauncherFont) -> Unit,
@@ -740,6 +741,7 @@ internal fun FavoritesPanel(
                         onHideStatusBarChanged(enabled)
                     },
                     onHideAppIconsChanged = onHideAppIconsChanged,
+                    onHideSearchButtonChanged = onHideSearchButtonChanged,
                     onCleanHomeScreenChanged = onCleanHomeScreenChanged,
                     onHomeRowClicked = ::openHomeRowSheet,
                     onFontClicked = ::openFontSheet,
@@ -870,6 +872,7 @@ private fun SettingsSheet(
     settings: LauncherSettings,
     onHideStatusBarChanged: (Boolean) -> Unit,
     onHideAppIconsChanged: (Boolean) -> Unit,
+    onHideSearchButtonChanged: (Boolean) -> Unit,
     onCleanHomeScreenChanged: (Boolean) -> Unit,
     onHomeRowClicked: () -> Unit,
     onFontClicked: () -> Unit,
@@ -912,6 +915,13 @@ private fun SettingsSheet(
             subtitle = "Show app names without icons",
             checked = settings.hideAppIcons,
             onCheckedChange = onHideAppIconsChanged,
+        )
+
+        SettingsToggleRow(
+            title = "Hide search button",
+            subtitle = "Use app list overscroll to search",
+            checked = settings.hideSearchButton,
+            onCheckedChange = onHideSearchButtonChanged,
         )
 
         SettingsToggleRow(
