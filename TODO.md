@@ -11,6 +11,9 @@
 - [ ] make home button return user to favorites menu
       @created 2026-05-14 18:03
 
+- [ ] make overscroll in applist also open search
+      @created 2026-06-04 17:34
+
 
 ## Completed
 
