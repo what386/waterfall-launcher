@@ -11,6 +11,9 @@
 - [ ] make home button return user to favorites menu
       @created 2026-05-14 18:03
 
+- [ ] clean home option?
+      @created 2026-06-04 18:08
+
 
 ## Completed
 
