@@ -200,6 +200,28 @@ internal fun AppRow(
             )
 
             DropdownMenuItem(
+                text = { Text("Uninstall") },
+                onClick = {
+                    showMenu = false
+
+                    val intent = Intent(Intent.ACTION_DELETE).apply {
+                        data = Uri.fromParts("package", app.packageName, null)
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                    }
+
+                    try {
+                        context.startActivity(intent)
+                    } catch (_: Exception) {
+                        Toast.makeText(
+                            context,
+                            "Unable to uninstall ${app.label}",
+                            Toast.LENGTH_SHORT,
+                        ).show()
+                    }
+                },
+            )
+
+            DropdownMenuItem(
                 text = { Text(if (isHiddenMode) "Unhide" else "Hide") },
                 onClick = {
                     showMenu = false
