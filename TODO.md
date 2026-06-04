@@ -17,13 +17,14 @@
 - [ ] make home button return user to favorites menu
       @created 2026-05-14 18:03
 
-- [ ] uninstall option in dropdown menu
-      @created 2026-06-04 16:56
-
 
 ## Completed
 
 - [x] fix apps installing/uninstalling not updating the applist
       @created 2026-06-03 19:19
+      @completed 2026-06-04 16:56
+
+- [x] uninstall option in dropdown menu
+      @created 2026-06-04 16:56
       @completed 2026-06-04 16:56
 
