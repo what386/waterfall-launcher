@@ -2,6 +2,17 @@
 
 *Generated on 2026-06-04*
 
+## 1.4.0 — 2026-06-04
+
+### Changes
+
+- dead app cleanup in database
+- search actions: enter opens top app and hold opens overflow menu
+- make overscroll in applist also open search
+- make home button return user to favorites menu
+- clean home option?
+
+
 ## 1.3.0 — 2026-06-04
 
 ### Changes
