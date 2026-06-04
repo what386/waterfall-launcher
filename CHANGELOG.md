@@ -7,7 +7,7 @@
 ### Changes
 
 - dead app cleanup in database
-- search actions: enter opens top app and hold opens overflow menu
+- search actions: enter opens top app
 - make overscroll in applist also open search
 - make home button return user to favorites menu
 - clean home option?
