@@ -20,6 +20,10 @@
 - [ ] search actions: enter opens top app and hold opens overflow menu
       @created 2026-06-04 17:00
 
-- [ ] dead app cleanup in database
+
+## Completed
+
+- [x] dead app cleanup in database
       @created 2026-06-04 17:01
+      @completed 2026-06-04 17:30
 
