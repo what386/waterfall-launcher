@@ -11,6 +11,9 @@
 - [ ] clean home option?
       @created 2026-06-04 18:08
 
+- [ ] custom overscroll actions in home/favorites screen? remap existing as defaults.
+      @created 2026-06-04 18:27
+
 
 ## Completed
 
