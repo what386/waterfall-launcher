@@ -204,7 +204,7 @@ internal fun AppRow(
                 onClick = {
                     showMenu = false
 
-                    val intent = Intent(Intent.ACTION_DELETE).apply {
+                    val intent = Intent(Intent.ACTION_UNINSTALL_PACKAGE).apply {
                         data = Uri.fromParts("package", app.packageName, null)
                         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     }
