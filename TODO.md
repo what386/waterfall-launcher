@@ -17,6 +17,9 @@
 - [ ] make home button return user to favorites menu
       @created 2026-05-14 18:03
 
+- [ ] uninstall option in dropdown menu
+      @created 2026-06-04 16:56
+
 
 ## Completed
 
