@@ -17,3 +17,6 @@
 - [ ] make home button return user to favorites menu
       @created 2026-05-14 18:03
 
+- [ ] search actions: enter opens top app and hold opens overflow menu
+      @created 2026-06-04 17:00
+
