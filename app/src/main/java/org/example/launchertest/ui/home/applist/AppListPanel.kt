@@ -54,6 +54,7 @@ internal fun AppListPanel(
     isHiddenMode: Boolean,
     showFavoritesOnly: Boolean,
     isSearchActive: Boolean,
+    highlightedAppComponentId: String?,
     listState: LazyListState,
     categoryPinOffsetPx: Int,
     layoutMetrics: HomeLayoutMetrics,
@@ -237,6 +238,7 @@ internal fun AppListPanel(
                         onHideApp = onHideApp,
                         onUnhideApp = onUnhideApp,
                         hideAppIcons = settings.hideAppIcons,
+                        isHighlighted = isSearchActive && app.componentId() == highlightedAppComponentId,
                         modifier = rowModifier,
                     )
                 }
@@ -248,6 +250,8 @@ internal fun bucketFor(label: String): Char {
     val first = label.trim().firstOrNull()?.uppercaseChar() ?: return '#'
     return if (first in 'A'..'Z') first else '#'
 }
+
+private fun LauncherApp.componentId(): String = "${packageName}/${activityName}"
 
 @Composable
 private fun HiddenModeIndicator() {

@@ -66,6 +66,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import org.example.launchertest.data.HomeRowNavigationMode
 import org.example.launchertest.domain.LauncherInteractor
+import org.example.launchertest.domain.componentId
 import org.example.launchertest.data.LauncherFont
 import org.example.launchertest.ui.model.LauncherApp
 import org.example.launchertest.ui.theme.LauncherTheme
@@ -317,8 +318,11 @@ private fun LauncherHomeScreen(
         }
     }
 
-    fun launchBestSearchMatch() {
-        val app = state.listLayout.apps.firstOrNull() ?: return
+    fun launchBestSearchMatch(submittedQuery: String = state.query) {
+        val app = bestSearchMatch(
+            apps = state.listLayout.apps,
+            rawQuery = submittedQuery,
+        ) ?: return
         launchApp(context, app)
         dismissSearch()
     }
@@ -339,7 +343,7 @@ private fun LauncherHomeScreen(
             return@LaunchedEffect
         }
 
-        launchBestSearchMatch()
+        launchBestSearchMatch(state.query)
     }
 
     Surface(
@@ -404,6 +408,10 @@ private fun LauncherHomeScreen(
                     isHiddenMode = state.isHiddenMode,
                     showFavoritesOnly = mode == HomeContentMode.Favorites,
                     isSearchActive = mode == HomeContentMode.Search,
+                    highlightedAppComponentId = bestSearchMatch(
+                        apps = state.listLayout.apps,
+                        rawQuery = state.query,
+                    )?.componentId(),
                     listState = if (mode == HomeContentMode.Favorites) {
                         favoritesListState
                     } else {
@@ -443,7 +451,6 @@ private fun LauncherHomeScreen(
             ) {
                 SearchOverlay(
                     query = state.query,
-                    topResultLabel = state.listLayout.apps.firstOrNull()?.label,
                     onQueryChanged = onQueryChanged,
                     onSearchSubmitted = ::launchBestSearchMatch,
                     onKeyboardDismissed = ::dismissSearch,
@@ -558,6 +565,26 @@ private fun launchApp(
             Toast.LENGTH_SHORT,
         ).show()
     }
+}
+
+private fun bestSearchMatch(
+    apps: List<LauncherApp>,
+    rawQuery: String,
+): LauncherApp? {
+    val query = rawQuery.trim().lowercase()
+    if (query.isBlank()) return null
+
+    return apps
+        .asSequence()
+        .filter { app -> app.label.lowercase().contains(query) }
+        .sortedWith(
+            compareBy<LauncherApp>(
+                { app -> if (app.label.lowercase() == query) 0 else 1 },
+                { app -> if (app.label.lowercase().startsWith(query)) 0 else 1 },
+                { app -> app.label.lowercase() },
+            ),
+        )
+        .firstOrNull()
 }
 
 private enum class HomeContentMode {

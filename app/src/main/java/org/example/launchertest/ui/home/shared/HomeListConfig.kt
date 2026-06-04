@@ -16,4 +16,5 @@ internal const val HOME_ROW_ICON_SIZE_DP = 44f
 internal const val HOME_ROW_FAVORITE_ICON_SIZE_DP = 52f
 internal const val HOME_ROW_PRESS_SCALE = 0.97f
 internal const val HOME_ROW_PRESS_TINT_ALPHA = 0.14f
+internal const val HOME_ROW_HIGHLIGHT_TINT_ALPHA = 0.10f
 internal const val HOME_ROW_PRESS_LAUNCH_DELAY_MS = 85L

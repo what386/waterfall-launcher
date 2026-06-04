@@ -69,6 +69,7 @@ internal fun AppRow(
     onHideApp: (LauncherApp) -> Unit,
     onUnhideApp: (LauncherApp) -> Unit,
     hideAppIcons: Boolean,
+    isHighlighted: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -83,7 +84,11 @@ internal fun AppRow(
         label = "rowScale",
     )
     val rowTintAlpha by animateFloatAsState(
-        targetValue = if (isLaunching) HOME_ROW_PRESS_TINT_ALPHA else 0f,
+        targetValue = when {
+            isLaunching -> HOME_ROW_PRESS_TINT_ALPHA
+            isHighlighted -> HOME_ROW_HIGHLIGHT_TINT_ALPHA
+            else -> 0f
+        },
         animationSpec = spring(),
         label = "rowTintAlpha",
     )

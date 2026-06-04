@@ -1,7 +1,6 @@
 package org.example.launchertest.ui.home
 
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.statusBars
@@ -11,7 +10,6 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -22,7 +20,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -33,9 +30,8 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun SearchOverlay(
     query: String,
-    topResultLabel: String?,
     onQueryChanged: (String) -> Unit,
-    onSearchSubmitted: () -> Unit,
+    onSearchSubmitted: (String) -> Unit,
     onKeyboardDismissed: () -> Unit,
     horizontalPaddingDp: Float,
     modifier: Modifier = Modifier,
@@ -66,45 +62,27 @@ fun SearchOverlay(
             .fillMaxWidth()
             .windowInsetsPadding(WindowInsets.statusBars),
     ) {
-        Column(
+        OutlinedTextField(
+            value = query,
+            onValueChange = onQueryChanged,
+            placeholder = { Text("Search apps") },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(
+                imeAction = ImeAction.Search,
+            ),
+            keyboardActions = KeyboardActions(
+                onSearch = {
+                    onSearchSubmitted(query)
+                },
+            ),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedContainerColor = Color(0x66000000),
+                unfocusedContainerColor = Color(0x66000000),
+            ),
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = horizontalPaddingDp.dp, vertical = 12.dp),
-        ) {
-            OutlinedTextField(
-                value = query,
-                onValueChange = onQueryChanged,
-                placeholder = { Text("Search apps") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(
-                    imeAction = ImeAction.Search,
-                ),
-                keyboardActions = KeyboardActions(
-                    onSearch = {
-                        onSearchSubmitted()
-                    },
-                ),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedContainerColor = Color(0x66000000),
-                    unfocusedContainerColor = Color(0x66000000),
-                ),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .focusRequester(focusRequester),
-            )
-
-            if (query.isNotBlank() && topResultLabel != null) {
-                TextButton(
-                    onClick = onSearchSubmitted,
-                    modifier = Modifier.fillMaxWidth(),
-                ) {
-                    Text(
-                        text = "Open $topResultLabel",
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
-            }
-        }
+                .padding(horizontal = horizontalPaddingDp.dp, vertical = 12.dp)
+                .focusRequester(focusRequester),
+        )
     }
 }
