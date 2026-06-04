@@ -21,9 +21,13 @@ class LauncherInteractor(
         query: Flow<String>,
         hiddenMode: Flow<Boolean>,
     ): Flow<List<LauncherApp>> {
-        val allApps = appRepository.loadLauncherApps()
-        return combine(preferencesRepository.favorites, preferencesRepository.hiddenApps, query, hiddenMode) {
-                favorites, hiddenApps, rawQuery, isHiddenMode ->
+        return combine(
+            appRepository.launcherAppsFlow(),
+            preferencesRepository.favorites,
+            preferencesRepository.hiddenApps,
+            query,
+            hiddenMode,
+        ) { allApps, favorites, hiddenApps, rawQuery, isHiddenMode ->
             val normalizedQuery = rawQuery.trim().lowercase()
             allApps
                 .asSequence()

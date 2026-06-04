@@ -42,6 +42,7 @@ class MainActivity : ComponentActivity() {
         setHighRefreshRate()
 
         val appRepository = AppRepository(
+            context = applicationContext,
             packageManager = packageManager,
             selfPackageName = packageName,
         )
