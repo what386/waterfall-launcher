@@ -128,7 +128,7 @@ internal fun calculateHomeLayoutMetrics(
         cleanHomeWidgetTopPaddingDp = scaleDp(96f, heightScale, min = 64f, max = 116f),
         searchDragThresholdDp = scaleDpByRatio(18f, touchScale, minRatio = 0.9f, maxRatio = 1.12f),
         searchFieldVerticalPaddingDp = scaleDpByRatio(12f, spacingScale),
-        searchButtonSizeDp = scaleDpByRatio(48f, touchScale, minRatio = 0.92f, maxRatio = 1.12f),
+        searchButtonSizeDp = scaleDpByRatio(40f, touchScale, minRatio = 0.95f, maxRatio = 1.1f),
         searchButtonRailGapDp = scaleDpByRatio(12f, spacingScale),
         sectionHeaderStartPaddingDp = scaleDpByRatio(20f, horizontalScale),
         sectionHeaderTopPaddingDp = scaleDpByRatio(8f, spacingScale),
