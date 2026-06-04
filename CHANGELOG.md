@@ -1,6 +1,14 @@
 # Changelog — launcher-test
 
-*Generated on 2026-05-23*
+*Generated on 2026-06-04*
+
+## 1.3.0 — 2026-06-04
+
+### Changes
+
+- fix apps installing/uninstalling not updating the applist
+- uninstall option in dropdown menu
+
 
 ## 1.2.1 — 2026-05-23
 
