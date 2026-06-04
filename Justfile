@@ -30,10 +30,6 @@ build-release:
     ./gradlew :app:assembleRelease
     "$ANDROID_SDK_ROOT/build-tools/35.0.0/apksigner" sign --ks "$HOME/.android/debug.keystore" --ks-key-alias androiddebugkey --ks-pass pass:android --key-pass pass:android --out app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/app-release-unsigned.apk
 
-dist:
-    mkdir -p dist
-    cp app/build/outputs/apk/release/app-release.apk dist/waterfall-launcher.apk
-
 uninstall:
     adb uninstall org.example.launchertest
 
@@ -63,4 +59,7 @@ refresh-release:
 gen-release:
     rm dist/waterfall-launcher.apk || true
     just build-release
-    just dist
+    mkdir -p dist
+    cp app/build/outputs/apk/release/app-release.apk dist/waterfall-launcher.apk
+
+
