@@ -31,6 +31,7 @@ import org.example.launchertest.data.HomeRowNavigationMode
 import org.example.launchertest.data.LauncherFont
 import org.example.launchertest.data.LauncherSettings
 import org.example.launchertest.ui.home.HomeLayoutMetrics
+import org.example.launchertest.ui.home.favorites.FAVORITES_OVERSCROLL_RESISTANCE
 import org.example.launchertest.ui.home.favorites.FavoritesPanel
 import org.example.launchertest.ui.home.shared.AppRow
 import org.example.launchertest.ui.home.shared.HOME_LIST_SEARCH_DRAG_THRESHOLD_DP
@@ -148,7 +149,7 @@ internal fun AppListPanel(
                     return Offset.Zero
                 }
 
-                accumulatedOverscrollPx += available.y
+                accumulatedOverscrollPx += available.y * FAVORITES_OVERSCROLL_RESISTANCE
                 if (!didTriggerSearch && accumulatedOverscrollPx >= dragThresholdPx) {
                     didTriggerSearch = true
                     onSearchActivated()
