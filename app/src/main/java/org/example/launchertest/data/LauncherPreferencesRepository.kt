@@ -110,6 +110,30 @@ class LauncherPreferencesRepository(
         }
     }
 
+    suspend fun removeUnavailableApps(availableComponentIds: Set<String>) {
+        if (availableComponentIds.isEmpty()) return
+
+        context.launcherPrefs.edit { prefs ->
+            val favorites = prefs[favoritesKey] ?: emptySet()
+            val cleanedFavorites = favorites.filterTo(mutableSetOf()) { it in availableComponentIds }
+            if (cleanedFavorites != favorites) {
+                prefs[favoritesKey] = cleanedFavorites
+            }
+
+            val hiddenApps = prefs[hiddenKey] ?: emptySet()
+            val cleanedHiddenApps = hiddenApps.filterTo(mutableSetOf()) { it in availableComponentIds }
+            if (cleanedHiddenApps != hiddenApps) {
+                prefs[hiddenKey] = cleanedHiddenApps
+            }
+
+            val favoriteOrder = prefs[favoriteOrderKey].toComponentIdList()
+            val cleanedFavoriteOrder = favoriteOrder.filter { it in availableComponentIds }.dedupComponentIds()
+            if (cleanedFavoriteOrder != favoriteOrder) {
+                prefs[favoriteOrderKey] = cleanedFavoriteOrder.joinToString(",")
+            }
+        }
+    }
+
     suspend fun addWidgetId(appWidgetId: Int) {
         context.launcherPrefs.edit { prefs ->
             val stacks = currentWidgetStacks(prefs) + WidgetStack(listOf(appWidgetId))

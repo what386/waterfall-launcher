@@ -443,6 +443,7 @@ private fun LauncherHomeScreen(
             ) {
                 SearchOverlay(
                     query = state.query,
+                    topResultLabel = state.listLayout.apps.firstOrNull()?.label,
                     onQueryChanged = onQueryChanged,
                     onSearchSubmitted = ::launchBestSearchMatch,
                     onKeyboardDismissed = ::dismissSearch,
