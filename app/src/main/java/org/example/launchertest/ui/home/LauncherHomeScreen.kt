@@ -45,6 +45,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -200,6 +201,7 @@ private fun LauncherHomeScreen(
     var isRailDragging by remember { mutableStateOf(false) }
 
     var contentMode by remember { mutableStateOf(HomeContentMode.Favorites) }
+    var lastHandledHomeIntentPressCount by remember { mutableIntStateOf(homeIntentPressCount) }
 
     val coroutineScope = rememberCoroutineScope()
 
@@ -374,8 +376,9 @@ private fun LauncherHomeScreen(
                 layoutMetrics.categoryPinOffsetDp.dp.toPx()
             }.toInt()
 
-            LaunchedEffect(homeIntentPressCount, categoryPinOffsetPx) {
-                if (homeIntentPressCount > 0) {
+            LaunchedEffect(homeIntentPressCount) {
+                if (homeIntentPressCount > lastHandledHomeIntentPressCount) {
+                    lastHandledHomeIntentPressCount = homeIntentPressCount
                     returnToFavoritesMenu(categoryPinOffsetPx)
                 }
             }

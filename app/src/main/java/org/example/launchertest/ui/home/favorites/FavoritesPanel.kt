@@ -154,6 +154,7 @@ internal fun FavoritesPanel(
     var activeDragWidgetOffsetY by remember { mutableFloatStateOf(0f) }
     val widgetRowMetrics = remember { mutableStateMapOf<Int, FavoriteRowMetrics>() }
     val orderedWidgetStacks = remember { mutableStateListOf<WidgetStack>() }
+    val useCleanHomeWidgetLayout = settings.cleanHomeScreen && orderedWidgetStacks.isNotEmpty()
 
     LaunchedEffect(favorites) {
         val incomingById = favorites.associateBy(::favoriteComponentId)
@@ -396,7 +397,7 @@ internal fun FavoritesPanel(
                     end = layoutMetrics.appListContentEndPaddingDp.dp,
                 )
                 .offset(
-                    y = if (hasScrollableContent) {
+                    y = if (hasScrollableContent || useCleanHomeWidgetLayout) {
                         0.dp
                     } else {
                         (-layoutMetrics.favoritesCenterBiasUpDp).dp
@@ -477,13 +478,21 @@ internal fun FavoritesPanel(
                     )
                 }
                 .verticalScroll(scrollState, enabled = false),
-            verticalArrangement = if (hasScrollableContent) {
+            verticalArrangement = if (hasScrollableContent || useCleanHomeWidgetLayout) {
                 Arrangement.Top
             } else {
                 Arrangement.Center
             },
         ) {
-            Spacer(modifier = Modifier.height(layoutMetrics.favoritesTopMarginDp.dp))
+            Spacer(
+                modifier = Modifier.height(
+                    if (useCleanHomeWidgetLayout) {
+                        layoutMetrics.cleanHomeWidgetTopPaddingDp.dp
+                    } else {
+                        layoutMetrics.favoritesTopMarginDp.dp
+                    },
+                ),
+            )
 
             orderedWidgetStacks.forEach { widgetStack ->
                 val stackId = widgetStackId(widgetStack)

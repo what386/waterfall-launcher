@@ -19,6 +19,7 @@ internal data class HomeLayoutMetrics(
     val appListSearchBottomPaddingDp: Float,
     val favoritesTopMarginDp: Float,
     val favoritesCenterBiasUpDp: Float,
+    val cleanHomeWidgetTopPaddingDp: Float,
 )
 
 internal fun calculateHomeLayoutMetrics(
@@ -65,6 +66,7 @@ internal fun calculateHomeLayoutMetrics(
         ),
         favoritesTopMarginDp = scaleDp(88f, heightScale, min = 52f, max = 112f),
         favoritesCenterBiasUpDp = scaleDp(44f, heightScale, min = 26f, max = 56f),
+        cleanHomeWidgetTopPaddingDp = scaleDp(96f, heightScale, min = 64f, max = 116f),
     )
 }
 
