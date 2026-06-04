@@ -478,10 +478,13 @@ private fun LauncherHomeScreen(
                     )
                 }
 
+                val isCleanFavoritesHome =
+                    contentMode == HomeContentMode.Favorites && state.settings.cleanHomeScreen
+
                 AnimatedVisibility(
                     visible = !state.isSearchActive &&
                         railLetters.isNotEmpty() &&
-                        !(contentMode == HomeContentMode.Favorites && state.settings.cleanHomeScreen),
+                        (!isCleanFavoritesHome || isRailDragging),
                     enter = fadeIn(),
                     exit = fadeOut(),
                     modifier = Modifier.align(Alignment.CenterEnd),
