@@ -2,6 +2,7 @@ package org.example.launchertest.domain
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.onEach
 import org.example.launchertest.data.AppRepository
 import org.example.launchertest.data.HomeRowNavigationMode
 import org.example.launchertest.data.LauncherFont
@@ -21,8 +22,13 @@ class LauncherInteractor(
         query: Flow<String>,
         hiddenMode: Flow<Boolean>,
     ): Flow<List<LauncherApp>> {
+        val launcherApps = appRepository.launcherAppsFlow()
+            .onEach { apps ->
+                preferencesRepository.removeUnavailableApps(apps.map { it.componentId() }.toSet())
+            }
+
         return combine(
-            appRepository.launcherAppsFlow(),
+            launcherApps,
             preferencesRepository.favorites,
             preferencesRepository.hiddenApps,
             query,
@@ -66,6 +72,14 @@ class LauncherInteractor(
 
     suspend fun setHideAppIcons(enabled: Boolean) {
         preferencesRepository.setHideAppIcons(enabled)
+    }
+
+    suspend fun setHideSearchButton(enabled: Boolean) {
+        preferencesRepository.setHideSearchButton(enabled)
+    }
+
+    suspend fun setCleanHomeScreen(enabled: Boolean) {
+        preferencesRepository.setCleanHomeScreen(enabled)
     }
 
     suspend fun setHomeRowNavigationMode(mode: HomeRowNavigationMode) {

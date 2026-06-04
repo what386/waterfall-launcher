@@ -25,6 +25,8 @@ class LauncherPreferencesRepository(
     private val widgetStacksKey = stringPreferencesKey("widget_stacks")
     private val hideStatusBarKey = booleanPreferencesKey("hide_status_bar")
     private val hideAppIconsKey = booleanPreferencesKey("hide_app_icons")
+    private val hideSearchButtonKey = booleanPreferencesKey("hide_search_button")
+    private val cleanHomeScreenKey = booleanPreferencesKey("clean_home_screen")
     private val homeRowNavigationModeKey = stringPreferencesKey("home_row_navigation_mode")
     private val fontKey = stringPreferencesKey("font")
 
@@ -57,6 +59,8 @@ class LauncherPreferencesRepository(
         LauncherSettings(
             hideStatusBar = prefs[hideStatusBarKey] ?: false,
             hideAppIcons = prefs[hideAppIconsKey] ?: false,
+            hideSearchButton = prefs[hideSearchButtonKey] ?: false,
+            cleanHomeScreen = prefs[cleanHomeScreenKey] ?: false,
             homeRowNavigationMode = HomeRowNavigationMode.fromStorageValue(prefs[homeRowNavigationModeKey]),
             font = LauncherFont.fromStorageValue(prefs[fontKey]),
         )
@@ -107,6 +111,30 @@ class LauncherPreferencesRepository(
     suspend fun setFavoriteOrder(componentIds: List<String>) {
         context.launcherPrefs.edit { prefs ->
             prefs[favoriteOrderKey] = componentIds.dedupComponentIds().joinToString(",")
+        }
+    }
+
+    suspend fun removeUnavailableApps(availableComponentIds: Set<String>) {
+        if (availableComponentIds.isEmpty()) return
+
+        context.launcherPrefs.edit { prefs ->
+            val favorites = prefs[favoritesKey] ?: emptySet()
+            val cleanedFavorites = favorites.filterTo(mutableSetOf()) { it in availableComponentIds }
+            if (cleanedFavorites != favorites) {
+                prefs[favoritesKey] = cleanedFavorites
+            }
+
+            val hiddenApps = prefs[hiddenKey] ?: emptySet()
+            val cleanedHiddenApps = hiddenApps.filterTo(mutableSetOf()) { it in availableComponentIds }
+            if (cleanedHiddenApps != hiddenApps) {
+                prefs[hiddenKey] = cleanedHiddenApps
+            }
+
+            val favoriteOrder = prefs[favoriteOrderKey].toComponentIdList()
+            val cleanedFavoriteOrder = favoriteOrder.filter { it in availableComponentIds }.dedupComponentIds()
+            if (cleanedFavoriteOrder != favoriteOrder) {
+                prefs[favoriteOrderKey] = cleanedFavoriteOrder.joinToString(",")
+            }
         }
     }
 
@@ -164,6 +192,18 @@ class LauncherPreferencesRepository(
         }
     }
 
+    suspend fun setHideSearchButton(enabled: Boolean) {
+        context.launcherPrefs.edit { prefs ->
+            prefs[hideSearchButtonKey] = enabled
+        }
+    }
+
+    suspend fun setCleanHomeScreen(enabled: Boolean) {
+        context.launcherPrefs.edit { prefs ->
+            prefs[cleanHomeScreenKey] = enabled
+        }
+    }
+
     suspend fun setHomeRowNavigationMode(mode: HomeRowNavigationMode) {
         context.launcherPrefs.edit { prefs ->
             prefs[homeRowNavigationModeKey] = mode.storageValue
@@ -180,6 +220,8 @@ class LauncherPreferencesRepository(
         context.launcherPrefs.edit { prefs ->
             prefs.remove(hideStatusBarKey)
             prefs.remove(hideAppIconsKey)
+            prefs.remove(hideSearchButtonKey)
+            prefs.remove(cleanHomeScreenKey)
             prefs.remove(homeRowNavigationModeKey)
             prefs.remove(fontKey)
         }

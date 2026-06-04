@@ -36,15 +36,20 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import org.example.launchertest.ui.home.LocalHomeLayoutMetrics
 import org.example.launchertest.ui.model.LauncherApp
 
 @Composable
 internal fun SectionHeader(
     text: String,
-    topPaddingDp: Float = HOME_LIST_SECTION_HEADER_TOP_PADDING_DP,
-    bottomPaddingDp: Float = HOME_LIST_SECTION_HEADER_BOTTOM_PADDING_DP,
+    topPaddingDp: Float? = null,
+    bottomPaddingDp: Float? = null,
     modifier: Modifier = Modifier,
 ) {
+    val layoutMetrics = LocalHomeLayoutMetrics.current
+    val resolvedTopPaddingDp = topPaddingDp ?: layoutMetrics.sectionHeaderTopPaddingDp
+    val resolvedBottomPaddingDp = bottomPaddingDp ?: layoutMetrics.sectionHeaderBottomPaddingDp
+
     Text(
         text = text,
         style = MaterialTheme.typography.labelMedium,
@@ -52,9 +57,9 @@ internal fun SectionHeader(
             alpha = HOME_LIST_SECTION_HEADER_ALPHA,
         ),
         modifier = modifier.padding(
-            start = HOME_LIST_SECTION_HEADER_START_PADDING_DP.dp,
-            top = topPaddingDp.dp,
-            bottom = bottomPaddingDp.dp,
+            start = layoutMetrics.sectionHeaderStartPaddingDp.dp,
+            top = resolvedTopPaddingDp.dp,
+            bottom = resolvedBottomPaddingDp.dp,
         ),
     )
 }
@@ -69,8 +74,10 @@ internal fun AppRow(
     onHideApp: (LauncherApp) -> Unit,
     onUnhideApp: (LauncherApp) -> Unit,
     hideAppIcons: Boolean,
+    isHighlighted: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
+    val layoutMetrics = LocalHomeLayoutMetrics.current
     val context = LocalContext.current
     val icon = if (hideAppIcons) null else rememberAppIcon(app.packageName)
     var showMenu by remember { mutableStateOf(false) }
@@ -83,7 +90,11 @@ internal fun AppRow(
         label = "rowScale",
     )
     val rowTintAlpha by animateFloatAsState(
-        targetValue = if (isLaunching) HOME_ROW_PRESS_TINT_ALPHA else 0f,
+        targetValue = when {
+            isLaunching -> HOME_ROW_PRESS_TINT_ALPHA
+            isHighlighted -> HOME_ROW_HIGHLIGHT_TINT_ALPHA
+            else -> 0f
+        },
         animationSpec = spring(),
         label = "rowTintAlpha",
     )
@@ -130,8 +141,8 @@ internal fun AppRow(
                     onLongClick = { showMenu = true },
                 )
                 .padding(
-                    horizontal = HOME_ROW_HORIZONTAL_PADDING_DP.dp,
-                    vertical = HOME_ROW_VERTICAL_PADDING_DP.dp,
+                    horizontal = layoutMetrics.rowHorizontalPaddingDp.dp,
+                    vertical = layoutMetrics.rowVerticalPaddingDp.dp,
                 ),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -141,14 +152,14 @@ internal fun AppRow(
                     contentDescription = null,
                     modifier = Modifier.size(
                         if (isFavorite) {
-                            (HOME_ROW_FAVORITE_ICON_SIZE_DP * HOME_ROW_CONTENT_SCALE).dp
+                            layoutMetrics.favoriteRowIconSizeDp.dp
                         } else {
-                            (HOME_ROW_ICON_SIZE_DP * HOME_ROW_CONTENT_SCALE).dp
+                            layoutMetrics.appRowIconSizeDp.dp
                         },
                     ),
                 )
 
-                Spacer(modifier = Modifier.width((HOME_ROW_ICON_SPACING_DP * HOME_ROW_CONTENT_SCALE).dp))
+                Spacer(modifier = Modifier.width(layoutMetrics.rowIconSpacingDp.dp))
             }
 
             Text(

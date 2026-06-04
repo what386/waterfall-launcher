@@ -34,6 +34,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.clickable
@@ -42,9 +43,11 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -66,6 +69,7 @@ import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import org.example.launchertest.data.HomeRowNavigationMode
 import org.example.launchertest.domain.LauncherInteractor
+import org.example.launchertest.domain.componentId
 import org.example.launchertest.data.LauncherFont
 import org.example.launchertest.ui.model.LauncherApp
 import org.example.launchertest.ui.theme.LauncherTheme
@@ -139,6 +143,8 @@ fun LauncherHomeRoute(
             onReorderFavorites = vm::onFavoriteOrderChanged,
             onHideStatusBarChanged = vm::onHideStatusBarChanged,
             onHideAppIconsChanged = vm::onHideAppIconsChanged,
+            onHideSearchButtonChanged = vm::onHideSearchButtonChanged,
+            onCleanHomeScreenChanged = vm::onCleanHomeScreenChanged,
             onHomeRowNavigationModeChanged = vm::onHomeRowNavigationModeChanged,
             onFontChanged = vm::onFontChanged,
             onResetSettings = vm::onResetSettings,
@@ -176,6 +182,8 @@ private fun LauncherHomeScreen(
     onReorderFavorites: (List<org.example.launchertest.ui.model.LauncherApp>) -> Unit,
     onHideStatusBarChanged: (Boolean) -> Unit,
     onHideAppIconsChanged: (Boolean) -> Unit,
+    onHideSearchButtonChanged: (Boolean) -> Unit,
+    onCleanHomeScreenChanged: (Boolean) -> Unit,
     onHomeRowNavigationModeChanged: (HomeRowNavigationMode) -> Unit,
     onFontChanged: (LauncherFont) -> Unit,
     onResetSettings: () -> Unit,
@@ -197,6 +205,7 @@ private fun LauncherHomeScreen(
     var isRailDragging by remember { mutableStateOf(false) }
 
     var contentMode by remember { mutableStateOf(HomeContentMode.Favorites) }
+    var lastHandledHomeIntentPressCount by remember { mutableIntStateOf(homeIntentPressCount) }
 
     val coroutineScope = rememberCoroutineScope()
 
@@ -293,13 +302,8 @@ private fun LauncherHomeScreen(
     }
 
     fun returnToFavoritesMenu(categoryPinOffsetPx: Int) {
-        if (state.isSearchActive) {
-            onSearchDismissed()
-        }
-        if (state.isHiddenMode) {
-            onHiddenModeChanged(false)
-        }
-
+        onSearchDismissed()
+        onHiddenModeChanged(false)
         contentMode = HomeContentMode.Favorites
         selectedRailItem.value = buildRailLetters(state.listLayout.letterJumpTargets).first()
         scrubbingLetter.value = null
@@ -317,8 +321,11 @@ private fun LauncherHomeScreen(
         }
     }
 
-    fun launchBestSearchMatch() {
-        val app = state.listLayout.apps.firstOrNull() ?: return
+    fun launchBestSearchMatch(submittedQuery: String = state.query) {
+        val app = bestSearchMatch(
+            apps = state.listLayout.apps,
+            rawQuery = submittedQuery,
+        ) ?: return
         launchApp(context, app)
         dismissSearch()
     }
@@ -339,7 +346,7 @@ private fun LauncherHomeScreen(
             return@LaunchedEffect
         }
 
-        launchBestSearchMatch()
+        launchBestSearchMatch(state.query)
     }
 
     Surface(
@@ -372,154 +379,188 @@ private fun LauncherHomeScreen(
             val categoryPinOffsetPx = with(density) {
                 layoutMetrics.categoryPinOffsetDp.dp.toPx()
             }.toInt()
-
-            LaunchedEffect(homeIntentPressCount, categoryPinOffsetPx) {
-                if (homeIntentPressCount > 0) {
-                    returnToFavoritesMenu(categoryPinOffsetPx)
-                }
+            val searchButtonRailYOffsetDp = run {
+                val railHalfHeightDp = maxHeight.value * layoutMetrics.railHeightFraction / 2f
+                val buttonHalfHeightDp = layoutMetrics.searchButtonSizeDp / 2f
+                layoutMetrics.railYOffsetDp +
+                    railHalfHeightDp +
+                    layoutMetrics.searchButtonRailGapDp +
+                    buttonHalfHeightDp
             }
 
-            LaunchedEffect(categoryPinOffsetPx, appListState, jumpToTarget) {
-                jumpToTarget.collectLatest { targetIndex ->
-                    // Negative offset pins the selected category below the top edge.
-                    appListState.scrollToItem(
-                        index = targetIndex,
-                        scrollOffset = -categoryPinOffsetPx,
+            CompositionLocalProvider(LocalHomeLayoutMetrics provides layoutMetrics) {
+                LaunchedEffect(homeIntentPressCount) {
+                    if (homeIntentPressCount > lastHandledHomeIntentPressCount) {
+                        lastHandledHomeIntentPressCount = homeIntentPressCount
+                        returnToFavoritesMenu(categoryPinOffsetPx)
+                    }
+                }
+
+                LaunchedEffect(categoryPinOffsetPx, appListState, jumpToTarget) {
+                    jumpToTarget.collectLatest { targetIndex ->
+                        // Negative offset pins the selected category below the top edge.
+                        appListState.scrollToItem(
+                            index = targetIndex,
+                            scrollOffset = -categoryPinOffsetPx,
+                        )
+                    }
+                }
+
+                AnimatedContent(
+                    targetState = contentMode,
+                    transitionSpec = {
+                        homeModeTransition(initialState, targetState)
+                    },
+                    label = "homeContentMode",
+                ) { mode ->
+                    AppListPanel(
+                        listLayout = state.listLayout,
+                        widgetStacks = widgetStacks,
+                        scrubbingLetter = scrubbingLetter,
+                        isScrubbing = isScrubbing,
+                        isHiddenMode = state.isHiddenMode,
+                        showFavoritesOnly = mode == HomeContentMode.Favorites,
+                        isSearchActive = mode == HomeContentMode.Search,
+                        highlightedAppComponentId = bestSearchMatch(
+                            apps = state.listLayout.apps,
+                            rawQuery = state.query,
+                        )?.componentId(),
+                        listState = if (mode == HomeContentMode.Favorites) {
+                            favoritesListState
+                        } else {
+                            appListState
+                        },
+                        categoryPinOffsetPx = categoryPinOffsetPx,
+                        layoutMetrics = layoutMetrics,
+                        onSearchActivated = ::activateSearch,
+                        onAppListActivated = ::activateAppList,
+                        onHiddenModeChanged = ::setHiddenMode,
+                        onToggleFavorite = onToggleFavorite,
+                        onHideApp = onHideApp,
+                        onUnhideApp = onUnhideApp,
+                        onReorderFavorites = onReorderFavorites,
+                        onAddWidget = onAddWidget,
+                        onAddWidgetToStack = onAddWidgetToStack,
+                        onRemoveWidget = onRemoveWidget,
+                        onReorderWidgetStacks = onReorderWidgetStacks,
+                        settings = state.settings,
+                        onHideStatusBarChanged = onHideStatusBarChanged,
+                        onHideAppIconsChanged = onHideAppIconsChanged,
+                        onHideSearchButtonChanged = onHideSearchButtonChanged,
+                        onCleanHomeScreenChanged = onCleanHomeScreenChanged,
+                        onHomeRowNavigationModeChanged = onHomeRowNavigationModeChanged,
+                        onFontChanged = onFontChanged,
+                        onResetSettings = onResetSettings,
+                        onRestartLauncher = onRestartLauncher,
+                        createWidgetView = createWidgetView,
+                        getWidgetMinHeightDp = getWidgetMinHeightDp,
+                        modifier = Modifier.fillMaxSize(),
                     )
                 }
-            }
 
-            AnimatedContent(
-                targetState = contentMode,
-                transitionSpec = {
-                    homeModeTransition(initialState, targetState)
-                },
-                label = "homeContentMode",
-            ) { mode ->
-                AppListPanel(
-                    listLayout = state.listLayout,
-                    widgetStacks = widgetStacks,
-                    scrubbingLetter = scrubbingLetter,
-                    isScrubbing = isScrubbing,
-                    isHiddenMode = state.isHiddenMode,
-                    showFavoritesOnly = mode == HomeContentMode.Favorites,
-                    isSearchActive = mode == HomeContentMode.Search,
-                    listState = if (mode == HomeContentMode.Favorites) {
-                        favoritesListState
-                    } else {
-                        appListState
-                    },
-                    categoryPinOffsetPx = categoryPinOffsetPx,
-                    layoutMetrics = layoutMetrics,
-                    onSearchActivated = ::activateSearch,
-                    onAppListActivated = ::activateAppList,
-                    onHiddenModeChanged = ::setHiddenMode,
-                    onToggleFavorite = onToggleFavorite,
-                    onHideApp = onHideApp,
-                    onUnhideApp = onUnhideApp,
-                    onReorderFavorites = onReorderFavorites,
-                    onAddWidget = onAddWidget,
-                    onAddWidgetToStack = onAddWidgetToStack,
-                    onRemoveWidget = onRemoveWidget,
-                    onReorderWidgetStacks = onReorderWidgetStacks,
-                    settings = state.settings,
-                    onHideStatusBarChanged = onHideStatusBarChanged,
-                    onHideAppIconsChanged = onHideAppIconsChanged,
-                    onHomeRowNavigationModeChanged = onHomeRowNavigationModeChanged,
-                    onFontChanged = onFontChanged,
-                    onResetSettings = onResetSettings,
-                    onRestartLauncher = onRestartLauncher,
-                    createWidgetView = createWidgetView,
-                    getWidgetMinHeightDp = getWidgetMinHeightDp,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
+                AnimatedVisibility(
+                    visible = state.isSearchActive,
+                    enter = fadeIn() + slideInVertically { -it / 2 },
+                    exit = fadeOut() + slideOutVertically { -it / 2 },
+                    modifier = Modifier.align(Alignment.TopCenter),
+                ) {
+                    SearchOverlay(
+                        query = state.query,
+                        onQueryChanged = onQueryChanged,
+                        onSearchSubmitted = ::launchBestSearchMatch,
+                        onKeyboardDismissed = ::dismissSearch,
+                        horizontalPaddingDp = layoutMetrics.searchFieldHorizontalPaddingDp,
+                        modifier = Modifier
+                            .padding(
+                                horizontal = 0.dp,
+                                vertical = 0.dp,
+                            ),
+                    )
+                }
 
-            AnimatedVisibility(
-                visible = state.isSearchActive,
-                enter = fadeIn() + slideInVertically { -it / 2 },
-                exit = fadeOut() + slideOutVertically { -it / 2 },
-                modifier = Modifier.align(Alignment.TopCenter),
-            ) {
-                SearchOverlay(
-                    query = state.query,
-                    onQueryChanged = onQueryChanged,
-                    onSearchSubmitted = ::launchBestSearchMatch,
-                    onKeyboardDismissed = ::dismissSearch,
-                    horizontalPaddingDp = layoutMetrics.searchFieldHorizontalPaddingDp,
-                    modifier = Modifier
-                        .padding(
-                            horizontal = 0.dp,
-                            vertical = 0.dp,
-                        ),
-                )
-            }
+                val isCleanFavoritesHome =
+                    contentMode == HomeContentMode.Favorites && state.settings.cleanHomeScreen
 
-            AnimatedVisibility(
-                visible = !state.isSearchActive && railLetters.isNotEmpty(),
-                enter = fadeIn(),
-                exit = fadeOut(),
-                modifier = Modifier.align(Alignment.CenterEnd),
-            ) {
-                AzRailPanel(
-                    modifier = Modifier
-                        .offset(y = layoutMetrics.railYOffsetDp.dp)
-                        .fillMaxHeight(layoutMetrics.railHeightFraction)
-                        .padding(end = layoutMetrics.railEndPaddingDp.dp)
-                        .width(layoutMetrics.railWidthDp.dp),
-                    letters = railLetters,
-                    onLetterSelected = {},
-                    onScrubStart = { item -> selectRailItem(item, categoryPinOffsetPx) },
-                    onScrubMove = { item -> selectRailItem(item, categoryPinOffsetPx) },
-                    onScrubEnd = {
-                        if (!isFavoritesRailItem(selectedRailItem.value)) {
-                            scrubbingLetter.value = null
-                            isScrubbing.value = false
-                        }
-                    },
-                    onDragStateChanged = { dragging ->
-                        isRailDragging = dragging
-                    },
-                )
-            }
+                AnimatedVisibility(
+                    visible = !state.isSearchActive &&
+                        railLetters.isNotEmpty() &&
+                        (!isCleanFavoritesHome || isRailDragging),
+                    enter = fadeIn(),
+                    exit = fadeOut(),
+                    modifier = Modifier.align(Alignment.CenterEnd),
+                ) {
+                    AzRailPanel(
+                        modifier = Modifier
+                            .offset(y = layoutMetrics.railYOffsetDp.dp)
+                            .fillMaxHeight(layoutMetrics.railHeightFraction)
+                            .padding(end = layoutMetrics.railEndPaddingDp.dp)
+                            .width(layoutMetrics.railWidthDp.dp),
+                        letters = railLetters,
+                        onLetterSelected = {},
+                        onScrubStart = { item -> selectRailItem(item, categoryPinOffsetPx) },
+                        onScrubMove = { item -> selectRailItem(item, categoryPinOffsetPx) },
+                        onScrubEnd = {
+                            if (!isFavoritesRailItem(selectedRailItem.value)) {
+                                scrubbingLetter.value = null
+                                isScrubbing.value = false
+                            }
+                        },
+                        onDragStateChanged = { dragging ->
+                            isRailDragging = dragging
+                        },
+                    )
+                }
 
-            if (!state.isSearchActive && !state.isHiddenMode) {
-                Box(
+                if (!state.isSearchActive &&
+                    !state.isHiddenMode &&
+                    !(contentMode == HomeContentMode.Favorites && state.settings.cleanHomeScreen)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .offset(y = layoutMetrics.homeRailHitYOffsetDp.dp)
+                            .padding(end = layoutMetrics.railEndPaddingDp.dp)
+                            .width(layoutMetrics.railWidthDp.dp)
+                            .fillMaxHeight(layoutMetrics.homeRailHitHeightFraction)
+                            .clickable { selectRailItem(railLetters.first(), categoryPinOffsetPx) },
+                    )
+                }
+
+                AnimatedVisibility(
+                    visible = contentMode == HomeContentMode.Apps &&
+                        !state.isSearchActive &&
+                        !isRailDragging &&
+                        !state.settings.hideSearchButton,
+                    enter = fadeIn(),
+                    exit = fadeOut(),
                     modifier = Modifier
                         .align(Alignment.CenterEnd)
-                        .offset(y = layoutMetrics.homeRailHitYOffsetDp.dp)
-                        .padding(end = layoutMetrics.railEndPaddingDp.dp)
-                        .width(layoutMetrics.railWidthDp.dp)
-                        .fillMaxHeight(layoutMetrics.homeRailHitHeightFraction)
-                        .clickable { selectRailItem(railLetters.first(), categoryPinOffsetPx) },
-                )
-            }
-
-            AnimatedVisibility(
-                visible = contentMode == HomeContentMode.Apps && !state.isSearchActive && !isRailDragging,
-                enter = fadeIn(),
-                exit = fadeOut(),
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(
-                        end = layoutMetrics.searchButtonEndPaddingDp.dp,
-                        bottom = layoutMetrics.searchButtonBottomPaddingDp.dp,
-                    ),
-            ) {
-                Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.primary,
-                    contentColor = Color.White,
-                    tonalElevation = 0.dp,
-                    shadowElevation = 0.dp,
-                    modifier = Modifier.clickable { activateSearch() },
+                        .offset(y = searchButtonRailYOffsetDp.dp)
+                        .padding(
+                            end = layoutMetrics.searchButtonEdgePaddingDp.dp,
+                        ),
                 ) {
-                    Text(
-                        text = "\u2315",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
-                    )
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primary,
+                        contentColor = Color.White,
+                        tonalElevation = 0.dp,
+                        shadowElevation = 0.dp,
+                        modifier = Modifier
+                            .size(layoutMetrics.searchButtonSizeDp.dp)
+                            .clickable { activateSearch() },
+                    ) {
+                        Box(
+                            contentAlignment = Alignment.Center,
+                            modifier = Modifier.fillMaxSize(),
+                        ) {
+                            Text(
+                                text = "\u2315",
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Medium,
+                            )
+                        }
+                    }
                 }
             }
         }
@@ -557,6 +598,26 @@ private fun launchApp(
             Toast.LENGTH_SHORT,
         ).show()
     }
+}
+
+private fun bestSearchMatch(
+    apps: List<LauncherApp>,
+    rawQuery: String,
+): LauncherApp? {
+    val query = rawQuery.trim().lowercase()
+    if (query.isBlank()) return null
+
+    return apps
+        .asSequence()
+        .filter { app -> app.label.lowercase().contains(query) }
+        .sortedWith(
+            compareBy<LauncherApp>(
+                { app -> if (app.label.lowercase() == query) 0 else 1 },
+                { app -> if (app.label.lowercase().startsWith(query)) 0 else 1 },
+                { app -> app.label.lowercase() },
+            ),
+        )
+        .firstOrNull()
 }
 
 private enum class HomeContentMode {

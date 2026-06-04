@@ -31,13 +31,14 @@ import androidx.compose.ui.unit.dp
 fun SearchOverlay(
     query: String,
     onQueryChanged: (String) -> Unit,
-    onSearchSubmitted: () -> Unit,
+    onSearchSubmitted: (String) -> Unit,
     onKeyboardDismissed: () -> Unit,
     horizontalPaddingDp: Float,
     modifier: Modifier = Modifier,
 ) {
     val focusRequester = remember { FocusRequester() }
     val keyboardController = LocalSoftwareKeyboardController.current
+    val layoutMetrics = LocalHomeLayoutMetrics.current
     val density = LocalDensity.current
     val imeBottom = WindowInsets.ime.getBottom(density)
     var hasSeenKeyboardVisible by remember { mutableStateOf(false) }
@@ -72,7 +73,7 @@ fun SearchOverlay(
             ),
             keyboardActions = KeyboardActions(
                 onSearch = {
-                    onSearchSubmitted()
+                    onSearchSubmitted(query)
                 },
             ),
             colors = OutlinedTextFieldDefaults.colors(
@@ -81,7 +82,10 @@ fun SearchOverlay(
             ),
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = horizontalPaddingDp.dp, vertical = 12.dp)
+                .padding(
+                    horizontal = horizontalPaddingDp.dp,
+                    vertical = layoutMetrics.searchFieldVerticalPaddingDp.dp,
+                )
                 .focusRequester(focusRequester),
         )
     }

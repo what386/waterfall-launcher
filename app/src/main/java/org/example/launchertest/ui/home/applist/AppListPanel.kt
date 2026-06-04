@@ -6,7 +6,6 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -17,20 +16,25 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Velocity
 import org.example.launchertest.data.HomeRowNavigationMode
 import org.example.launchertest.data.LauncherFont
 import org.example.launchertest.data.LauncherSettings
 import org.example.launchertest.ui.home.HomeLayoutMetrics
+import org.example.launchertest.ui.home.favorites.FAVORITES_OVERSCROLL_RESISTANCE
 import org.example.launchertest.ui.home.favorites.FavoritesPanel
 import org.example.launchertest.ui.home.shared.AppRow
-import org.example.launchertest.ui.home.shared.HOME_LIST_SEARCH_DRAG_THRESHOLD_DP
-import org.example.launchertest.ui.home.shared.HOME_ROW_HORIZONTAL_PADDING_DP
+import org.example.launchertest.ui.home.LocalHomeLayoutMetrics
 import org.example.launchertest.ui.home.shared.SectionHeader
 import org.example.launchertest.ui.model.LauncherApp
 import org.example.launchertest.widgets.WidgetStack
@@ -54,6 +58,7 @@ internal fun AppListPanel(
     isHiddenMode: Boolean,
     showFavoritesOnly: Boolean,
     isSearchActive: Boolean,
+    highlightedAppComponentId: String?,
     listState: LazyListState,
     categoryPinOffsetPx: Int,
     layoutMetrics: HomeLayoutMetrics,
@@ -71,6 +76,8 @@ internal fun AppListPanel(
     settings: LauncherSettings,
     onHideStatusBarChanged: (Boolean) -> Unit,
     onHideAppIconsChanged: (Boolean) -> Unit,
+    onHideSearchButtonChanged: (Boolean) -> Unit,
+    onCleanHomeScreenChanged: (Boolean) -> Unit,
     onHomeRowNavigationModeChanged: (HomeRowNavigationMode) -> Unit,
     onFontChanged: (LauncherFont) -> Unit,
     onResetSettings: () -> Unit,
@@ -83,7 +90,7 @@ internal fun AppListPanel(
     val favorites = listLayout.favorites
 
     val density = LocalDensity.current
-    val dragThresholdPx = with(density) { HOME_LIST_SEARCH_DRAG_THRESHOLD_DP.dp.toPx() }
+    val dragThresholdPx = with(density) { layoutMetrics.searchDragThresholdDp.dp.toPx() }
     val categoryPinOffsetDp = with(density) { categoryPinOffsetPx.toDp() }
 
     // Mask for the top fade: starts transparent at 0dp and becomes fully opaque by 80dp
@@ -103,21 +110,77 @@ internal fun AppListPanel(
         label = "favAlpha",
     )
 
+    val searchOverscrollConnection = remember(
+        dragThresholdPx,
+        isHiddenMode,
+        showFavoritesOnly,
+        isSearchActive,
+        listState,
+        onSearchActivated,
+    ) {
+        object : NestedScrollConnection {
+            private var accumulatedOverscrollPx = 0f
+            private var didTriggerSearch = false
+
+            override fun onPreScroll(
+                available: Offset,
+                source: NestedScrollSource,
+            ): Offset {
+                if (source != NestedScrollSource.UserInput || available.y <= 0f) {
+                    reset()
+                }
+                return Offset.Zero
+            }
+
+            override fun onPostScroll(
+                consumed: Offset,
+                available: Offset,
+                source: NestedScrollSource,
+            ): Offset {
+                val isNormalAppList = !isHiddenMode && !showFavoritesOnly && !isSearchActive
+                val isAtTop = listState.firstVisibleItemIndex == 0 &&
+                    listState.firstVisibleItemScrollOffset == 0
+
+                if (source != NestedScrollSource.UserInput ||
+                    !isNormalAppList ||
+                    !isAtTop ||
+                    available.y <= 0f
+                ) {
+                    reset()
+                    return Offset.Zero
+                }
+
+                accumulatedOverscrollPx += available.y * FAVORITES_OVERSCROLL_RESISTANCE
+                if (!didTriggerSearch && accumulatedOverscrollPx >= dragThresholdPx) {
+                    didTriggerSearch = true
+                    onSearchActivated()
+                }
+
+                return Offset.Zero
+            }
+
+            override suspend fun onPostFling(
+                consumed: Velocity,
+                available: Velocity,
+            ): Velocity {
+                reset()
+                return Velocity.Zero
+            }
+
+            private fun reset() {
+                accumulatedOverscrollPx = 0f
+                didTriggerSearch = false
+            }
+        }
+    }
+
     Box(modifier = modifier.fillMaxSize()) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 // This is the "eraser" that creates transparency at the top
                 .fadingEdge(topFadeBrush)
-                .pointerInput(isSearchActive) {
-                    if (!isSearchActive) {
-                        detectVerticalDragGestures { _, dragAmount ->
-                            if (!listState.canScrollForward && dragAmount < -dragThresholdPx) {
-                                onSearchActivated()
-                            }
-                        }
-                    }
-                }
+                .nestedScroll(searchOverscrollConnection)
                 .pointerInput(isHiddenMode, showFavoritesOnly, isSearchActive) {
                     if (isHiddenMode && !showFavoritesOnly && !isSearchActive) {
                         awaitEachGesture {
@@ -187,6 +250,8 @@ internal fun AppListPanel(
                         settings = settings,
                         onHideStatusBarChanged = onHideStatusBarChanged,
                         onHideAppIconsChanged = onHideAppIconsChanged,
+                        onHideSearchButtonChanged = onHideSearchButtonChanged,
+                        onCleanHomeScreenChanged = onCleanHomeScreenChanged,
                         onHomeRowNavigationModeChanged = onHomeRowNavigationModeChanged,
                         onFontChanged = onFontChanged,
                         onResetSettings = onResetSettings,
@@ -220,7 +285,7 @@ internal fun AppListPanel(
 
                     if (previousBucket == null || bucket != previousBucket) {
                         if (index > 0) {
-                            Spacer(modifier = Modifier.height(APP_LIST_BUCKET_SPACER_HEIGHT_DP.dp))
+                            Spacer(modifier = Modifier.height(layoutMetrics.appListBucketSpacerHeightDp.dp))
                         }
 
                         SectionHeader(
@@ -237,6 +302,7 @@ internal fun AppListPanel(
                         onHideApp = onHideApp,
                         onUnhideApp = onUnhideApp,
                         hideAppIcons = settings.hideAppIcons,
+                        isHighlighted = isSearchActive && app.componentId() == highlightedAppComponentId,
                         modifier = rowModifier,
                     )
                 }
@@ -249,22 +315,29 @@ internal fun bucketFor(label: String): Char {
     return if (first in 'A'..'Z') first else '#'
 }
 
+private fun LauncherApp.componentId(): String = "${packageName}/${activityName}"
+
 @Composable
 private fun HiddenModeIndicator() {
+    val layoutMetrics = LocalHomeLayoutMetrics.current
+
     Surface(
         color = MaterialTheme.colorScheme.primary.copy(alpha = 0.86f),
         contentColor = Color.White,
         shape = MaterialTheme.shapes.medium,
         modifier = Modifier.padding(
-            start = HOME_ROW_HORIZONTAL_PADDING_DP.dp,
-            end = HOME_ROW_HORIZONTAL_PADDING_DP.dp,
-            bottom = 18.dp,
+            start = layoutMetrics.hiddenModeHorizontalPaddingDp.dp,
+            end = layoutMetrics.hiddenModeHorizontalPaddingDp.dp,
+            bottom = layoutMetrics.hiddenModeBottomPaddingDp.dp,
         ),
     ) {
         Text(
             text = "HIDDEN APPS",
             style = MaterialTheme.typography.labelMedium,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+            modifier = Modifier.padding(
+                horizontal = layoutMetrics.hiddenModeLabelHorizontalPaddingDp.dp,
+                vertical = layoutMetrics.hiddenModeLabelVerticalPaddingDp.dp,
+            ),
         )
     }
 }

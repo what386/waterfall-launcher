@@ -24,6 +24,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
@@ -69,16 +70,9 @@ import org.example.launchertest.data.HomeRowNavigationMode
 import org.example.launchertest.data.LauncherFont
 import org.example.launchertest.data.LauncherSettings
 import org.example.launchertest.ui.home.HomeLayoutMetrics
+import org.example.launchertest.ui.home.LocalHomeLayoutMetrics
 import org.example.launchertest.ui.home.shared.AppRow
-import org.example.launchertest.ui.home.shared.HOME_LIST_SEARCH_DRAG_THRESHOLD_DP
-import org.example.launchertest.ui.home.shared.HOME_LIST_SECTION_HEADER_BOTTOM_PADDING_DP
-import org.example.launchertest.ui.home.shared.HOME_LIST_SECTION_HEADER_TOP_PADDING_DP
-import org.example.launchertest.ui.home.shared.HOME_ROW_CONTENT_SCALE
-import org.example.launchertest.ui.home.shared.HOME_ROW_FAVORITE_ICON_SIZE_DP
-import org.example.launchertest.ui.home.shared.HOME_ROW_HORIZONTAL_PADDING_DP
-import org.example.launchertest.ui.home.shared.HOME_ROW_ICON_SPACING_DP
 import org.example.launchertest.ui.home.shared.HOME_ROW_TEXT_SCALE
-import org.example.launchertest.ui.home.shared.HOME_ROW_VERTICAL_PADDING_DP
 import org.example.launchertest.ui.home.shared.SectionHeader
 import org.example.launchertest.ui.home.shared.rememberAppIcon
 import org.example.launchertest.ui.theme.toPreviewFontFamily
@@ -114,6 +108,8 @@ internal fun FavoritesPanel(
     settings: LauncherSettings,
     onHideStatusBarChanged: (Boolean) -> Unit,
     onHideAppIconsChanged: (Boolean) -> Unit,
+    onHideSearchButtonChanged: (Boolean) -> Unit,
+    onCleanHomeScreenChanged: (Boolean) -> Unit,
     onHomeRowNavigationModeChanged: (HomeRowNavigationMode) -> Unit,
     onFontChanged: (LauncherFont) -> Unit,
     onResetSettings: () -> Unit,
@@ -127,8 +123,9 @@ internal fun FavoritesPanel(
     val overscrollOffset = remember { Animatable(0f) }
     val scope = rememberCoroutineScope()
     val density = LocalDensity.current
-    val overscrollTriggerPx = with(density) { HOME_LIST_SEARCH_DRAG_THRESHOLD_DP.dp.toPx() }
+    val overscrollTriggerPx = with(density) { layoutMetrics.searchDragThresholdDp.dp.toPx() }
     val hasScrollableContent = scrollState.maxValue > 0
+    val showFavoriteApps = !settings.cleanHomeScreen
     var showPanelMenu by remember { mutableStateOf(false) }
     var showSettingsSheet by remember { mutableStateOf(false) }
     var showFontSheet by remember { mutableStateOf(false) }
@@ -152,6 +149,7 @@ internal fun FavoritesPanel(
     var activeDragWidgetOffsetY by remember { mutableFloatStateOf(0f) }
     val widgetRowMetrics = remember { mutableStateMapOf<Int, FavoriteRowMetrics>() }
     val orderedWidgetStacks = remember { mutableStateListOf<WidgetStack>() }
+    val useCleanHomeWidgetLayout = settings.cleanHomeScreen && orderedWidgetStacks.isNotEmpty()
 
     LaunchedEffect(favorites) {
         val incomingById = favorites.associateBy(::favoriteComponentId)
@@ -358,6 +356,7 @@ internal fun FavoritesPanel(
 
     Box(
         modifier = modifier
+            .fillMaxSize()
             .then(
                 if (reorderMode) {
                     Modifier.pointerInput(reorderMode) {
@@ -388,13 +387,13 @@ internal fun FavoritesPanel(
     ) {
         Column(
             modifier = Modifier
-                .fillMaxHeight()
+                .fillMaxSize()
                 .padding(
                     start = layoutMetrics.appListContentStartPaddingDp.dp,
                     end = layoutMetrics.appListContentEndPaddingDp.dp,
                 )
                 .offset(
-                    y = if (hasScrollableContent) {
+                    y = if (hasScrollableContent || useCleanHomeWidgetLayout) {
                         0.dp
                     } else {
                         (-layoutMetrics.favoritesCenterBiasUpDp).dp
@@ -475,13 +474,21 @@ internal fun FavoritesPanel(
                     )
                 }
                 .verticalScroll(scrollState, enabled = false),
-            verticalArrangement = if (hasScrollableContent) {
+            verticalArrangement = if (hasScrollableContent || useCleanHomeWidgetLayout) {
                 Arrangement.Top
             } else {
                 Arrangement.Center
             },
         ) {
-            Spacer(modifier = Modifier.height(layoutMetrics.favoritesTopMarginDp.dp))
+            Spacer(
+                modifier = Modifier.height(
+                    if (useCleanHomeWidgetLayout) {
+                        layoutMetrics.cleanHomeWidgetTopPaddingDp.dp
+                    } else {
+                        layoutMetrics.favoritesTopMarginDp.dp
+                    },
+                ),
+            )
 
             orderedWidgetStacks.forEach { widgetStack ->
                 val stackId = widgetStackId(widgetStack)
@@ -555,21 +562,21 @@ internal fun FavoritesPanel(
                     onClick = onAddWidget,
                     modifier = Modifier.graphicsLayer { alpha = favAlpha },
                 )
-                Spacer(modifier = Modifier.height(ADD_WIDGET_BOTTOM_PADDING_DP.dp))
+                Spacer(modifier = Modifier.height(layoutMetrics.addWidgetBottomPaddingDp.dp))
             }
 
-            if (favorites.isNotEmpty()) {
+            if (showFavoriteApps && favorites.isNotEmpty()) {
                 SectionHeader(
                     text = "FAVORITES",
                     topPaddingDp = if (orderedWidgetStacks.isNotEmpty()) {
                         0f
                     } else {
-                        HOME_LIST_SECTION_HEADER_TOP_PADDING_DP
+                        null
                     },
                     bottomPaddingDp = if (orderedWidgetStacks.isNotEmpty()) {
                         0f
                     } else {
-                        HOME_LIST_SECTION_HEADER_BOTTOM_PADDING_DP
+                        null
                     },
                     modifier = Modifier.graphicsLayer { alpha = favAlpha },
                 )
@@ -647,17 +654,17 @@ internal fun FavoritesPanel(
                         if (hasScrollableContent) {
                             0.dp
                         } else {
-                            APP_LIST_FAVORITES_BOTTOM_SPACER_DP.dp
+                            layoutMetrics.favoritesBottomSpacerDp.dp
                         },
                     ),
                 )
-            } else if (orderedWidgetStacks.isEmpty()) {
+            } else if (showFavoriteApps && orderedWidgetStacks.isEmpty()) {
                 Text(
                     text = "No favorites yet. Long-press any app and choose Favorite.",
                     modifier = Modifier
                         .padding(
-                            horizontal = HOME_ROW_HORIZONTAL_PADDING_DP.dp,
-                            vertical = HOME_ROW_VERTICAL_PADDING_DP.dp,
+                            horizontal = layoutMetrics.rowHorizontalPaddingDp.dp,
+                            vertical = layoutMetrics.rowVerticalPaddingDp.dp,
                         )
                         .graphicsLayer { alpha = favAlpha * 0.78f },
                     style = MaterialTheme.typography.bodyMedium,
@@ -675,7 +682,7 @@ internal fun FavoritesPanel(
                     isHiddenMode = isHiddenMode,
                     reorderMode = reorderMode,
                     widgetReorderMode = widgetReorderMode,
-                    hasFavorites = orderedFavorites.isNotEmpty(),
+                    hasFavorites = showFavoriteApps && orderedFavorites.isNotEmpty(),
                     onHiddenModeClicked = {
                         showPanelMenu = false
                         if (reorderMode) {
@@ -734,6 +741,8 @@ internal fun FavoritesPanel(
                         onHideStatusBarChanged(enabled)
                     },
                     onHideAppIconsChanged = onHideAppIconsChanged,
+                    onHideSearchButtonChanged = onHideSearchButtonChanged,
+                    onCleanHomeScreenChanged = onCleanHomeScreenChanged,
                     onHomeRowClicked = ::openHomeRowSheet,
                     onFontClicked = ::openFontSheet,
                     onResetClicked = {
@@ -794,15 +803,21 @@ private fun FavoritesOptionsSheet(
     onReorderFavoritesClicked: () -> Unit,
     onSettingsClicked: () -> Unit,
 ) {
+    val layoutMetrics = LocalHomeLayoutMetrics.current
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 20.dp, end = 20.dp, bottom = 28.dp),
+            .padding(
+                start = layoutMetrics.sheetHorizontalPaddingDp.dp,
+                end = layoutMetrics.sheetHorizontalPaddingDp.dp,
+                bottom = layoutMetrics.sheetBottomPaddingDp.dp,
+            ),
     ) {
         Text(
             text = "Favorites",
             style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(bottom = 8.dp),
+            modifier = Modifier.padding(bottom = layoutMetrics.sheetTitleBottomPaddingDp.dp),
         )
 
         SheetActionRow(
@@ -857,20 +872,28 @@ private fun SettingsSheet(
     settings: LauncherSettings,
     onHideStatusBarChanged: (Boolean) -> Unit,
     onHideAppIconsChanged: (Boolean) -> Unit,
+    onHideSearchButtonChanged: (Boolean) -> Unit,
+    onCleanHomeScreenChanged: (Boolean) -> Unit,
     onHomeRowClicked: () -> Unit,
     onFontClicked: () -> Unit,
     onResetClicked: () -> Unit,
     onBackClicked: () -> Unit,
 ) {
+    val layoutMetrics = LocalHomeLayoutMetrics.current
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 20.dp, end = 20.dp, bottom = 28.dp),
+            .padding(
+                start = layoutMetrics.sheetHorizontalPaddingDp.dp,
+                end = layoutMetrics.sheetHorizontalPaddingDp.dp,
+                bottom = layoutMetrics.sheetBottomPaddingDp.dp,
+            ),
     ) {
         Text(
             text = "Settings",
             style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(bottom = 8.dp),
+            modifier = Modifier.padding(bottom = layoutMetrics.sheetTitleBottomPaddingDp.dp),
         )
 
         SheetActionRow(
@@ -892,6 +915,20 @@ private fun SettingsSheet(
             subtitle = "Show app names without icons",
             checked = settings.hideAppIcons,
             onCheckedChange = onHideAppIconsChanged,
+        )
+
+        SettingsToggleRow(
+            title = "Hide search button",
+            subtitle = "Use app list overscroll to search",
+            checked = settings.hideSearchButton,
+            onCheckedChange = onHideSearchButtonChanged,
+        )
+
+        SettingsToggleRow(
+            title = "Clean home screen",
+            subtitle = "Hide favorites and AZRail on Home",
+            checked = settings.cleanHomeScreen,
+            onCheckedChange = onCleanHomeScreenChanged,
         )
 
         SheetActionRow(
@@ -923,15 +960,21 @@ private fun HomeRowSheet(
     onModeSelected: (HomeRowNavigationMode) -> Unit,
     onBackClicked: () -> Unit,
 ) {
+    val layoutMetrics = LocalHomeLayoutMetrics.current
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 20.dp, end = 20.dp, bottom = 28.dp),
+            .padding(
+                start = layoutMetrics.sheetHorizontalPaddingDp.dp,
+                end = layoutMetrics.sheetHorizontalPaddingDp.dp,
+                bottom = layoutMetrics.sheetBottomPaddingDp.dp,
+            ),
     ) {
         Text(
             text = "Home row",
             style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(bottom = 8.dp),
+            modifier = Modifier.padding(bottom = layoutMetrics.sheetTitleBottomPaddingDp.dp),
         )
 
         SheetActionRow(
@@ -959,15 +1002,21 @@ private fun FontSheet(
     onFontSelected: (LauncherFont) -> Unit,
     onBackClicked: () -> Unit,
 ) {
+    val layoutMetrics = LocalHomeLayoutMetrics.current
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 20.dp, end = 20.dp, bottom = 28.dp),
+            .padding(
+                start = layoutMetrics.sheetHorizontalPaddingDp.dp,
+                end = layoutMetrics.sheetHorizontalPaddingDp.dp,
+                bottom = layoutMetrics.sheetBottomPaddingDp.dp,
+            ),
     ) {
         Text(
             text = "Font",
             style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(bottom = 8.dp),
+            modifier = Modifier.padding(bottom = layoutMetrics.sheetTitleBottomPaddingDp.dp),
         )
 
         SheetActionRow(
@@ -1001,24 +1050,26 @@ private fun FontOptionRow(
     active: Boolean = false,
     onClick: () -> Unit,
 ) {
+    val layoutMetrics = LocalHomeLayoutMetrics.current
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(vertical = 12.dp),
+            .padding(vertical = layoutMetrics.sheetRowVerticalPaddingDp.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = icon,
             color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
             style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.size(40.dp),
+            modifier = Modifier.size(layoutMetrics.sheetIconSizeDp.dp),
         )
 
         Column(
             modifier = Modifier
                 .weight(1f)
-                .padding(start = 12.dp),
+                .padding(start = layoutMetrics.sheetContentStartPaddingDp.dp),
         ) {
             Text(
                 text = font.displayName,
@@ -1043,11 +1094,13 @@ private fun SettingsToggleRow(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
 ) {
+    val layoutMetrics = LocalHomeLayoutMetrics.current
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onCheckedChange(!checked) }
-            .padding(vertical = 12.dp),
+            .padding(vertical = layoutMetrics.sheetRowVerticalPaddingDp.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(
@@ -1080,24 +1133,26 @@ private fun SheetActionRow(
     active: Boolean = false,
     onClick: () -> Unit,
 ) {
+    val layoutMetrics = LocalHomeLayoutMetrics.current
+
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
-            .padding(vertical = 12.dp),
+            .padding(vertical = layoutMetrics.sheetRowVerticalPaddingDp.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = icon,
             color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
             style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.size(40.dp),
+            modifier = Modifier.size(layoutMetrics.sheetIconSizeDp.dp),
         )
 
         Column(
             modifier = Modifier
                 .weight(1f)
-                .padding(start = 12.dp),
+                .padding(start = layoutMetrics.sheetContentStartPaddingDp.dp),
         ) {
             Text(
                 text = title,
@@ -1138,15 +1193,17 @@ private fun AddWidgetEditRow(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val layoutMetrics = LocalHomeLayoutMetrics.current
+
     Row(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick)
             .padding(
-                start = APP_WIDGET_ROW_START_PADDING_DP.dp,
-                end = APP_WIDGET_ROW_END_PADDING_DP.dp,
-                top = APP_WIDGET_ROW_TOP_PADDING_DP.dp,
-                bottom = APP_WIDGET_ROW_BOTTOM_PADDING_DP.dp,
+                start = layoutMetrics.widgetRowStartPaddingDp.dp,
+                end = layoutMetrics.widgetRowEndPaddingDp.dp,
+                top = layoutMetrics.widgetRowTopPaddingDp.dp,
+                bottom = layoutMetrics.widgetRowBottomPaddingDp.dp,
             ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -1154,10 +1211,10 @@ private fun AddWidgetEditRow(
             text = "+",
             color = MaterialTheme.colorScheme.primary,
             style = MaterialTheme.typography.headlineSmall,
-            modifier = Modifier.size(40.dp),
+            modifier = Modifier.size(layoutMetrics.sheetIconSizeDp.dp),
         )
         Column(
-            modifier = Modifier.padding(start = 12.dp),
+            modifier = Modifier.padding(start = layoutMetrics.sheetContentStartPaddingDp.dp),
         ) {
             Text(
                 text = "Add stack",
@@ -1190,13 +1247,14 @@ private fun ReorderableWidgetStackRow(
     onMeasured: (FavoriteRowMetrics) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val layoutMetrics = LocalHomeLayoutMetrics.current
     var showContextMenu by remember { mutableStateOf(false) }
     var dragDistancePx by remember { mutableFloatStateOf(0f) }
     val pagerState = rememberPagerState(pageCount = { widgetStack.widgetIds.size + 1 })
     val currentWidgetId = widgetStack.widgetIds.getOrNull(pagerState.currentPage)
     val density = LocalDensity.current
     val contextMenuDragThresholdPx = with(density) {
-        WIDGET_CONTEXT_MENU_DRAG_THRESHOLD_DP.dp.toPx()
+        layoutMetrics.widgetContextMenuDragThresholdDp.dp.toPx()
     }
     val settleSpec = spring<Float>(
         stiffness = FAVORITES_REORDER_SETTLE_STIFFNESS,
@@ -1227,7 +1285,7 @@ private fun ReorderableWidgetStackRow(
                 scaleX = activeScale
                 scaleY = activeScale
                 shadowElevation = if (isActiveDrag) {
-                    FAVORITES_REORDER_ACTIVE_SHADOW_Y_DP.dp.toPx()
+                    layoutMetrics.reorderActiveShadowYDp.dp.toPx()
                 } else {
                     0f
                 }
@@ -1267,10 +1325,10 @@ private fun ReorderableWidgetStackRow(
                 shape = MaterialTheme.shapes.medium,
             )
             .padding(
-                start = APP_WIDGET_ROW_START_PADDING_DP.dp,
-                end = APP_WIDGET_ROW_END_PADDING_DP.dp,
-                top = APP_WIDGET_ROW_TOP_PADDING_DP.dp,
-                bottom = APP_WIDGET_ROW_BOTTOM_PADDING_DP.dp,
+                start = layoutMetrics.widgetRowStartPaddingDp.dp,
+                end = layoutMetrics.widgetRowEndPaddingDp.dp,
+                top = layoutMetrics.widgetRowTopPaddingDp.dp,
+                bottom = layoutMetrics.widgetRowBottomPaddingDp.dp,
             ),
     ) {
         WidgetStackContent(
@@ -1288,7 +1346,10 @@ private fun ReorderableWidgetStackRow(
             text = "↕",
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(top = 12.dp, end = 12.dp),
+                .padding(
+                    top = layoutMetrics.widgetDragHandleTopPaddingDp.dp,
+                    end = layoutMetrics.widgetDragHandleEndPaddingDp.dp,
+                ),
         )
 
         DropdownMenu(
@@ -1320,21 +1381,22 @@ private fun WidgetStackContent(
         pageCount = { widgetStack.widgetIds.size },
     ),
 ) {
-    val stackHeightDp = remember(widgetStack, getWidgetMinHeightDp) {
+    val layoutMetrics = LocalHomeLayoutMetrics.current
+    val stackHeightDp = remember(widgetStack, getWidgetMinHeightDp, layoutMetrics.widgetMinHeightDp) {
         widgetStack.widgetIds
             .mapNotNull(getWidgetMinHeightDp)
             .maxOrNull()
-            ?.coerceAtLeast(APP_WIDGET_MIN_HEIGHT_DP.toInt())
-            ?: APP_WIDGET_MIN_HEIGHT_DP.toInt()
+            ?.coerceAtLeast(layoutMetrics.widgetMinHeightDp.toInt())
+            ?: layoutMetrics.widgetMinHeightDp.toInt()
     }
 
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         modifier = modifier.padding(
-            start = APP_WIDGET_ROW_START_PADDING_DP.dp,
-            end = APP_WIDGET_ROW_END_PADDING_DP.dp,
-            top = APP_WIDGET_ROW_TOP_PADDING_DP.dp,
-            bottom = APP_WIDGET_ROW_BOTTOM_PADDING_DP.dp,
+            start = layoutMetrics.widgetRowStartPaddingDp.dp,
+            end = layoutMetrics.widgetRowEndPaddingDp.dp,
+            top = layoutMetrics.widgetRowTopPaddingDp.dp,
+            bottom = layoutMetrics.widgetRowBottomPaddingDp.dp,
         ),
     ) {
         HorizontalPager(
@@ -1369,13 +1431,19 @@ private fun WidgetStackContent(
         val pageCount = widgetStack.widgetIds.size + if (showAddPlaceholder) 1 else 0
         if (pageCount > 1) {
             Row(
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                modifier = Modifier.padding(top = 2.dp),
+                horizontalArrangement = Arrangement.spacedBy(layoutMetrics.widgetPageIndicatorSpacingDp.dp),
+                modifier = Modifier.padding(top = layoutMetrics.widgetPageIndicatorTopPaddingDp.dp),
             ) {
                 repeat(pageCount) { index ->
                     Box(
                         modifier = Modifier
-                            .size(if (pagerState.currentPage == index) 5.dp else 4.dp)
+                            .size(
+                                if (pagerState.currentPage == index) {
+                                    layoutMetrics.widgetPageIndicatorSelectedSizeDp.dp
+                                } else {
+                                    layoutMetrics.widgetPageIndicatorSizeDp.dp
+                                },
+                            )
                             .background(
                                 color = Color.White.copy(
                                     alpha = if (pagerState.currentPage == index) 0.82f else 0.38f,
@@ -1529,12 +1597,14 @@ private fun EditDragHandle(
     text: String,
     modifier: Modifier = Modifier,
 ) {
+    val layoutMetrics = LocalHomeLayoutMetrics.current
+
     Text(
         text = text,
         color = Color.White.copy(alpha = 0.84f),
         style = MaterialTheme.typography.headlineMedium,
         modifier = modifier
-            .padding(horizontal = 6.dp),
+            .padding(horizontal = layoutMetrics.editDragHandleHorizontalPaddingDp.dp),
     )
 }
 
@@ -1552,6 +1622,7 @@ private fun ReorderableFavoriteRow(
     onMeasured: (FavoriteRowMetrics) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val layoutMetrics = LocalHomeLayoutMetrics.current
     val icon = if (hideAppIcons) null else rememberAppIcon(app.packageName)
 
     val settleSpec = spring<Float>(
@@ -1583,7 +1654,7 @@ private fun ReorderableFavoriteRow(
                 scaleY = activeScale
                 alpha = 1f
                 shadowElevation = if (isActiveDrag) {
-                    FAVORITES_REORDER_ACTIVE_SHADOW_Y_DP.dp.toPx()
+                    layoutMetrics.reorderActiveShadowYDp.dp.toPx()
                 } else {
                     0f
                 }
@@ -1618,17 +1689,17 @@ private fun ReorderableFavoriteRow(
                 shape = MaterialTheme.shapes.medium,
             )
             .padding(
-                horizontal = HOME_ROW_HORIZONTAL_PADDING_DP.dp,
-                vertical = HOME_ROW_VERTICAL_PADDING_DP.dp,
+                horizontal = layoutMetrics.rowHorizontalPaddingDp.dp,
+                vertical = layoutMetrics.rowVerticalPaddingDp.dp,
             ),
-        horizontalArrangement = Arrangement.spacedBy((HOME_ROW_ICON_SPACING_DP * HOME_ROW_CONTENT_SCALE).dp),
+        horizontalArrangement = Arrangement.spacedBy(layoutMetrics.rowIconSpacingDp.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         if (icon != null) {
             androidx.compose.foundation.Image(
                 bitmap = icon,
                 contentDescription = null,
-                modifier = Modifier.size((HOME_ROW_FAVORITE_ICON_SIZE_DP * HOME_ROW_CONTENT_SCALE).dp),
+                modifier = Modifier.size(layoutMetrics.favoriteRowIconSizeDp.dp),
             )
         }
 
