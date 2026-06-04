@@ -8,9 +8,6 @@
 - [ ] icon pack support?
       @created 2026-05-13 17:33
 
-- [ ] clean home option?
-      @created 2026-06-04 18:08
-
 - [ ] custom overscroll actions in home/favorites screen? remap existing as defaults.
       @created 2026-06-04 18:27
 
@@ -32,4 +29,8 @@
 - [x] make home button return user to favorites menu
       @created 2026-05-14 18:03
       @completed 2026-06-04 18:25
+
+- [x] clean home option?
+      @created 2026-06-04 18:08
+      @completed 2026-06-04 18:34
 
