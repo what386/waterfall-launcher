@@ -56,7 +56,7 @@ refresh-release:
     just build-release
     just install-release
 
-gen-release:
+gen-package:
     rm dist/waterfall-launcher.apk || true
     just build-release
     mkdir -p dist
