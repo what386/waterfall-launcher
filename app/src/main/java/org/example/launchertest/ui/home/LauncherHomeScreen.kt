@@ -140,6 +140,7 @@ fun LauncherHomeRoute(
             onReorderFavorites = vm::onFavoriteOrderChanged,
             onHideStatusBarChanged = vm::onHideStatusBarChanged,
             onHideAppIconsChanged = vm::onHideAppIconsChanged,
+            onCleanHomeScreenChanged = vm::onCleanHomeScreenChanged,
             onHomeRowNavigationModeChanged = vm::onHomeRowNavigationModeChanged,
             onFontChanged = vm::onFontChanged,
             onResetSettings = vm::onResetSettings,
@@ -177,6 +178,7 @@ private fun LauncherHomeScreen(
     onReorderFavorites: (List<org.example.launchertest.ui.model.LauncherApp>) -> Unit,
     onHideStatusBarChanged: (Boolean) -> Unit,
     onHideAppIconsChanged: (Boolean) -> Unit,
+    onCleanHomeScreenChanged: (Boolean) -> Unit,
     onHomeRowNavigationModeChanged: (HomeRowNavigationMode) -> Unit,
     onFontChanged: (LauncherFont) -> Unit,
     onResetSettings: () -> Unit,
@@ -428,6 +430,7 @@ private fun LauncherHomeScreen(
                     settings = state.settings,
                     onHideStatusBarChanged = onHideStatusBarChanged,
                     onHideAppIconsChanged = onHideAppIconsChanged,
+                    onCleanHomeScreenChanged = onCleanHomeScreenChanged,
                     onHomeRowNavigationModeChanged = onHomeRowNavigationModeChanged,
                     onFontChanged = onFontChanged,
                     onResetSettings = onResetSettings,
@@ -459,7 +462,9 @@ private fun LauncherHomeScreen(
             }
 
             AnimatedVisibility(
-                visible = !state.isSearchActive && railLetters.isNotEmpty(),
+                visible = !state.isSearchActive &&
+                    railLetters.isNotEmpty() &&
+                    !(contentMode == HomeContentMode.Favorites && state.settings.cleanHomeScreen),
                 enter = fadeIn(),
                 exit = fadeOut(),
                 modifier = Modifier.align(Alignment.CenterEnd),
@@ -486,7 +491,10 @@ private fun LauncherHomeScreen(
                 )
             }
 
-            if (!state.isSearchActive && !state.isHiddenMode) {
+            if (!state.isSearchActive &&
+                !state.isHiddenMode &&
+                !(contentMode == HomeContentMode.Favorites && state.settings.cleanHomeScreen)
+            ) {
                 Box(
                     modifier = Modifier
                         .align(Alignment.CenterEnd)

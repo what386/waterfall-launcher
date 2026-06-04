@@ -114,6 +114,7 @@ internal fun FavoritesPanel(
     settings: LauncherSettings,
     onHideStatusBarChanged: (Boolean) -> Unit,
     onHideAppIconsChanged: (Boolean) -> Unit,
+    onCleanHomeScreenChanged: (Boolean) -> Unit,
     onHomeRowNavigationModeChanged: (HomeRowNavigationMode) -> Unit,
     onFontChanged: (LauncherFont) -> Unit,
     onResetSettings: () -> Unit,
@@ -129,6 +130,7 @@ internal fun FavoritesPanel(
     val density = LocalDensity.current
     val overscrollTriggerPx = with(density) { HOME_LIST_SEARCH_DRAG_THRESHOLD_DP.dp.toPx() }
     val hasScrollableContent = scrollState.maxValue > 0
+    val showFavoriteApps = !settings.cleanHomeScreen
     var showPanelMenu by remember { mutableStateOf(false) }
     var showSettingsSheet by remember { mutableStateOf(false) }
     var showFontSheet by remember { mutableStateOf(false) }
@@ -558,7 +560,7 @@ internal fun FavoritesPanel(
                 Spacer(modifier = Modifier.height(ADD_WIDGET_BOTTOM_PADDING_DP.dp))
             }
 
-            if (favorites.isNotEmpty()) {
+            if (showFavoriteApps && favorites.isNotEmpty()) {
                 SectionHeader(
                     text = "FAVORITES",
                     topPaddingDp = if (orderedWidgetStacks.isNotEmpty()) {
@@ -651,7 +653,7 @@ internal fun FavoritesPanel(
                         },
                     ),
                 )
-            } else if (orderedWidgetStacks.isEmpty()) {
+            } else if (showFavoriteApps && orderedWidgetStacks.isEmpty()) {
                 Text(
                     text = "No favorites yet. Long-press any app and choose Favorite.",
                     modifier = Modifier
@@ -675,7 +677,7 @@ internal fun FavoritesPanel(
                     isHiddenMode = isHiddenMode,
                     reorderMode = reorderMode,
                     widgetReorderMode = widgetReorderMode,
-                    hasFavorites = orderedFavorites.isNotEmpty(),
+                    hasFavorites = showFavoriteApps && orderedFavorites.isNotEmpty(),
                     onHiddenModeClicked = {
                         showPanelMenu = false
                         if (reorderMode) {
@@ -734,6 +736,7 @@ internal fun FavoritesPanel(
                         onHideStatusBarChanged(enabled)
                     },
                     onHideAppIconsChanged = onHideAppIconsChanged,
+                    onCleanHomeScreenChanged = onCleanHomeScreenChanged,
                     onHomeRowClicked = ::openHomeRowSheet,
                     onFontClicked = ::openFontSheet,
                     onResetClicked = {
@@ -857,6 +860,7 @@ private fun SettingsSheet(
     settings: LauncherSettings,
     onHideStatusBarChanged: (Boolean) -> Unit,
     onHideAppIconsChanged: (Boolean) -> Unit,
+    onCleanHomeScreenChanged: (Boolean) -> Unit,
     onHomeRowClicked: () -> Unit,
     onFontClicked: () -> Unit,
     onResetClicked: () -> Unit,
@@ -892,6 +896,13 @@ private fun SettingsSheet(
             subtitle = "Show app names without icons",
             checked = settings.hideAppIcons,
             onCheckedChange = onHideAppIconsChanged,
+        )
+
+        SettingsToggleRow(
+            title = "Clean home screen",
+            subtitle = "Hide favorites and AZRail on Home",
+            checked = settings.cleanHomeScreen,
+            onCheckedChange = onCleanHomeScreenChanged,
         )
 
         SheetActionRow(

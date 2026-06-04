@@ -3,6 +3,7 @@ package org.example.launchertest.data
 data class LauncherSettings(
     val hideStatusBar: Boolean = false,
     val hideAppIcons: Boolean = false,
+    val cleanHomeScreen: Boolean = false,
     val homeRowNavigationMode: HomeRowNavigationMode = HomeRowNavigationMode.Shown,
     val font: LauncherFont = LauncherFont.System,
 )

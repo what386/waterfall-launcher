@@ -102,6 +102,10 @@ class LauncherHomeViewModel(
         viewModelScope.launch { interactor.setHideAppIcons(enabled) }
     }
 
+    fun onCleanHomeScreenChanged(enabled: Boolean) {
+        viewModelScope.launch { interactor.setCleanHomeScreen(enabled) }
+    }
+
     fun onHomeRowNavigationModeChanged(mode: HomeRowNavigationMode) {
         viewModelScope.launch { interactor.setHomeRowNavigationMode(mode) }
     }

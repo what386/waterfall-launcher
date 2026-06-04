@@ -25,6 +25,7 @@ class LauncherPreferencesRepository(
     private val widgetStacksKey = stringPreferencesKey("widget_stacks")
     private val hideStatusBarKey = booleanPreferencesKey("hide_status_bar")
     private val hideAppIconsKey = booleanPreferencesKey("hide_app_icons")
+    private val cleanHomeScreenKey = booleanPreferencesKey("clean_home_screen")
     private val homeRowNavigationModeKey = stringPreferencesKey("home_row_navigation_mode")
     private val fontKey = stringPreferencesKey("font")
 
@@ -57,6 +58,7 @@ class LauncherPreferencesRepository(
         LauncherSettings(
             hideStatusBar = prefs[hideStatusBarKey] ?: false,
             hideAppIcons = prefs[hideAppIconsKey] ?: false,
+            cleanHomeScreen = prefs[cleanHomeScreenKey] ?: false,
             homeRowNavigationMode = HomeRowNavigationMode.fromStorageValue(prefs[homeRowNavigationModeKey]),
             font = LauncherFont.fromStorageValue(prefs[fontKey]),
         )
@@ -188,6 +190,12 @@ class LauncherPreferencesRepository(
         }
     }
 
+    suspend fun setCleanHomeScreen(enabled: Boolean) {
+        context.launcherPrefs.edit { prefs ->
+            prefs[cleanHomeScreenKey] = enabled
+        }
+    }
+
     suspend fun setHomeRowNavigationMode(mode: HomeRowNavigationMode) {
         context.launcherPrefs.edit { prefs ->
             prefs[homeRowNavigationModeKey] = mode.storageValue
@@ -204,6 +212,7 @@ class LauncherPreferencesRepository(
         context.launcherPrefs.edit { prefs ->
             prefs.remove(hideStatusBarKey)
             prefs.remove(hideAppIconsKey)
+            prefs.remove(cleanHomeScreenKey)
             prefs.remove(homeRowNavigationModeKey)
             prefs.remove(fontKey)
         }

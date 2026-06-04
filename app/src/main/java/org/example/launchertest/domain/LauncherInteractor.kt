@@ -74,6 +74,10 @@ class LauncherInteractor(
         preferencesRepository.setHideAppIcons(enabled)
     }
 
+    suspend fun setCleanHomeScreen(enabled: Boolean) {
+        preferencesRepository.setCleanHomeScreen(enabled)
+    }
+
     suspend fun setHomeRowNavigationMode(mode: HomeRowNavigationMode) {
         preferencesRepository.setHomeRowNavigationMode(mode)
     }
