@@ -42,6 +42,7 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.getValue
@@ -376,164 +377,169 @@ private fun LauncherHomeScreen(
                 layoutMetrics.categoryPinOffsetDp.dp.toPx()
             }.toInt()
 
-            LaunchedEffect(homeIntentPressCount) {
-                if (homeIntentPressCount > lastHandledHomeIntentPressCount) {
-                    lastHandledHomeIntentPressCount = homeIntentPressCount
-                    returnToFavoritesMenu(categoryPinOffsetPx)
+            CompositionLocalProvider(LocalHomeLayoutMetrics provides layoutMetrics) {
+                LaunchedEffect(homeIntentPressCount) {
+                    if (homeIntentPressCount > lastHandledHomeIntentPressCount) {
+                        lastHandledHomeIntentPressCount = homeIntentPressCount
+                        returnToFavoritesMenu(categoryPinOffsetPx)
+                    }
                 }
-            }
 
-            LaunchedEffect(categoryPinOffsetPx, appListState, jumpToTarget) {
-                jumpToTarget.collectLatest { targetIndex ->
-                    // Negative offset pins the selected category below the top edge.
-                    appListState.scrollToItem(
-                        index = targetIndex,
-                        scrollOffset = -categoryPinOffsetPx,
+                LaunchedEffect(categoryPinOffsetPx, appListState, jumpToTarget) {
+                    jumpToTarget.collectLatest { targetIndex ->
+                        // Negative offset pins the selected category below the top edge.
+                        appListState.scrollToItem(
+                            index = targetIndex,
+                            scrollOffset = -categoryPinOffsetPx,
+                        )
+                    }
+                }
+
+                AnimatedContent(
+                    targetState = contentMode,
+                    transitionSpec = {
+                        homeModeTransition(initialState, targetState)
+                    },
+                    label = "homeContentMode",
+                ) { mode ->
+                    AppListPanel(
+                        listLayout = state.listLayout,
+                        widgetStacks = widgetStacks,
+                        scrubbingLetter = scrubbingLetter,
+                        isScrubbing = isScrubbing,
+                        isHiddenMode = state.isHiddenMode,
+                        showFavoritesOnly = mode == HomeContentMode.Favorites,
+                        isSearchActive = mode == HomeContentMode.Search,
+                        highlightedAppComponentId = bestSearchMatch(
+                            apps = state.listLayout.apps,
+                            rawQuery = state.query,
+                        )?.componentId(),
+                        listState = if (mode == HomeContentMode.Favorites) {
+                            favoritesListState
+                        } else {
+                            appListState
+                        },
+                        categoryPinOffsetPx = categoryPinOffsetPx,
+                        layoutMetrics = layoutMetrics,
+                        onSearchActivated = ::activateSearch,
+                        onAppListActivated = ::activateAppList,
+                        onHiddenModeChanged = ::setHiddenMode,
+                        onToggleFavorite = onToggleFavorite,
+                        onHideApp = onHideApp,
+                        onUnhideApp = onUnhideApp,
+                        onReorderFavorites = onReorderFavorites,
+                        onAddWidget = onAddWidget,
+                        onAddWidgetToStack = onAddWidgetToStack,
+                        onRemoveWidget = onRemoveWidget,
+                        onReorderWidgetStacks = onReorderWidgetStacks,
+                        settings = state.settings,
+                        onHideStatusBarChanged = onHideStatusBarChanged,
+                        onHideAppIconsChanged = onHideAppIconsChanged,
+                        onCleanHomeScreenChanged = onCleanHomeScreenChanged,
+                        onHomeRowNavigationModeChanged = onHomeRowNavigationModeChanged,
+                        onFontChanged = onFontChanged,
+                        onResetSettings = onResetSettings,
+                        onRestartLauncher = onRestartLauncher,
+                        createWidgetView = createWidgetView,
+                        getWidgetMinHeightDp = getWidgetMinHeightDp,
+                        modifier = Modifier.fillMaxSize(),
                     )
                 }
-            }
 
-            AnimatedContent(
-                targetState = contentMode,
-                transitionSpec = {
-                    homeModeTransition(initialState, targetState)
-                },
-                label = "homeContentMode",
-            ) { mode ->
-                AppListPanel(
-                    listLayout = state.listLayout,
-                    widgetStacks = widgetStacks,
-                    scrubbingLetter = scrubbingLetter,
-                    isScrubbing = isScrubbing,
-                    isHiddenMode = state.isHiddenMode,
-                    showFavoritesOnly = mode == HomeContentMode.Favorites,
-                    isSearchActive = mode == HomeContentMode.Search,
-                    highlightedAppComponentId = bestSearchMatch(
-                        apps = state.listLayout.apps,
-                        rawQuery = state.query,
-                    )?.componentId(),
-                    listState = if (mode == HomeContentMode.Favorites) {
-                        favoritesListState
-                    } else {
-                        appListState
-                    },
-                    categoryPinOffsetPx = categoryPinOffsetPx,
-                    layoutMetrics = layoutMetrics,
-                    onSearchActivated = ::activateSearch,
-                    onAppListActivated = ::activateAppList,
-                    onHiddenModeChanged = ::setHiddenMode,
-                    onToggleFavorite = onToggleFavorite,
-                    onHideApp = onHideApp,
-                    onUnhideApp = onUnhideApp,
-                    onReorderFavorites = onReorderFavorites,
-                    onAddWidget = onAddWidget,
-                    onAddWidgetToStack = onAddWidgetToStack,
-                    onRemoveWidget = onRemoveWidget,
-                    onReorderWidgetStacks = onReorderWidgetStacks,
-                    settings = state.settings,
-                    onHideStatusBarChanged = onHideStatusBarChanged,
-                    onHideAppIconsChanged = onHideAppIconsChanged,
-                    onCleanHomeScreenChanged = onCleanHomeScreenChanged,
-                    onHomeRowNavigationModeChanged = onHomeRowNavigationModeChanged,
-                    onFontChanged = onFontChanged,
-                    onResetSettings = onResetSettings,
-                    onRestartLauncher = onRestartLauncher,
-                    createWidgetView = createWidgetView,
-                    getWidgetMinHeightDp = getWidgetMinHeightDp,
-                    modifier = Modifier.fillMaxSize(),
-                )
-            }
-
-            AnimatedVisibility(
-                visible = state.isSearchActive,
-                enter = fadeIn() + slideInVertically { -it / 2 },
-                exit = fadeOut() + slideOutVertically { -it / 2 },
-                modifier = Modifier.align(Alignment.TopCenter),
-            ) {
-                SearchOverlay(
-                    query = state.query,
-                    onQueryChanged = onQueryChanged,
-                    onSearchSubmitted = ::launchBestSearchMatch,
-                    onKeyboardDismissed = ::dismissSearch,
-                    horizontalPaddingDp = layoutMetrics.searchFieldHorizontalPaddingDp,
-                    modifier = Modifier
-                        .padding(
-                            horizontal = 0.dp,
-                            vertical = 0.dp,
-                        ),
-                )
-            }
-
-            AnimatedVisibility(
-                visible = !state.isSearchActive &&
-                    railLetters.isNotEmpty() &&
-                    !(contentMode == HomeContentMode.Favorites && state.settings.cleanHomeScreen),
-                enter = fadeIn(),
-                exit = fadeOut(),
-                modifier = Modifier.align(Alignment.CenterEnd),
-            ) {
-                AzRailPanel(
-                    modifier = Modifier
-                        .offset(y = layoutMetrics.railYOffsetDp.dp)
-                        .fillMaxHeight(layoutMetrics.railHeightFraction)
-                        .padding(end = layoutMetrics.railEndPaddingDp.dp)
-                        .width(layoutMetrics.railWidthDp.dp),
-                    letters = railLetters,
-                    onLetterSelected = {},
-                    onScrubStart = { item -> selectRailItem(item, categoryPinOffsetPx) },
-                    onScrubMove = { item -> selectRailItem(item, categoryPinOffsetPx) },
-                    onScrubEnd = {
-                        if (!isFavoritesRailItem(selectedRailItem.value)) {
-                            scrubbingLetter.value = null
-                            isScrubbing.value = false
-                        }
-                    },
-                    onDragStateChanged = { dragging ->
-                        isRailDragging = dragging
-                    },
-                )
-            }
-
-            if (!state.isSearchActive &&
-                !state.isHiddenMode &&
-                !(contentMode == HomeContentMode.Favorites && state.settings.cleanHomeScreen)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.CenterEnd)
-                        .offset(y = layoutMetrics.homeRailHitYOffsetDp.dp)
-                        .padding(end = layoutMetrics.railEndPaddingDp.dp)
-                        .width(layoutMetrics.railWidthDp.dp)
-                        .fillMaxHeight(layoutMetrics.homeRailHitHeightFraction)
-                        .clickable { selectRailItem(railLetters.first(), categoryPinOffsetPx) },
-                )
-            }
-
-            AnimatedVisibility(
-                visible = contentMode == HomeContentMode.Apps && !state.isSearchActive && !isRailDragging,
-                enter = fadeIn(),
-                exit = fadeOut(),
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(
-                        end = layoutMetrics.searchButtonEndPaddingDp.dp,
-                        bottom = layoutMetrics.searchButtonBottomPaddingDp.dp,
-                    ),
-            ) {
-                Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.primary,
-                    contentColor = Color.White,
-                    tonalElevation = 0.dp,
-                    shadowElevation = 0.dp,
-                    modifier = Modifier.clickable { activateSearch() },
+                AnimatedVisibility(
+                    visible = state.isSearchActive,
+                    enter = fadeIn() + slideInVertically { -it / 2 },
+                    exit = fadeOut() + slideOutVertically { -it / 2 },
+                    modifier = Modifier.align(Alignment.TopCenter),
                 ) {
-                    Text(
-                        text = "\u2315",
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Medium,
-                        modifier = Modifier.padding(horizontal = 14.dp, vertical = 9.dp),
+                    SearchOverlay(
+                        query = state.query,
+                        onQueryChanged = onQueryChanged,
+                        onSearchSubmitted = ::launchBestSearchMatch,
+                        onKeyboardDismissed = ::dismissSearch,
+                        horizontalPaddingDp = layoutMetrics.searchFieldHorizontalPaddingDp,
+                        modifier = Modifier
+                            .padding(
+                                horizontal = 0.dp,
+                                vertical = 0.dp,
+                            ),
                     )
+                }
+
+                AnimatedVisibility(
+                    visible = !state.isSearchActive &&
+                        railLetters.isNotEmpty() &&
+                        !(contentMode == HomeContentMode.Favorites && state.settings.cleanHomeScreen),
+                    enter = fadeIn(),
+                    exit = fadeOut(),
+                    modifier = Modifier.align(Alignment.CenterEnd),
+                ) {
+                    AzRailPanel(
+                        modifier = Modifier
+                            .offset(y = layoutMetrics.railYOffsetDp.dp)
+                            .fillMaxHeight(layoutMetrics.railHeightFraction)
+                            .padding(end = layoutMetrics.railEndPaddingDp.dp)
+                            .width(layoutMetrics.railWidthDp.dp),
+                        letters = railLetters,
+                        onLetterSelected = {},
+                        onScrubStart = { item -> selectRailItem(item, categoryPinOffsetPx) },
+                        onScrubMove = { item -> selectRailItem(item, categoryPinOffsetPx) },
+                        onScrubEnd = {
+                            if (!isFavoritesRailItem(selectedRailItem.value)) {
+                                scrubbingLetter.value = null
+                                isScrubbing.value = false
+                            }
+                        },
+                        onDragStateChanged = { dragging ->
+                            isRailDragging = dragging
+                        },
+                    )
+                }
+
+                if (!state.isSearchActive &&
+                    !state.isHiddenMode &&
+                    !(contentMode == HomeContentMode.Favorites && state.settings.cleanHomeScreen)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.CenterEnd)
+                            .offset(y = layoutMetrics.homeRailHitYOffsetDp.dp)
+                            .padding(end = layoutMetrics.railEndPaddingDp.dp)
+                            .width(layoutMetrics.railWidthDp.dp)
+                            .fillMaxHeight(layoutMetrics.homeRailHitHeightFraction)
+                            .clickable { selectRailItem(railLetters.first(), categoryPinOffsetPx) },
+                    )
+                }
+
+                AnimatedVisibility(
+                    visible = contentMode == HomeContentMode.Apps && !state.isSearchActive && !isRailDragging,
+                    enter = fadeIn(),
+                    exit = fadeOut(),
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(
+                            end = layoutMetrics.searchButtonEndPaddingDp.dp,
+                            bottom = layoutMetrics.searchButtonBottomPaddingDp.dp,
+                        ),
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.primary,
+                        contentColor = Color.White,
+                        tonalElevation = 0.dp,
+                        shadowElevation = 0.dp,
+                        modifier = Modifier.clickable { activateSearch() },
+                    ) {
+                        Text(
+                            text = "\u2315",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Medium,
+                            modifier = Modifier.padding(
+                                horizontal = layoutMetrics.searchButtonHorizontalPaddingDp.dp,
+                                vertical = layoutMetrics.searchButtonVerticalPaddingDp.dp,
+                            ),
+                        )
+                    }
                 }
             }
         }

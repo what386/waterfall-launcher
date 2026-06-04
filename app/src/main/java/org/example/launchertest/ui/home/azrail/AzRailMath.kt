@@ -3,6 +3,14 @@ package org.example.launchertest.ui.home.azrail
 import kotlin.math.exp
 import kotlin.math.roundToInt
 
+internal data class AzRailMotionPx(
+    val baseAmplitudePx: Float,
+    val leftPullAmplitudePx: Float,
+    val rightPullAmplitudePx: Float,
+    val leftPullSetpointPx: Float,
+    val rightPullSetpointPx: Float,
+)
+
 internal fun railItemCenter(index: Int, itemCount: Int, railHeightPx: Float): Float {
     if (itemCount <= 0) return Float.NaN
     return (index + 0.5f) * railHeightPx / itemCount
@@ -45,20 +53,32 @@ internal fun railLeftPull(pull: Float): Float = pull.coerceAtLeast(0f)
 
 internal fun railRightPull(pull: Float): Float = (-pull).coerceAtLeast(0f)
 
-internal fun railAmplitudeFor(leftPull: Float, rightPull: Float): Float {
-    return AZ_RAIL_BASE_AMPLITUDE_PX +
-        AZ_RAIL_LEFT_PULL_AMPLITUDE_PX * leftPull -
-        AZ_RAIL_RIGHT_PULL_AMPLITUDE_PX * rightPull
+internal fun railAmplitudeFor(
+    leftPull: Float,
+    rightPull: Float,
+    motionPx: AzRailMotionPx,
+): Float {
+    return motionPx.baseAmplitudePx +
+        motionPx.leftPullAmplitudePx * leftPull -
+        motionPx.rightPullAmplitudePx * rightPull
 }
 
-internal fun railSetpointFor(leftPull: Float, rightPull: Float): Float {
-    return AZ_RAIL_LEFT_PULL_SETPOINT_PX * leftPull +
-        AZ_RAIL_RIGHT_PULL_SETPOINT_PX * rightPull
+internal fun railSetpointFor(
+    leftPull: Float,
+    rightPull: Float,
+    motionPx: AzRailMotionPx,
+): Float {
+    return motionPx.leftPullSetpointPx * leftPull +
+        motionPx.rightPullSetpointPx * rightPull
 }
 
-internal fun railPeakXFor(leftPull: Float, rightPull: Float): Float {
-    return railSetpointFor(leftPull, rightPull) -
-        railAmplitudeFor(leftPull, rightPull)
+internal fun railPeakXFor(
+    leftPull: Float,
+    rightPull: Float,
+    motionPx: AzRailMotionPx,
+): Float {
+    return railSetpointFor(leftPull, rightPull, motionPx) -
+        railAmplitudeFor(leftPull, rightPull, motionPx)
 }
 
 internal fun railPeakWidthFor(leftPull: Float, rightPull: Float): Float {
@@ -88,7 +108,8 @@ internal fun railItemTranslationXFor(
     influence: Float,
     leftPull: Float,
     rightPull: Float,
+    motionPx: AzRailMotionPx,
 ): Float {
-    return railSetpointFor(leftPull, rightPull) -
-        railAmplitudeFor(leftPull, rightPull) * influence
+    return railSetpointFor(leftPull, rightPull, motionPx) -
+        railAmplitudeFor(leftPull, rightPull, motionPx) * influence
 }

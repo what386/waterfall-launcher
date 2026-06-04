@@ -34,8 +34,7 @@ import org.example.launchertest.ui.home.HomeLayoutMetrics
 import org.example.launchertest.ui.home.favorites.FAVORITES_OVERSCROLL_RESISTANCE
 import org.example.launchertest.ui.home.favorites.FavoritesPanel
 import org.example.launchertest.ui.home.shared.AppRow
-import org.example.launchertest.ui.home.shared.HOME_LIST_SEARCH_DRAG_THRESHOLD_DP
-import org.example.launchertest.ui.home.shared.HOME_ROW_HORIZONTAL_PADDING_DP
+import org.example.launchertest.ui.home.LocalHomeLayoutMetrics
 import org.example.launchertest.ui.home.shared.SectionHeader
 import org.example.launchertest.ui.model.LauncherApp
 import org.example.launchertest.widgets.WidgetStack
@@ -90,7 +89,7 @@ internal fun AppListPanel(
     val favorites = listLayout.favorites
 
     val density = LocalDensity.current
-    val dragThresholdPx = with(density) { HOME_LIST_SEARCH_DRAG_THRESHOLD_DP.dp.toPx() }
+    val dragThresholdPx = with(density) { layoutMetrics.searchDragThresholdDp.dp.toPx() }
     val categoryPinOffsetDp = with(density) { categoryPinOffsetPx.toDp() }
 
     // Mask for the top fade: starts transparent at 0dp and becomes fully opaque by 80dp
@@ -284,7 +283,7 @@ internal fun AppListPanel(
 
                     if (previousBucket == null || bucket != previousBucket) {
                         if (index > 0) {
-                            Spacer(modifier = Modifier.height(APP_LIST_BUCKET_SPACER_HEIGHT_DP.dp))
+                            Spacer(modifier = Modifier.height(layoutMetrics.appListBucketSpacerHeightDp.dp))
                         }
 
                         SectionHeader(
@@ -318,20 +317,25 @@ private fun LauncherApp.componentId(): String = "${packageName}/${activityName}"
 
 @Composable
 private fun HiddenModeIndicator() {
+    val layoutMetrics = LocalHomeLayoutMetrics.current
+
     Surface(
         color = MaterialTheme.colorScheme.primary.copy(alpha = 0.86f),
         contentColor = Color.White,
         shape = MaterialTheme.shapes.medium,
         modifier = Modifier.padding(
-            start = HOME_ROW_HORIZONTAL_PADDING_DP.dp,
-            end = HOME_ROW_HORIZONTAL_PADDING_DP.dp,
-            bottom = 18.dp,
+            start = layoutMetrics.hiddenModeHorizontalPaddingDp.dp,
+            end = layoutMetrics.hiddenModeHorizontalPaddingDp.dp,
+            bottom = layoutMetrics.hiddenModeBottomPaddingDp.dp,
         ),
     ) {
         Text(
             text = "HIDDEN APPS",
             style = MaterialTheme.typography.labelMedium,
-            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+            modifier = Modifier.padding(
+                horizontal = layoutMetrics.hiddenModeLabelHorizontalPaddingDp.dp,
+                vertical = layoutMetrics.hiddenModeLabelVerticalPaddingDp.dp,
+            ),
         )
     }
 }

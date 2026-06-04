@@ -32,20 +32,8 @@ import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.unit.dp
+import org.example.launchertest.ui.home.LocalHomeLayoutMetrics
 import kotlin.math.abs
-import kotlin.math.exp
-
-// How far left (in px) the user has dragged relative to the rail's own width.
-// 0 = touching the rail edge, more negative = further left.
-// Clamped so dragging right of the rail doesn't invert things.
-private fun touchXInfluence(touchX: Float, railWidthPx: Float): Float {
-    // touchX is in rail-local coords; rail sits at the right edge of the screen.
-    // Moving left means smaller touchX values (toward 0 or negative).
-    // We express influence as a 0..1 value where 1 = dragged ~150dp left.
-    val leftwardPx = (railWidthPx - touchX).coerceAtLeast(0f)
-    val maxPx = 400f // ~150dp on a typical screen; influence saturates here
-    return (leftwardPx / maxPx).coerceIn(0f, 1f)
-}
 
 @Composable
 fun AzRailPanel(
@@ -66,12 +54,23 @@ fun AzRailPanel(
     var isRailDragging by remember { mutableIntStateOf(0) }
 
     val density = LocalDensity.current
+    val layoutMetrics = LocalHomeLayoutMetrics.current
     val hapticFeedback = LocalHapticFeedback.current
     val primaryColor = MaterialTheme.colorScheme.primary
 
-    val spotlightSizeDp = AZ_RAIL_SPOTLIGHT_SIZE_DP.dp
+    val spotlightSizeDp = layoutMetrics.azRailSpotlightSizeDp.dp
     val spotlightSizePx = with(density) { spotlightSizeDp.toPx() }
-    val pullDistancePx = with(density) { AZ_RAIL_PULL_DISTANCE_DP.dp.toPx() }
+    val pullDistancePx = with(density) { layoutMetrics.azRailPullDistanceDp.dp.toPx() }
+    val spotlightGapPx = with(density) { layoutMetrics.azRailSpotlightGapDp.dp.toPx() }
+    val motionPx = with(density) {
+        AzRailMotionPx(
+            baseAmplitudePx = layoutMetrics.azRailBaseAmplitudeDp.dp.toPx(),
+            leftPullAmplitudePx = layoutMetrics.azRailLeftPullAmplitudeDp.dp.toPx(),
+            rightPullAmplitudePx = layoutMetrics.azRailRightPullAmplitudeDp.dp.toPx(),
+            leftPullSetpointPx = layoutMetrics.azRailLeftPullSetpointDp.dp.toPx(),
+            rightPullSetpointPx = layoutMetrics.azRailRightPullSetpointDp.dp.toPx(),
+        )
+    }
 
     val rawPull = if (isRailDragging > 0) {
         railPullFor(
@@ -147,7 +146,7 @@ fun AzRailPanel(
 
     val leftPull = railLeftPull(animatedPull)
     val rightPull = railRightPull(animatedPull)
-    val selectedPeakX = railPeakXFor(leftPull, rightPull)
+    val selectedPeakX = railPeakXFor(leftPull, rightPull, motionPx)
 
     fun pickIndex(y: Float): Int {
         return pickRailIndex(y, letters.size, railHeightPx)
@@ -155,7 +154,7 @@ fun AzRailPanel(
 
     Box(
         modifier = modifier
-            .width(AZ_RAIL_WIDTH_DP.dp)
+            .width(layoutMetrics.railWidthDp.dp)
             .fillMaxHeight()
             .onGloballyPositioned { coords ->
                 railHeightPx = coords.size.height.toFloat()
@@ -236,7 +235,7 @@ fun AzRailPanel(
                     contentAlignment = Alignment.Center,
                     modifier = Modifier
                         .graphicsLayer {
-                            translationX = selectedPeakX - spotlightSizePx - AZ_RAIL_SPOTLIGHT_GAP_PX
+                            translationX = selectedPeakX - spotlightSizePx - spotlightGapPx
                             translationY = spotlightY - spotlightSizePx / 2f
                             alpha = spotlightAlpha
                         }
@@ -279,6 +278,7 @@ fun AzRailPanel(
                                 influence = influence,
                                 leftPull = itemLeftPull,
                                 rightPull = itemRightPull,
+                                motionPx = motionPx,
                             )
 
                             scaleX = 1f + scaleBoost * influence
