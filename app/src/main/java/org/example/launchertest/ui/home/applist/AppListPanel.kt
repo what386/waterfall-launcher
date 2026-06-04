@@ -6,7 +6,6 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -17,12 +16,17 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.Velocity
 import org.example.launchertest.data.HomeRowNavigationMode
 import org.example.launchertest.data.LauncherFont
 import org.example.launchertest.data.LauncherSettings
@@ -104,21 +108,73 @@ internal fun AppListPanel(
         label = "favAlpha",
     )
 
+    val searchOverscrollConnection = remember(
+        dragThresholdPx,
+        isHiddenMode,
+        showFavoritesOnly,
+        isSearchActive,
+        listState,
+        onSearchActivated,
+    ) {
+        object : NestedScrollConnection {
+            private var accumulatedOverscrollPx = 0f
+            private var didTriggerSearch = false
+
+            override fun onPreScroll(
+                available: Offset,
+                source: NestedScrollSource,
+            ): Offset {
+                if (available.y <= 0f) {
+                    reset()
+                }
+                return Offset.Zero
+            }
+
+            override fun onPostScroll(
+                consumed: Offset,
+                available: Offset,
+                source: NestedScrollSource,
+            ): Offset {
+                val isNormalAppList = !isHiddenMode && !showFavoritesOnly && !isSearchActive
+                val isAtTop = listState.firstVisibleItemIndex == 0 &&
+                    listState.firstVisibleItemScrollOffset == 0
+
+                if (!isNormalAppList || !isAtTop || available.y <= 0f) {
+                    reset()
+                    return Offset.Zero
+                }
+
+                accumulatedOverscrollPx += available.y
+                if (!didTriggerSearch && accumulatedOverscrollPx >= dragThresholdPx) {
+                    didTriggerSearch = true
+                    onSearchActivated()
+                }
+
+                return Offset.Zero
+            }
+
+            override suspend fun onPostFling(
+                consumed: Velocity,
+                available: Velocity,
+            ): Velocity {
+                reset()
+                return Velocity.Zero
+            }
+
+            private fun reset() {
+                accumulatedOverscrollPx = 0f
+                didTriggerSearch = false
+            }
+        }
+    }
+
     Box(modifier = modifier.fillMaxSize()) {
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 // This is the "eraser" that creates transparency at the top
                 .fadingEdge(topFadeBrush)
-                .pointerInput(isSearchActive) {
-                    if (!isSearchActive) {
-                        detectVerticalDragGestures { _, dragAmount ->
-                            if (!listState.canScrollForward && dragAmount < -dragThresholdPx) {
-                                onSearchActivated()
-                            }
-                        }
-                    }
-                }
+                .nestedScroll(searchOverscrollConnection)
                 .pointerInput(isHiddenMode, showFavoritesOnly, isSearchActive) {
                     if (isHiddenMode && !showFavoritesOnly && !isSearchActive) {
                         awaitEachGesture {
