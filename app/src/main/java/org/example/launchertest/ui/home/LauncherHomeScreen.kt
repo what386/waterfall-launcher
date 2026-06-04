@@ -294,13 +294,8 @@ private fun LauncherHomeScreen(
     }
 
     fun returnToFavoritesMenu(categoryPinOffsetPx: Int) {
-        if (state.isSearchActive) {
-            onSearchDismissed()
-        }
-        if (state.isHiddenMode) {
-            onHiddenModeChanged(false)
-        }
-
+        onSearchDismissed()
+        onHiddenModeChanged(false)
         contentMode = HomeContentMode.Favorites
         selectedRailItem.value = buildRailLetters(state.listLayout.letterJumpTargets).first()
         scrubbingLetter.value = null
