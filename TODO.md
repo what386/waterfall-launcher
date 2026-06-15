@@ -5,6 +5,3 @@
 
 ## Tasks
 
-- [ ] icon pack support?
-      @created 2026-05-13 17:33
-
