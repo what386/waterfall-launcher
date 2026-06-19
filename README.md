@@ -61,7 +61,17 @@ This repository includes Fastlane-compatible metadata under:
 fastlane/metadata/android/en-US/
 ```
 
-Before submitting to F-Droid, confirm that the package name, version name, version code, screenshots, icon, release tag, and license are final. The official F-Droid build recipe should be submitted separately to the `fdroiddata` repository as `metadata/<applicationId>.yml`.
+Waterfall's Android application ID is:
+
+```text
+com.what386.waterfall
+```
+
+The official F-Droid build recipe should be submitted separately to the `fdroiddata` repository as:
+
+```text
+metadata/com.what386.waterfall.yml
+```
 
 ## License
 

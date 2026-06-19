@@ -1,0 +1,5 @@
+Dead app cleanup in the launcher database.
+Search submissions now open the top matching app.
+Overscrolling the app list can open search.
+The home button returns to the favorites screen.
+Added clean home screen support.

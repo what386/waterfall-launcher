@@ -39,5 +39,5 @@ if (!localPropertiesFile.exists()) {
         }
 }
 
-rootProject.name = "launcher-test"
+rootProject.name = "waterfall"
 include(":app")
