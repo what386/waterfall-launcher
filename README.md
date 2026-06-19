@@ -65,5 +65,4 @@ Before submitting to F-Droid, confirm that the package name, version name, versi
 
 ## License
 
-Apache-2.0. See [LICENSE](LICENSE).
-
+MIT. See [LICENSE](LICENSE).
