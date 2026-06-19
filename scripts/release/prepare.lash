@@ -24,7 +24,7 @@ git commit -m "Format Kotlin sources" || true
 
 tally semver $version
 
-if $(tally list --done --semver $version) == "No tasks found."
+if $(tally list --released $version) == "No released tasks found."
     echo -e $"{RED}No completed tasks for version $version.{NC}"
     exit 1
 end
