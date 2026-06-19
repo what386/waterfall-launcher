@@ -8,9 +8,6 @@
 - [ ] configure spacing
       @created 2026-06-19 17:54
 
-- [ ] Prepared F-Droid-facing metadata for the next public release.
-      @created 2026-06-19 18:09
-
 
 ## Completed
 
@@ -19,6 +16,10 @@
       @completed 2026-06-19 18:09
 
 - [x] Updated release metadata, README, and repository templates for Waterfall Launcher.
+      @created 2026-06-19 18:09
+      @completed 2026-06-19 18:09
+
+- [x] Prepared F-Droid-facing metadata for the next public release.
       @created 2026-06-19 18:09
       @completed 2026-06-19 18:09
 
