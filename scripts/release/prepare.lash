@@ -11,16 +11,16 @@ if #argv == 0 || #argv > 1
     exit 1
 end
 
-go fmt .
-git add src/
-git commit -m "go fmt" || true
-
 let version = argv[0]
 
 if $(git branch --show-current) != "dev"
     echo -e $"{RED}Not on dev branch{NC}"
     exit 1
 end
+
+./gradlew ktlintFormat
+git add app settings.gradle.kts gradle.properties gradle README.md CHANGELOG.md TODO.md fastlane .github
+git commit -m "Format Kotlin sources" || true
 
 tally semver $version
 
@@ -31,13 +31,11 @@ end
 
 echo -e $"{BLUE}Generating changelog...{NC}"
 tally changelog > CHANGELOG.md
-git add CHANGELOG.md TODO.md .tally/history.json
+git add CHANGELOG.md TODO.md
+git add .tally/history.json || true
 git commit -m $"Release {version}: update changelog"
 
-just gen-completions
-git add ./completions
-git commit -m $"Release {version}: Update shell completions" || true
+echo -e $"{BLUE}Validating Gradle release build...{NC}"
+./gradlew :app:assembleRelease
 
 echo -e $"{GREEN}Release {version} prepared.{NC}"
-
-

@@ -5,8 +5,8 @@ fmt:
     ./gradlew ktlintFormat
 
 lint:
-    ktfmt --kotlinlang-style --dry-run . | diff - /dev/null
-    detekt --all-rules
+    ./gradlew ktlintCheck
+    ./gradlew lint
 
 test:
     ./gradlew test
@@ -61,5 +61,4 @@ gen-package:
     just build-release
     mkdir -p dist
     cp app/build/outputs/apk/release/app-release.apk dist/waterfall-launcher.apk
-
 
