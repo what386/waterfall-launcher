@@ -17,6 +17,10 @@
 - [ ] Prepared F-Droid-facing metadata for the next public release.
       @created 2026-06-19 18:14
 
-- [ ] Updated release metadata, README, and repository templates for Waterfall Launcher.
+
+## Completed
+
+- [x] Updated release metadata, README, and repository templates for Waterfall Launcher.
       @created 2026-06-19 18:14
+      @completed 2026-06-19 18:14
 
