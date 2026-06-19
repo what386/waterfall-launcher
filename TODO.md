@@ -11,3 +11,6 @@
 - [ ] make azrail active when hidden in clean screen
       @created 2026-06-19 18:10
 
+- [ ] Renamed the Android package to com.what386.waterfall.
+      @created 2026-06-19 18:14
+
