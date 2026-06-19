@@ -6,13 +6,11 @@ import com.what386.waterfall.ui.home.azrail.buildRailLetters
 import com.what386.waterfall.ui.home.azrail.isFavoritesRailItem
 
 import android.app.Activity
-import android.app.WallpaperManager
 import android.content.ComponentName
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
 import android.view.WindowManager
-import android.widget.ImageView
 import android.widget.Toast
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
@@ -23,7 +21,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
-import androidx.compose.ui.viewinterop.AndroidView
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.ui.graphics.Color
@@ -76,38 +73,6 @@ import com.what386.waterfall.ui.theme.LauncherTheme
 import com.what386.waterfall.widgets.LauncherWidgetController
 import com.what386.waterfall.widgets.WidgetStack
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.ui.graphics.toArgb
-
-@Composable
-private fun WallpaperBackground(
-    modifier: Modifier = Modifier,
-) {
-    val fallbackColor = MaterialTheme.colorScheme.background.toArgb()
-
-    AndroidView(
-        modifier = modifier,
-        factory = { context ->
-            ImageView(context).apply {
-                scaleType = ImageView.ScaleType.CENTER_CROP
-
-                // Attempt to get wallpaper
-                val wallpaperManager = WallpaperManager.getInstance(context)
-                val drawable = try {
-                    wallpaperManager.drawable
-                } catch (e: SecurityException) {
-                    null
-                }
-
-                if (drawable != null) {
-                    setImageDrawable(drawable)
-                } else {
-                    setBackgroundColor(fallbackColor)
-                }
-            }
-        },
-        update = { /* Leave empty to avoid overwriting the factory setup */ }
-    )
-}
 
 @Composable
 fun LauncherHomeRoute(
