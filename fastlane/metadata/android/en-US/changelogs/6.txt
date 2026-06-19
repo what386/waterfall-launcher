@@ -1,0 +1,3 @@
+Renamed the Android package to com.what386.waterfall.
+Updated release metadata, README, and repository templates for Waterfall Launcher.
+Prepared F-Droid-facing metadata for the next public release.
