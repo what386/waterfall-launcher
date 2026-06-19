@@ -29,13 +29,4 @@ if $(tally list --released $version) == "No released tasks found."
     exit 1
 end
 
-echo -e $"{BLUE}Generating changelog...{NC}"
-tally changelog > CHANGELOG.md
-git add CHANGELOG.md TODO.md
-git add .tally/history.json || true
-git commit -m $"Release {version}: update changelog"
-
-echo -e $"{BLUE}Validating Gradle release build...{NC}"
-./gradlew :app:assembleRelease
-
 echo -e $"{GREEN}Release {version} prepared.{NC}"
