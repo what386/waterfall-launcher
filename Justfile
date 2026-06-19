@@ -28,7 +28,11 @@ build-debug:
 
 build-release:
     ./gradlew :app:assembleRelease
-    "$ANDROID_SDK_ROOT/build-tools/35.0.0/apksigner" sign --ks "$HOME/.android/debug.keystore" --ks-key-alias androiddebugkey --ks-pass pass:android --key-pass pass:android --out app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/app-release-unsigned.apk
+    "$ANDROID_SDK_ROOT/build-tools/35.0.0/apksigner" sign \
+        --ks ~/Android/keys/waterfall-release.keystore \
+        --ks-key-alias waterfall \
+        --out app/build/outputs/apk/release/app-release.apk \
+        app/build/outputs/apk/release/app-release-unsigned.apk
 
 uninstall:
     adb uninstall com.what386.waterfall
