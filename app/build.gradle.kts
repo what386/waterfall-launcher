@@ -5,15 +5,15 @@ plugins {
 }
 
 android {
-    namespace = "org.example.launchertest"
+    namespace = "com.what386.waterfall"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "org.example.launchertest"
+        applicationId = "com.what386.waterfall"
         minSdk = 26
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0"
+        versionCode = 6
+        versionName = "1.5.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

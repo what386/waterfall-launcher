@@ -1,5 +1,5 @@
 name: Feature request
-description: Suggest an idea or enhancement for launcher-test.
+description: Suggest an idea or enhancement for Waterfall Launcher.
 title: "[Feature]: "
 labels:
   - enhancement
@@ -53,29 +53,35 @@ body:
     id: examples
     attributes:
       label: Examples / prior art
-      description: Links or references to similar features in other tools, if applicable.
+      description: Links or references to similar features in other launchers, if applicable.
       placeholder: |
-        Tool X does this by...
+        Launcher X does this by...
     validations:
       required: false
 
   - type: input
     id: version
     attributes:
-      label: launcher-test version
-      description: Output of `launcher-test --version`.
-      placeholder: launcher-test x.y.z
+      label: Waterfall Launcher version
+      description: Version name and version code from Android app info, the APK, or F-Droid.
+      placeholder: 1.5.0 (6)
     validations:
       required: false
 
   - type: dropdown
-    id: os
+    id: android_version
     attributes:
-      label: Operating system
+      label: Android version
       options:
-        - Linux
-        - macOS
-        - Windows
+        - Android 8.x
+        - Android 9
+        - Android 10
+        - Android 11
+        - Android 12
+        - Android 13
+        - Android 14
+        - Android 15
+        - Android 16
         - Other
     validations:
       required: false

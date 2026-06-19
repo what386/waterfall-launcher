@@ -1,0 +1,1 @@
+A fast, minimal Android launcher with favorites, search, widgets, and an A-Z rail, inspired by Niagara Launcher.
