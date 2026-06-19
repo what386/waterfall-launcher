@@ -18,7 +18,9 @@ class HomeLayoutMetricsTest {
         assertEquals(120f, metrics.railYOffsetDp, FLOAT_DELTA)
         assertEquals(-130f, metrics.homeRailHitYOffsetDp, FLOAT_DELTA)
         assertEquals(28f, metrics.railEndPaddingDp, FLOAT_DELTA)
-        assertEquals(40f, metrics.searchButtonBottomPaddingDp, FLOAT_DELTA)
+        assertEquals(28f, metrics.searchButtonEdgePaddingDp, FLOAT_DELTA)
+        assertEquals(40f, metrics.searchButtonSizeDp, FLOAT_DELTA)
+        assertEquals(12f, metrics.searchButtonRailGapDp, FLOAT_DELTA)
         assertEquals(88f, metrics.favoritesTopMarginDp, FLOAT_DELTA)
         assertEquals(44f, metrics.favoritesCenterBiasUpDp, FLOAT_DELTA)
     }
@@ -36,7 +38,8 @@ class HomeLayoutMetricsTest {
         assertTrue(metrics.railYOffsetDp < 120f)
         assertTrue(metrics.favoritesTopMarginDp < 88f)
         assertTrue(metrics.favoritesCenterBiasUpDp < 44f)
-        assertTrue(metrics.searchButtonBottomPaddingDp >= 44f)
+        assertTrue(metrics.appListSearchBottomPaddingDp >= 68f)
+        assertTrue(metrics.searchButtonSizeDp >= 38f)
     }
 
     @Test
