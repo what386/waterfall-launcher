@@ -11,3 +11,6 @@
 - [ ] Renamed the Android package to com.what386.waterfall.
       @created 2026-06-19 18:09
 
+- [ ] Updated release metadata, README, and repository templates for Waterfall Launcher.
+      @created 2026-06-19 18:09
+
