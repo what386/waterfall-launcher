@@ -67,3 +67,10 @@ dependencies {
     debugImplementation(libs.androidx.compose.ui.tooling)
     debugImplementation(libs.androidx.compose.ui.test.manifest)
 }
+
+dependenciesInfo {
+    // Disables dependency metadata when building APKs.
+    includeInApk = false
+    // Disables dependency metadata when building Android App Bundles.
+    includeInBundle = false
+}
