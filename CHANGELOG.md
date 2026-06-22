@@ -1,6 +1,13 @@
 # Changelog — Untitled
 
-*Generated on 2026-06-19*
+*Generated on 2026-06-22*
+
+## 1.6.0 — 2026-06-22
+
+### Changes
+
+- disable dep metadata when building apks/bundles
+
 
 ## 1.5.0 — 2026-06-19
 
