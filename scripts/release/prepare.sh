@@ -18,11 +18,6 @@ if [[ "$(git branch --show-current)" != "dev" ]]; then
     exit 1
 fi
 
-cargo fmt
-
-git add src/
-git commit -m "cargo fmt" || true
-
 tally semver "${version}"
 
 if [[ "$(tally list --released "${version}")" == "No released tasks found." ]]; then
