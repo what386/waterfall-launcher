@@ -1,0 +1,3 @@
+Waterfall Launcher is a lightweight Android home screen focused on fast app access and a minimal wallpaper-first layout.
+
+It provides a favorites screen for commonly used apps, a searchable app list, an A-Z rail for quick navigation, draggable favorite ordering, hidden apps, and Android widget stacks. Settings let you adjust status bar visibility, app icons, the search button, clean home screen mode, home-row navigation buttons, and font selection.

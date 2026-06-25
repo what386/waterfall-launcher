@@ -1,53 +1,20 @@
-# Changelog — launcher-test
+# Changelog — Untitled
 
-*Generated on 2026-06-04*
+*Generated on 2026-06-22*
 
-## 1.4.0 — 2026-06-04
-
-### Changes
-
-- dead app cleanup in database
-- search actions: enter opens top app and hold opens overflow menu
-- make overscroll in applist also open search
-- make home button return user to favorites menu
-- clean home option?
-
-
-## 1.3.0 — 2026-06-04
+## 1.6.0 — 2026-06-22
 
 ### Changes
 
-- fix apps installing/uninstalling not updating the applist
-- uninstall option in dropdown menu
+- disable dep metadata when building apks/bundles
 
 
-## 1.2.1 — 2026-05-23
-
-### Changes
-
-- add api to get screen size to adjust dimensions
-- bug: fix letter group alignment sometimes not working
-
-
-## 1.2.0 — 2026-05-14
+## 1.5.0 — 2026-06-19
 
 ### Changes
 
-- fix behavior on phones with home buttons
-- make font options render in the font they are
-- more fonts
-- fix cutoff on many favorites
-
-
-## 1.1.0 — 2026-05-13
-
-### Changes
-
-- feat: drag-and-drop favorite reordering
-- behavior: widget stacks (swipe to change widgets in a carousel)
-- settings page
-- allow hide statusbar
-- allow hide iconsr
-- option to change font
+- Updated release metadata, README, and repository templates for Waterfall Launcher.
+- Prepared F-Droid-facing metadata for the next public release.
+- Renamed the Android package to com.what386.waterfall.
 
 

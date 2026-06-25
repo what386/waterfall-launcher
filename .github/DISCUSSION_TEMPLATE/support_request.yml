@@ -39,29 +39,29 @@ body:
       required: false
 
   - type: textarea
-    id: code
+    id: diagnostics
     attributes:
-      label: Relevant code or configuration
-      description: Paste any relevant code, config, or logs.
+      label: Relevant diagnostics
+      description: Paste relevant logcat output, screenshots, launcher settings, or reproduction notes.
       render: shell
     validations:
       required: false
 
-- type: input
+  - type: input
     id: version
     attributes:
-      label: launcher-test version
-      description: Output of `launcher-test --version`.
-      placeholder: launcher-test x.y.z
+      label: Waterfall Launcher version
+      description: Version name and version code from Android app info, the APK, or F-Droid.
+      placeholder: 1.5.0 (6)
     validations:
       required: true
 
   - type: input
-    id: os
+    id: device
     attributes:
-      label: Operating system
-      description: OS and version (if relevant)
-      placeholder: e.g. Ubuntu 24.04, Windows 11, macOS 14
+      label: Device and Android version
+      description: Device model, Android version, ROM/OEM skin, and whether Waterfall is the default home app.
+      placeholder: Pixel 8, Android 15, Waterfall set as default home.
     validations:
       required: false
 
@@ -72,5 +72,5 @@ body:
       options:
         - label: I searched existing discussions and issues.
           required: true
-        - label: I read the documentation (or help text).
+        - label: I read the README and checked Android default home app settings.
           required: true

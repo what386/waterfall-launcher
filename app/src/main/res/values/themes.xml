@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Theme.LauncherTest" parent="@android:style/Theme.DeviceDefault.NoActionBar">
-        <!-- This tells Android to show the system wallpaper behind your app -->
+    <style name="Theme.Waterfall" parent="@android:style/Theme.DeviceDefault.NoActionBar">
+        <!-- Show the system wallpaper behind Waterfall's home surface. -->
         <item name="android:windowShowWallpaper">true</item>
         <item name="android:windowBackground">@android:color/transparent</item>
         <item name="android:colorBackgroundCacheHint">@null</item>

@@ -1,13 +1,13 @@
-# TODO — launcher-test
+# TODO — waterfall
 
 @created: 2026-05-08
-@modified: 2026-06-04
+@modified: 2026-06-22
 
 ## Tasks
 
-- [ ] icon pack support?
-      @created 2026-05-13 17:33
+- [ ] configure spacing
+      @created 2026-06-19 17:54
 
-- [ ] custom overscroll actions in home/favorites screen? remap existing as defaults.
-      @created 2026-06-04 18:27
+- [ ] make azrail active when hidden in clean screen
+      @created 2026-06-19 18:10
 
