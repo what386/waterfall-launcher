@@ -1,17 +1,12 @@
 package com.what386.waterfall.ui.home
 
-import com.what386.waterfall.ui.home.applist.AppListPanel
-import com.what386.waterfall.ui.home.azrail.AzRailPanel
-import com.what386.waterfall.ui.home.azrail.buildRailLetters
-import com.what386.waterfall.ui.home.azrail.isFavoritesRailItem
-
 import android.app.Activity
 import android.content.ComponentName
 import android.content.Context
 import android.content.ContextWrapper
 import android.content.Intent
-import android.view.WindowManager
 import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.ContentTransform
@@ -21,10 +16,9 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
-import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.layout.BoxWithConstraints
-import androidx.compose.ui.graphics.Color
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -34,9 +28,13 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.clickable
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -51,28 +49,40 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.role
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.what386.waterfall.R
 import com.what386.waterfall.data.HomeRowNavigationMode
-import com.what386.waterfall.domain.LauncherInteractor
-import com.what386.waterfall.domain.componentId
 import com.what386.waterfall.data.LauncherFont
+import com.what386.waterfall.domain.LauncherInteractor
+import com.what386.waterfall.domain.bestSearchMatch
+import com.what386.waterfall.ui.home.applist.AppListPanel
+import com.what386.waterfall.ui.home.azrail.AzRailPanel
+import com.what386.waterfall.ui.home.azrail.buildRailLetters
+import com.what386.waterfall.ui.home.azrail.isFavoritesRailItem
 import com.what386.waterfall.ui.model.LauncherApp
 import com.what386.waterfall.ui.theme.LauncherTheme
 import com.what386.waterfall.widgets.LauncherWidgetController
 import com.what386.waterfall.widgets.WidgetStack
-import androidx.compose.material3.MaterialTheme
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 @Composable
 fun LauncherHomeRoute(
@@ -80,9 +90,10 @@ fun LauncherHomeRoute(
     widgetController: LauncherWidgetController,
     homeIntentPressCount: StateFlow<Int>,
 ) {
-    val vm: LauncherHomeViewModel = viewModel(
-        factory = LauncherHomeViewModelFactory(interactor),
-    )
+    val vm: LauncherHomeViewModel =
+        viewModel(
+            factory = LauncherHomeViewModelFactory(interactor),
+        )
     val state by vm.uiState.collectAsStateWithLifecycle()
     val widgetStacks by widgetController.widgetStacks.collectAsStateWithLifecycle()
     val appListState = rememberLazyListState()
@@ -99,7 +110,8 @@ fun LauncherHomeRoute(
             jumpToTarget = vm.jumpToTarget,
             onQueryChanged = vm::onQueryChanged,
             onSearchActivated = vm::onSearchActivated,
-            onAppListActivated = vm::onSearchDismissed,
+            onAppListActivated = vm::onAppListActivated,
+            onFavoritesActivated = vm::onFavoritesActivated,
             onSearchDismissed = vm::onSearchDismissed,
             onHiddenModeChanged = vm::onHiddenModeChanged,
             onToggleFavorite = vm::onToggleFavorite,
@@ -113,9 +125,6 @@ fun LauncherHomeRoute(
             onHomeRowNavigationModeChanged = vm::onHomeRowNavigationModeChanged,
             onFontChanged = vm::onFontChanged,
             onResetSettings = vm::onResetSettings,
-            onRestartLauncher = {
-                context.findActivity()?.recreate()
-            },
             onLetterSelected = vm::onLetterSelected,
             onAddWidget = widgetController::addWidgetToNewStack,
             onAddWidgetToStack = widgetController::addWidgetToStack,
@@ -139,6 +148,7 @@ private fun LauncherHomeScreen(
     onQueryChanged: (String) -> Unit,
     onSearchActivated: () -> Unit,
     onAppListActivated: () -> Unit,
+    onFavoritesActivated: () -> Unit,
     onSearchDismissed: () -> Unit,
     onHiddenModeChanged: (Boolean) -> Unit,
     onToggleFavorite: (com.what386.waterfall.ui.model.LauncherApp) -> Unit,
@@ -152,7 +162,6 @@ private fun LauncherHomeScreen(
     onHomeRowNavigationModeChanged: (HomeRowNavigationMode) -> Unit,
     onFontChanged: (LauncherFont) -> Unit,
     onResetSettings: () -> Unit,
-    onRestartLauncher: () -> Unit,
     onLetterSelected: (Char) -> Unit,
     onAddWidget: () -> Unit,
     onAddWidgetToStack: (Int) -> Unit,
@@ -165,11 +174,14 @@ private fun LauncherHomeScreen(
     val isScrubbing = remember { mutableStateOf(false) }
     val selectedRailItem = remember { mutableStateOf(buildRailLetters(emptyMap()).first()) }
     val context = LocalContext.current
+    val resources = LocalResources.current
     val view = LocalView.current
     val density = LocalDensity.current
     var isRailDragging by remember { mutableStateOf(false) }
+    val searchAppsLabel = stringResource(R.string.search_apps)
+    val undoLabel = stringResource(R.string.undo)
+    val snackbarHostState = remember { SnackbarHostState() }
 
-    var contentMode by remember { mutableStateOf(HomeContentMode.Favorites) }
     var lastHandledHomeIntentPressCount by remember { mutableIntStateOf(homeIntentPressCount) }
 
     val coroutineScope = rememberCoroutineScope()
@@ -178,20 +190,19 @@ private fun LauncherHomeScreen(
         val window = view.context.findActivity()?.window ?: return@SideEffect
         val controller = WindowInsetsControllerCompat(window, view)
         if (state.settings.hideStatusBar) {
-            window.addFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
             controller.hide(WindowInsetsCompat.Type.statusBars())
         } else {
-            window.clearFlags(WindowManager.LayoutParams.FLAG_FULLSCREEN)
             controller.show(WindowInsetsCompat.Type.statusBars())
         }
         controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
         WindowCompat.setDecorFitsSystemWindows(window, false)
     }
 
-    val railLetters = remember(state.isHiddenMode, state.listLayout.letterJumpTargets) {
-        buildRailLetters(state.listLayout.letterJumpTargets)
-            .filterNot { state.isHiddenMode && isFavoritesRailItem(it) }
-    }
+    val railLetters =
+        remember(state.isHiddenMode, state.listLayout.letterJumpTargets) {
+            buildRailLetters(state.listLayout.letterJumpTargets)
+                .filterNot { state.isHiddenMode && isFavoritesRailItem(it) }
+        }
 
     fun selectRailItem(
         item: Char,
@@ -200,22 +211,22 @@ private fun LauncherHomeScreen(
         selectedRailItem.value = item
 
         if (isFavoritesRailItem(item)) {
-            contentMode = HomeContentMode.Favorites
+            onFavoritesActivated()
             scrubbingLetter.value = null
             isScrubbing.value = false
 
             coroutineScope.launch {
                 favoritesListState.scrollToItem(
-                    index = if (state.listLayout.favorites.isNotEmpty()) {
-                        favoritesHeaderIndex(widgetStacks.size)
-                    } else {
-                        FirstHomeContentIndex
-                    },
+                    index =
+                        if (state.listLayout.favorites.isNotEmpty()) {
+                            favoritesHeaderIndex(widgetStacks.size)
+                        } else {
+                            FirstHomeContentIndex
+                        },
                     scrollOffset = -categoryPinOffsetPx,
                 )
             }
         } else {
-            contentMode = HomeContentMode.Apps
             scrubbingLetter.value = item
             isScrubbing.value = true
             onLetterSelected(item)
@@ -223,7 +234,6 @@ private fun LauncherHomeScreen(
     }
 
     fun activateSearch() {
-        contentMode = HomeContentMode.Search
         scrubbingLetter.value = null
         isScrubbing.value = false
         onSearchActivated()
@@ -234,7 +244,6 @@ private fun LauncherHomeScreen(
     }
 
     fun activateAppList() {
-        contentMode = HomeContentMode.Apps
         scrubbingLetter.value = null
         isScrubbing.value = false
         onAppListActivated()
@@ -246,7 +255,6 @@ private fun LauncherHomeScreen(
 
     fun setHiddenMode(enabled: Boolean) {
         onHiddenModeChanged(enabled)
-        contentMode = if (enabled) HomeContentMode.Apps else HomeContentMode.Favorites
         scrubbingLetter.value = null
         isScrubbing.value = false
 
@@ -260,44 +268,71 @@ private fun LauncherHomeScreen(
     }
 
     fun dismissSearch() {
-        contentMode = if (state.isHiddenMode) HomeContentMode.Apps else HomeContentMode.Favorites
         scrubbingLetter.value = null
         isScrubbing.value = false
         onSearchDismissed()
     }
 
     fun returnToFavoritesMenu(categoryPinOffsetPx: Int) {
-        onSearchDismissed()
-        onHiddenModeChanged(false)
-        contentMode = HomeContentMode.Favorites
+        onFavoritesActivated()
         selectedRailItem.value = buildRailLetters(state.listLayout.letterJumpTargets).first()
         scrubbingLetter.value = null
         isScrubbing.value = false
 
         coroutineScope.launch {
             favoritesListState.scrollToItem(
-                index = if (state.listLayout.favorites.isNotEmpty()) {
-                    favoritesHeaderIndex(widgetStacks.size)
-                } else {
-                    FirstHomeContentIndex
-                },
+                index =
+                    if (state.listLayout.favorites.isNotEmpty()) {
+                        favoritesHeaderIndex(widgetStacks.size)
+                    } else {
+                        FirstHomeContentIndex
+                    },
                 scrollOffset = -categoryPinOffsetPx,
             )
         }
     }
 
     fun launchBestSearchMatch(submittedQuery: String = state.query) {
-        val app = bestSearchMatch(
-            apps = state.listLayout.apps,
-            rawQuery = submittedQuery,
-        ) ?: return
+        val app =
+            bestSearchMatch(
+                apps = state.listLayout.apps,
+                rawQuery = submittedQuery,
+            ) ?: return
         launchApp(context, app)
         dismissSearch()
     }
 
-    if (state.isSearchActive) {
-        BackHandler(onBack = ::dismissSearch)
+    fun toggleFavoriteWithUndo(app: LauncherApp) {
+        val wasFavorite = app.isFavorite
+        onToggleFavorite(app)
+        coroutineScope.launch {
+            val message =
+                resources.getString(
+                    if (wasFavorite) R.string.favorite_removed else R.string.favorite_added,
+                    app.label,
+                )
+            if (snackbarHostState.showSnackbar(message, undoLabel) == SnackbarResult.ActionPerformed) {
+                onToggleFavorite(app)
+            }
+        }
     }
+
+    fun hideWithUndo(app: LauncherApp) {
+        onHideApp(app)
+        coroutineScope.launch {
+            val message = resources.getString(R.string.app_hidden, app.label)
+            if (snackbarHostState.showSnackbar(message, undoLabel) == SnackbarResult.ActionPerformed) {
+                onUnhideApp(app)
+            }
+        }
+    }
+
+    BackHandler(enabled = state.isSearchActive, onBack = ::dismissSearch)
+    BackHandler(enabled = state.isHiddenMode) { setHiddenMode(false) }
+    BackHandler(
+        enabled = state.contentMode == HomeContentMode.Apps && !state.isHiddenMode,
+        onBack = onFavoritesActivated,
+    )
 
     LaunchedEffect(
         state.isSearchActive,
@@ -317,41 +352,52 @@ private fun LauncherHomeScreen(
     Surface(
         modifier = Modifier.fillMaxSize(),
         color = Color.Transparent,
-        contentColor = Color.White.copy(alpha = 0.92f)
+        contentColor = Color.White.copy(alpha = 0.92f),
     ) {
         BoxWithConstraints(
             modifier = Modifier.fillMaxSize(),
         ) {
-            val statusBarTopDp = with(density) {
-                WindowInsets.statusBars.getTop(this).toDp().value
-            }
-            val navigationBarBottomDp = with(density) {
-                WindowInsets.navigationBars.getBottom(this).toDp().value
-            }
-            val layoutMetrics = remember(
-                maxWidth,
-                maxHeight,
-                statusBarTopDp,
-                navigationBarBottomDp,
-            ) {
-                calculateHomeLayoutMetrics(
-                    screenWidthDp = maxWidth.value,
-                    screenHeightDp = maxHeight.value,
-                    statusBarTopDp = statusBarTopDp,
-                    navigationBarBottomDp = navigationBarBottomDp,
-                )
-            }
-            val categoryPinOffsetPx = with(density) {
-                layoutMetrics.categoryPinOffsetDp.dp.toPx()
-            }.toInt()
-            val searchButtonRailYOffsetDp = run {
-                val railHalfHeightDp = maxHeight.value * layoutMetrics.railHeightFraction / 2f
-                val buttonHalfHeightDp = layoutMetrics.searchButtonSizeDp / 2f
-                layoutMetrics.railYOffsetDp +
-                    railHalfHeightDp +
-                    layoutMetrics.searchButtonRailGapDp +
-                    buttonHalfHeightDp
-            }
+            val statusBarTopDp =
+                with(density) {
+                    WindowInsets.statusBars
+                        .getTop(this)
+                        .toDp()
+                        .value
+                }
+            val navigationBarBottomDp =
+                with(density) {
+                    WindowInsets.navigationBars
+                        .getBottom(this)
+                        .toDp()
+                        .value
+                }
+            val layoutMetrics =
+                remember(
+                    maxWidth,
+                    maxHeight,
+                    statusBarTopDp,
+                    navigationBarBottomDp,
+                ) {
+                    calculateHomeLayoutMetrics(
+                        screenWidthDp = maxWidth.value,
+                        screenHeightDp = maxHeight.value,
+                        statusBarTopDp = statusBarTopDp,
+                        navigationBarBottomDp = navigationBarBottomDp,
+                    )
+                }
+            val categoryPinOffsetPx =
+                with(density) {
+                    layoutMetrics.categoryPinOffsetDp.dp.toPx()
+                }.toInt()
+            val searchButtonRailYOffsetDp =
+                run {
+                    val railHalfHeightDp = maxHeight.value * layoutMetrics.railHeightFraction / 2f
+                    val buttonHalfHeightDp = layoutMetrics.searchButtonSizeDp / 2f
+                    layoutMetrics.railYOffsetDp +
+                        railHalfHeightDp +
+                        layoutMetrics.searchButtonRailGapDp +
+                        buttonHalfHeightDp
+                }
 
             CompositionLocalProvider(LocalHomeLayoutMetrics provides layoutMetrics) {
                 LaunchedEffect(homeIntentPressCount) {
@@ -372,7 +418,7 @@ private fun LauncherHomeScreen(
                 }
 
                 AnimatedContent(
-                    targetState = contentMode,
+                    targetState = state.contentMode,
                     transitionSpec = {
                         homeModeTransition(initialState, targetState)
                     },
@@ -386,22 +432,24 @@ private fun LauncherHomeScreen(
                         isHiddenMode = state.isHiddenMode,
                         showFavoritesOnly = mode == HomeContentMode.Favorites,
                         isSearchActive = mode == HomeContentMode.Search,
-                        highlightedAppComponentId = bestSearchMatch(
-                            apps = state.listLayout.apps,
-                            rawQuery = state.query,
-                        )?.componentId(),
-                        listState = if (mode == HomeContentMode.Favorites) {
-                            favoritesListState
-                        } else {
-                            appListState
-                        },
+                        highlightedAppComponentId =
+                            bestSearchMatch(
+                                apps = state.listLayout.apps,
+                                rawQuery = state.query,
+                            )?.componentId,
+                        listState =
+                            if (mode == HomeContentMode.Favorites) {
+                                favoritesListState
+                            } else {
+                                appListState
+                            },
                         categoryPinOffsetPx = categoryPinOffsetPx,
                         layoutMetrics = layoutMetrics,
                         onSearchActivated = ::activateSearch,
                         onAppListActivated = ::activateAppList,
                         onHiddenModeChanged = ::setHiddenMode,
-                        onToggleFavorite = onToggleFavorite,
-                        onHideApp = onHideApp,
+                        onToggleFavorite = ::toggleFavoriteWithUndo,
+                        onHideApp = ::hideWithUndo,
                         onUnhideApp = onUnhideApp,
                         onReorderFavorites = onReorderFavorites,
                         onAddWidget = onAddWidget,
@@ -416,7 +464,6 @@ private fun LauncherHomeScreen(
                         onHomeRowNavigationModeChanged = onHomeRowNavigationModeChanged,
                         onFontChanged = onFontChanged,
                         onResetSettings = onResetSettings,
-                        onRestartLauncher = onRestartLauncher,
                         createWidgetView = createWidgetView,
                         getWidgetMinHeightDp = getWidgetMinHeightDp,
                         modifier = Modifier.fillMaxSize(),
@@ -432,34 +479,38 @@ private fun LauncherHomeScreen(
                     SearchOverlay(
                         query = state.query,
                         onQueryChanged = onQueryChanged,
-                        onSearchSubmitted = ::launchBestSearchMatch,
                         onKeyboardDismissed = ::dismissSearch,
                         horizontalPaddingDp = layoutMetrics.searchFieldHorizontalPaddingDp,
-                        modifier = Modifier
-                            .padding(
-                                horizontal = 0.dp,
-                                vertical = 0.dp,
-                            ),
+                        modifier =
+                            Modifier
+                                .padding(
+                                    horizontal = 0.dp,
+                                    vertical = 0.dp,
+                                ),
                     )
                 }
 
                 val isCleanFavoritesHome =
-                    contentMode == HomeContentMode.Favorites && state.settings.cleanHomeScreen
+                    state.contentMode == HomeContentMode.Favorites && state.settings.cleanHomeScreen
 
                 AnimatedVisibility(
-                    visible = !state.isSearchActive &&
-                        railLetters.isNotEmpty() &&
-                        (!isCleanFavoritesHome || isRailDragging),
+                    visible =
+                        !state.isSearchActive &&
+                            railLetters.isNotEmpty(),
                     enter = fadeIn(),
                     exit = fadeOut(),
                     modifier = Modifier.align(Alignment.CenterEnd),
                 ) {
                     AzRailPanel(
-                        modifier = Modifier
-                            .offset(y = layoutMetrics.railYOffsetDp.dp)
-                            .fillMaxHeight(layoutMetrics.railHeightFraction)
-                            .padding(end = layoutMetrics.railEndPaddingDp.dp)
-                            .width(layoutMetrics.railWidthDp.dp),
+                        modifier =
+                            Modifier
+                                .offset(y = layoutMetrics.railYOffsetDp.dp)
+                                .fillMaxHeight(layoutMetrics.railHeightFraction)
+                                .padding(end = layoutMetrics.railEndPaddingDp.dp)
+                                .width(layoutMetrics.railWidthDp.dp)
+                                .graphicsLayer {
+                                    alpha = if (!isCleanFavoritesHome || isRailDragging) 1f else 0f
+                                },
                         letters = railLetters,
                         onLetterSelected = {},
                         onScrubStart = { item -> selectRailItem(item, categoryPinOffsetPx) },
@@ -478,32 +529,35 @@ private fun LauncherHomeScreen(
 
                 if (!state.isSearchActive &&
                     !state.isHiddenMode &&
-                    !(contentMode == HomeContentMode.Favorites && state.settings.cleanHomeScreen)
+                    !(state.contentMode == HomeContentMode.Favorites && state.settings.cleanHomeScreen)
                 ) {
                     Box(
-                        modifier = Modifier
-                            .align(Alignment.CenterEnd)
-                            .offset(y = layoutMetrics.homeRailHitYOffsetDp.dp)
-                            .padding(end = layoutMetrics.railEndPaddingDp.dp)
-                            .width(layoutMetrics.railWidthDp.dp)
-                            .fillMaxHeight(layoutMetrics.homeRailHitHeightFraction)
-                            .clickable { selectRailItem(railLetters.first(), categoryPinOffsetPx) },
+                        modifier =
+                            Modifier
+                                .align(Alignment.CenterEnd)
+                                .offset(y = layoutMetrics.homeRailHitYOffsetDp.dp)
+                                .padding(end = layoutMetrics.railEndPaddingDp.dp)
+                                .width(layoutMetrics.railWidthDp.dp)
+                                .fillMaxHeight(layoutMetrics.homeRailHitHeightFraction)
+                                .clickable { selectRailItem(railLetters.first(), categoryPinOffsetPx) },
                     )
                 }
 
                 AnimatedVisibility(
-                    visible = contentMode == HomeContentMode.Apps &&
-                        !state.isSearchActive &&
-                        !isRailDragging &&
-                        !state.settings.hideSearchButton,
+                    visible =
+                        state.contentMode == HomeContentMode.Apps &&
+                            !state.isSearchActive &&
+                            !isRailDragging &&
+                            !state.settings.hideSearchButton,
                     enter = fadeIn(),
                     exit = fadeOut(),
-                    modifier = Modifier
-                        .align(Alignment.CenterEnd)
-                        .offset(y = searchButtonRailYOffsetDp.dp)
-                        .padding(
-                            end = layoutMetrics.searchButtonEdgePaddingDp.dp,
-                        ),
+                    modifier =
+                        Modifier
+                            .align(Alignment.CenterEnd)
+                            .offset(y = searchButtonRailYOffsetDp.dp)
+                            .padding(
+                                end = layoutMetrics.searchButtonEdgePaddingDp.dp,
+                            ),
                 ) {
                     Surface(
                         shape = CircleShape,
@@ -511,9 +565,13 @@ private fun LauncherHomeScreen(
                         contentColor = Color.White,
                         tonalElevation = 0.dp,
                         shadowElevation = 0.dp,
-                        modifier = Modifier
-                            .size(layoutMetrics.searchButtonSizeDp.dp)
-                            .clickable { activateSearch() },
+                        modifier =
+                            Modifier
+                                .size(layoutMetrics.searchButtonSizeDp.dp)
+                                .semantics {
+                                    contentDescription = searchAppsLabel
+                                    role = Role.Button
+                                }.clickable { activateSearch() },
                     ) {
                         Box(
                             contentAlignment = Alignment.Center,
@@ -527,75 +585,59 @@ private fun LauncherHomeScreen(
                         }
                     }
                 }
+
+                SnackbarHost(
+                    hostState = snackbarHostState,
+                    modifier =
+                        Modifier
+                            .align(Alignment.BottomCenter)
+                            .windowInsetsPadding(WindowInsets.navigationBars),
+                )
             }
         }
     }
 }
+
 private const val FirstHomeContentIndex = 1
-private const val SEARCH_AUTO_OPEN_MIN_QUERY_LENGTH = 3
+private const val SEARCH_AUTO_OPEN_MIN_QUERY_LENGTH = 2
 
 private fun favoritesHeaderIndex(widgetCount: Int): Int = widgetCount + 2
 
-private tailrec fun Context.findActivity(): Activity? {
-    return when (this) {
+private tailrec fun Context.findActivity(): Activity? =
+    when (this) {
         is Activity -> this
         is ContextWrapper -> baseContext.findActivity()
         else -> null
     }
-}
 
 private fun launchApp(
     context: Context,
     app: LauncherApp,
 ) {
-    val intent = Intent(Intent.ACTION_MAIN).apply {
-        addCategory(Intent.CATEGORY_LAUNCHER)
-        component = ComponentName(app.packageName, app.activityName)
-        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-    }
+    val intent =
+        Intent(Intent.ACTION_MAIN).apply {
+            addCategory(Intent.CATEGORY_LAUNCHER)
+            component = ComponentName(app.packageName, app.activityName)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
 
     try {
         context.startActivity(intent)
     } catch (_: Exception) {
-        Toast.makeText(
-            context,
-            "Unable to launch ${app.label}",
-            Toast.LENGTH_SHORT,
-        ).show()
+        Toast
+            .makeText(
+                context,
+                context.getString(R.string.unable_to_launch, app.label),
+                Toast.LENGTH_SHORT,
+            ).show()
     }
-}
-
-private fun bestSearchMatch(
-    apps: List<LauncherApp>,
-    rawQuery: String,
-): LauncherApp? {
-    val query = rawQuery.trim().lowercase()
-    if (query.isBlank()) return null
-
-    return apps
-        .asSequence()
-        .filter { app -> app.label.lowercase().contains(query) }
-        .sortedWith(
-            compareBy<LauncherApp>(
-                { app -> if (app.label.lowercase() == query) 0 else 1 },
-                { app -> if (app.label.lowercase().startsWith(query)) 0 else 1 },
-                { app -> app.label.lowercase() },
-            ),
-        )
-        .firstOrNull()
-}
-
-private enum class HomeContentMode {
-    Favorites,
-    Apps,
-    Search,
 }
 
 private fun homeModeTransition(
     initialState: HomeContentMode,
     targetState: HomeContentMode,
-): ContentTransform {
-    return if (targetState == HomeContentMode.Search) {
+): ContentTransform =
+    if (targetState == HomeContentMode.Search) {
         (fadeIn() + slideInVertically { it / 8 }) togetherWith
             (fadeOut() + slideOutVertically { -it / 8 })
     } else if (initialState == HomeContentMode.Search) {
@@ -604,4 +646,3 @@ private fun homeModeTransition(
     } else {
         fadeIn() togetherWith fadeOut()
     }
-}

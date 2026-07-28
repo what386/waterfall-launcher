@@ -1,14 +1,14 @@
 package com.what386.waterfall.domain
 
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.onEach
 import com.what386.waterfall.data.AppRepository
 import com.what386.waterfall.data.HomeRowNavigationMode
 import com.what386.waterfall.data.LauncherFont
 import com.what386.waterfall.data.LauncherPreferencesRepository
 import com.what386.waterfall.data.LauncherSettings
 import com.what386.waterfall.ui.model.LauncherApp
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.onEach
 
 class LauncherInteractor(
     private val appRepository: AppRepository,
@@ -22,10 +22,12 @@ class LauncherInteractor(
         query: Flow<String>,
         hiddenMode: Flow<Boolean>,
     ): Flow<List<LauncherApp>> {
-        val launcherApps = appRepository.launcherAppsFlow()
-            .onEach { apps ->
-                preferencesRepository.removeUnavailableApps(apps.map { it.componentId() }.toSet())
-            }
+        val launcherApps =
+            appRepository
+                .launcherAppsFlow()
+                .onEach { apps ->
+                    preferencesRepository.removeUnavailableApps(apps.map { it.componentId }.toSet())
+                }
 
         return combine(
             launcherApps,
@@ -34,32 +36,33 @@ class LauncherInteractor(
             query,
             hiddenMode,
         ) { allApps, favorites, hiddenApps, rawQuery, isHiddenMode ->
-            val normalizedQuery = rawQuery.trim().lowercase()
             allApps
                 .asSequence()
-                .filter { app -> (app.componentId() in hiddenApps) == isHiddenMode }
+                .filter { app -> (app.componentId in hiddenApps) == isHiddenMode }
                 .map { app ->
-                    val componentId = app.componentId()
+                    val componentId = app.componentId
                     app.copy(isFavorite = componentId in favorites)
-                }
-                .filter { app ->
-                    normalizedQuery.isBlank() || app.label.lowercase().contains(normalizedQuery)
-                }
-                .sortedBy { it.label.lowercase() }
-                .toList()
+                }.filter { app ->
+                    app.matchesSearch(rawQuery)
+                }.sortedWith(
+                    compareBy(
+                        { app -> normalizedSearchText(app.label) },
+                        { app -> app.componentId },
+                    ),
+                ).toList()
         }
     }
 
     suspend fun toggleFavorite(app: LauncherApp) {
-        preferencesRepository.toggleFavorite(app.componentId())
+        preferencesRepository.toggleFavorite(app.componentId)
     }
 
     suspend fun hideApp(app: LauncherApp) {
-        preferencesRepository.hideApp(app.componentId())
+        preferencesRepository.hideApp(app.componentId)
     }
 
     suspend fun unhideApp(app: LauncherApp) {
-        preferencesRepository.unhideApp(app.componentId())
+        preferencesRepository.unhideApp(app.componentId)
     }
 
     suspend fun setFavoriteOrder(componentIds: List<String>) {
@@ -93,7 +96,4 @@ class LauncherInteractor(
     suspend fun resetSettings() {
         preferencesRepository.resetSettings()
     }
-
 }
-
-fun LauncherApp.componentId(): String = "$packageName/$activityName"

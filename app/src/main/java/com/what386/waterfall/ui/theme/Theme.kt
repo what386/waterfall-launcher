@@ -44,32 +44,31 @@ private fun Typography.withLauncherFont(font: LauncherFont): Typography {
     )
 }
 
-private fun TextStyle.withFontFamily(fontFamily: FontFamily): TextStyle {
-    return copy(fontFamily = fontFamily)
-}
+private fun TextStyle.withFontFamily(fontFamily: FontFamily): TextStyle = copy(fontFamily = fontFamily)
 
-internal fun LauncherFont.toPreviewFontFamily(): FontFamily {
-    return toFontFamily() ?: FontFamily.Default
-}
+internal fun LauncherFont.toPreviewFontFamily(): FontFamily = toFontFamily() ?: FontFamily.Default
 
-private fun LauncherFont.toFontFamily(): FontFamily? {
-    return when (this) {
+private fun LauncherFont.toFontFamily(): FontFamily? =
+    when (this) {
         LauncherFont.System -> null
         LauncherFont.SansSerif -> FontFamily.SansSerif
-        LauncherFont.SansSerifCondensed -> FontFamily(
-            Typeface.create("sans-serif-condensed", Typeface.NORMAL),
-        )
-        LauncherFont.SansSerifMedium -> FontFamily(
-            Typeface.create("sans-serif-medium", Typeface.NORMAL),
-        )
+        LauncherFont.SansSerifCondensed ->
+            FontFamily(
+                Typeface.create("sans-serif-condensed", Typeface.NORMAL),
+            )
+        LauncherFont.SansSerifMedium ->
+            FontFamily(
+                Typeface.create("sans-serif-medium", Typeface.NORMAL),
+            )
         LauncherFont.Serif -> FontFamily.Serif
         LauncherFont.Monospace -> FontFamily.Monospace
         LauncherFont.Cursive -> FontFamily.Cursive
-        LauncherFont.Casual -> FontFamily(
-            Typeface.create("casual", Typeface.NORMAL),
-        )
-        LauncherFont.SmallCaps -> FontFamily(
-            Typeface.create("sans-serif-smallcaps", Typeface.NORMAL),
-        )
+        LauncherFont.Casual ->
+            FontFamily(
+                Typeface.create("casual", Typeface.NORMAL),
+            )
+        LauncherFont.SmallCaps ->
+            FontFamily(
+                Typeface.create("sans-serif-smallcaps", Typeface.NORMAL),
+            )
     }
-}

@@ -3,9 +3,9 @@ package com.what386.waterfall.ui.home
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
@@ -20,18 +20,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.what386.waterfall.R
 
 @Composable
 fun SearchOverlay(
     query: String,
     onQueryChanged: (String) -> Unit,
-    onSearchSubmitted: (String) -> Unit,
     onKeyboardDismissed: () -> Unit,
     horizontalPaddingDp: Float,
     modifier: Modifier = Modifier,
@@ -59,34 +57,28 @@ fun SearchOverlay(
 
     Surface(
         color = Color.Transparent,
-        modifier = modifier
-            .fillMaxWidth()
-            .windowInsetsPadding(WindowInsets.statusBars),
+        modifier =
+            modifier
+                .fillMaxWidth()
+                .windowInsetsPadding(WindowInsets.statusBars),
     ) {
         OutlinedTextField(
             value = query,
             onValueChange = onQueryChanged,
-            placeholder = { Text("Search apps") },
+            placeholder = { Text(stringResource(R.string.search_apps)) },
             singleLine = true,
-            keyboardOptions = KeyboardOptions(
-                imeAction = ImeAction.Search,
-            ),
-            keyboardActions = KeyboardActions(
-                onSearch = {
-                    onSearchSubmitted(query)
-                },
-            ),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedContainerColor = Color(0x66000000),
-                unfocusedContainerColor = Color(0x66000000),
-            ),
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(
-                    horizontal = horizontalPaddingDp.dp,
-                    vertical = layoutMetrics.searchFieldVerticalPaddingDp.dp,
-                )
-                .focusRequester(focusRequester),
+            colors =
+                OutlinedTextFieldDefaults.colors(
+                    focusedContainerColor = Color(0x66000000),
+                    unfocusedContainerColor = Color(0x66000000),
+                ),
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .padding(
+                        horizontal = horizontalPaddingDp.dp,
+                        vertical = layoutMetrics.searchFieldVerticalPaddingDp.dp,
+                    ).focusRequester(focusRequester),
         )
     }
 }

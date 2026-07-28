@@ -16,8 +16,6 @@ enum class LauncherFont(
     ;
 
     companion object {
-        fun fromStorageValue(value: String?): LauncherFont {
-            return entries.firstOrNull { font -> font.storageValue == value } ?: System
-        }
+        fun fromStorageValue(value: String?): LauncherFont = entries.firstOrNull { font -> font.storageValue == value } ?: System
     }
 }

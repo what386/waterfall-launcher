@@ -1,84 +1,56 @@
 package com.what386.waterfall.ui.home.favorites
 
 import android.appwidget.AppWidgetHostView
-import android.view.MotionEvent
-import android.view.View
-import android.view.ViewConfiguration
-import android.view.ViewGroup
-import android.widget.FrameLayout
 import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
-import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
-import androidx.compose.foundation.pager.HorizontalPager
-import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInParent
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.viewinterop.AndroidView
-import androidx.compose.ui.zIndex
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import com.what386.waterfall.R
 import com.what386.waterfall.data.HomeRowNavigationMode
 import com.what386.waterfall.data.LauncherFont
 import com.what386.waterfall.data.LauncherSettings
 import com.what386.waterfall.ui.home.HomeLayoutMetrics
-import com.what386.waterfall.ui.home.LocalHomeLayoutMetrics
 import com.what386.waterfall.ui.home.shared.AppRow
-import com.what386.waterfall.ui.home.shared.HOME_ROW_TEXT_SCALE
 import com.what386.waterfall.ui.home.shared.SectionHeader
-import com.what386.waterfall.ui.home.shared.rememberAppIcon
-import com.what386.waterfall.ui.theme.toPreviewFontFamily
 import com.what386.waterfall.ui.model.LauncherApp
 import com.what386.waterfall.widgets.WidgetStack
-import kotlin.math.hypot
+import kotlinx.coroutines.launch
 
 /**
  * The favorites panel: widgets + favorite app rows, all in a vertically scrollable column
@@ -113,7 +85,6 @@ internal fun FavoritesPanel(
     onHomeRowNavigationModeChanged: (HomeRowNavigationMode) -> Unit,
     onFontChanged: (LauncherFont) -> Unit,
     onResetSettings: () -> Unit,
-    onRestartLauncher: () -> Unit,
     createWidgetView: (Int) -> AppWidgetHostView?,
     getWidgetMinHeightDp: (Int) -> Int?,
     layoutMetrics: HomeLayoutMetrics,
@@ -130,8 +101,6 @@ internal fun FavoritesPanel(
     var showSettingsSheet by remember { mutableStateOf(false) }
     var showFontSheet by remember { mutableStateOf(false) }
     var showHomeRowSheet by remember { mutableStateOf(false) }
-    var hideStatusBarAtSettingsOpen by remember { mutableStateOf<Boolean?>(null) }
-    var hideStatusBarSettingsDraft by remember { mutableStateOf<Boolean?>(null) }
     var reorderMode by remember { mutableStateOf(false) }
     var widgetReorderMode by remember { mutableStateOf(false) }
     var didTriggerSearchDuringDrag by remember { mutableStateOf(false) }
@@ -143,11 +112,11 @@ internal fun FavoritesPanel(
     var activeDragOffsetY by remember { mutableFloatStateOf(0f) }
     val rowMetrics = remember { mutableStateMapOf<String, FavoriteRowMetrics>() }
     val orderedFavorites = remember { mutableStateListOf<LauncherApp>() }
-    var activeDragWidgetStackId by remember { mutableIntStateOf(-1) }
+    var activeDragWidgetStackId by remember { mutableStateOf<String?>(null) }
     var activeDragWidgetStartIndex by remember { mutableIntStateOf(-1) }
     var activeDragWidgetTargetIndex by remember { mutableIntStateOf(-1) }
     var activeDragWidgetOffsetY by remember { mutableFloatStateOf(0f) }
-    val widgetRowMetrics = remember { mutableStateMapOf<Int, FavoriteRowMetrics>() }
+    val widgetRowMetrics = remember { mutableStateMapOf<String, FavoriteRowMetrics>() }
     val orderedWidgetStacks = remember { mutableStateListOf<WidgetStack>() }
     val useCleanHomeWidgetLayout = settings.cleanHomeScreen && orderedWidgetStacks.isNotEmpty()
 
@@ -178,30 +147,16 @@ internal fun FavoritesPanel(
     }
 
     fun openSettingsSheet() {
-        hideStatusBarAtSettingsOpen = settings.hideStatusBar
-        hideStatusBarSettingsDraft = settings.hideStatusBar
         showPanelMenu = false
         showHomeRowSheet = false
         showSettingsSheet = true
     }
 
     fun closeSettingsSheet(reopenFavorites: Boolean) {
-        val didHideStatusBarChange = hideStatusBarAtSettingsOpen != null &&
-            hideStatusBarAtSettingsOpen != hideStatusBarSettingsDraft
-
         showSettingsSheet = false
         showFontSheet = false
         showHomeRowSheet = false
-        hideStatusBarAtSettingsOpen = null
-        hideStatusBarSettingsDraft = null
         showPanelMenu = reopenFavorites
-
-        if (didHideStatusBarChange) {
-            scope.launch {
-                delay(250)
-                onRestartLauncher()
-            }
-        }
     }
 
     fun openFontSheet() {
@@ -240,9 +195,10 @@ internal fun FavoritesPanel(
             return
         }
 
-        val currentIndex = orderedFavorites.indexOfFirst {
-            favoriteComponentId(it) == activeComponentId
-        }
+        val currentIndex =
+            orderedFavorites.indexOfFirst {
+                favoriteComponentId(it) == activeComponentId
+            }
 
         if (currentIndex != -1 &&
             currentIndex != activeDragTargetIndex &&
@@ -257,7 +213,7 @@ internal fun FavoritesPanel(
     }
 
     fun clearWidgetDragState() {
-        activeDragWidgetStackId = -1
+        activeDragWidgetStackId = null
         activeDragWidgetStartIndex = -1
         activeDragWidgetTargetIndex = -1
         activeDragWidgetOffsetY = 0f
@@ -265,7 +221,7 @@ internal fun FavoritesPanel(
 
     fun commitWidgetDragReorderIfNeeded() {
         val activeStackId = activeDragWidgetStackId
-        if (activeStackId == -1 || activeDragWidgetTargetIndex == -1) {
+        if (activeStackId == null || activeDragWidgetTargetIndex == -1) {
             clearWidgetDragState()
             return
         }
@@ -284,7 +240,7 @@ internal fun FavoritesPanel(
         clearWidgetDragState()
     }
 
-    fun updateWidgetDragTarget(stackId: Int) {
+    fun updateWidgetDragTarget(stackId: String) {
         val startIndex = activeDragWidgetStartIndex
         if (startIndex !in orderedWidgetStacks.indices) return
 
@@ -296,8 +252,9 @@ internal fun FavoritesPanel(
             for (index in (startIndex + 1)..orderedWidgetStacks.lastIndex) {
                 val candidateId = widgetStackId(orderedWidgetStacks[index])
                 val metrics = widgetRowMetrics[candidateId] ?: continue
-                val replaceThresholdY = metrics.topY +
-                    (metrics.height * FAVORITES_REORDER_SWAP_FRACTION_OF_ROW)
+                val replaceThresholdY =
+                    metrics.topY +
+                        (metrics.height * FAVORITES_REORDER_SWAP_FRACTION_OF_ROW)
 
                 if (draggedCenterY >= replaceThresholdY) {
                     targetIndex = index
@@ -307,8 +264,9 @@ internal fun FavoritesPanel(
             for (index in (startIndex - 1) downTo 0) {
                 val candidateId = widgetStackId(orderedWidgetStacks[index])
                 val metrics = widgetRowMetrics[candidateId] ?: continue
-                val replaceThresholdY = metrics.topY +
-                    (metrics.height * (1f - FAVORITES_REORDER_SWAP_FRACTION_OF_ROW))
+                val replaceThresholdY =
+                    metrics.topY +
+                        (metrics.height * (1f - FAVORITES_REORDER_SWAP_FRACTION_OF_ROW))
 
                 if (draggedCenterY <= replaceThresholdY) {
                     targetIndex = index
@@ -331,8 +289,9 @@ internal fun FavoritesPanel(
             for (index in (startIndex + 1)..orderedFavorites.lastIndex) {
                 val candidateId = favoriteComponentId(orderedFavorites[index])
                 val metrics = rowMetrics[candidateId] ?: continue
-                val replaceThresholdY = metrics.topY +
-                    (metrics.height * FAVORITES_REORDER_SWAP_FRACTION_OF_ROW)
+                val replaceThresholdY =
+                    metrics.topY +
+                        (metrics.height * FAVORITES_REORDER_SWAP_FRACTION_OF_ROW)
 
                 if (draggedCenterY >= replaceThresholdY) {
                     targetIndex = index
@@ -342,8 +301,9 @@ internal fun FavoritesPanel(
             for (index in (startIndex - 1) downTo 0) {
                 val candidateId = favoriteComponentId(orderedFavorites[index])
                 val metrics = rowMetrics[candidateId] ?: continue
-                val replaceThresholdY = metrics.topY +
-                    (metrics.height * (1f - FAVORITES_REORDER_SWAP_FRACTION_OF_ROW))
+                val replaceThresholdY =
+                    metrics.topY +
+                        (metrics.height * (1f - FAVORITES_REORDER_SWAP_FRACTION_OF_ROW))
 
                 if (draggedCenterY <= replaceThresholdY) {
                     targetIndex = index
@@ -355,139 +315,144 @@ internal fun FavoritesPanel(
     }
 
     Box(
-        modifier = modifier
-            .fillMaxSize()
-            .then(
-                if (reorderMode) {
-                    Modifier.pointerInput(reorderMode) {
-                        detectTapGestures {
-                            reorderMode = false
-                            commitDragReorderIfNeeded()
-                        }
-                    }
-                } else if (widgetReorderMode) {
-                    Modifier.pointerInput(widgetReorderMode) {
-                        detectTapGestures {
-                            widgetReorderMode = false
-                            commitWidgetDragReorderIfNeeded()
-                        }
-                    }
-                } else {
-                    Modifier.combinedClickable(
-                        interactionSource = panelInteractionSource,
-                        indication = null,
-                        onClick = {},
-                        onLongClick = {
-                            showSettingsSheet = false
-                            showPanelMenu = true
-                        },
-                    )
-                }
-            ),
-    ) {
-        Column(
-            modifier = Modifier
+        modifier =
+            modifier
                 .fillMaxSize()
-                .padding(
-                    start = layoutMetrics.appListContentStartPaddingDp.dp,
-                    end = layoutMetrics.appListContentEndPaddingDp.dp,
-                )
-                .offset(
-                    y = if (hasScrollableContent || useCleanHomeWidgetLayout) {
-                        0.dp
+                .then(
+                    if (reorderMode) {
+                        Modifier.pointerInput(reorderMode) {
+                            detectTapGestures {
+                                reorderMode = false
+                                commitDragReorderIfNeeded()
+                            }
+                        }
+                    } else if (widgetReorderMode) {
+                        Modifier.pointerInput(widgetReorderMode) {
+                            detectTapGestures {
+                                widgetReorderMode = false
+                                commitWidgetDragReorderIfNeeded()
+                            }
+                        }
                     } else {
-                        (-layoutMetrics.favoritesCenterBiasUpDp).dp
-                    },
-                )
-                .graphicsLayer { translationY = overscrollOffset.value }
-                .pointerInput(reorderMode, widgetReorderMode) {
-                    if (reorderMode || widgetReorderMode) return@pointerInput
-                    detectVerticalDragGestures(
-                        onDragEnd = {
-                            didTriggerSearchDuringDrag = false
-                            didTriggerAppListDuringDrag = false
-                            scope.launch {
-                                overscrollOffset.animateTo(
-                                    targetValue = 0f,
-                                    animationSpec = spring(
-                                        stiffness = FAVORITES_OVERSCROLL_SPRING_STIFFNESS,
-                                        dampingRatio = FAVORITES_OVERSCROLL_SPRING_DAMPING,
-                                    ),
-                                )
-                            }
-                        },
-                        onDragCancel = {
-                            didTriggerSearchDuringDrag = false
-                            didTriggerAppListDuringDrag = false
-                            scope.launch {
-                                overscrollOffset.animateTo(
-                                    targetValue = 0f,
-                                    animationSpec = spring(
-                                        stiffness = FAVORITES_OVERSCROLL_SPRING_STIFFNESS,
-                                        dampingRatio = FAVORITES_OVERSCROLL_SPRING_DAMPING,
-                                    ),
-                                )
-                            }
-                        },
-                        onVerticalDrag = { _, dragAmount ->
-                            val atTop = scrollState.value == 0
-                            val atBottom = scrollState.value == scrollState.maxValue
-
-                            val canNormalScroll = when {
-                                dragAmount < 0 && !atBottom -> true
-                                dragAmount > 0 && !atTop    -> true
-                                else                        -> false
-                            }
-
-                            if (canNormalScroll) {
-                                scope.launch {
-                                    scrollState.scrollTo(
-                                        (scrollState.value - dragAmount.toInt()).coerceIn(0, scrollState.maxValue)
-                                    )
-                                }
-                            } else {
-                                val dampened = dragAmount * FAVORITES_OVERSCROLL_RESISTANCE
-                                scope.launch {
-                                    val nextOverscroll = overscrollOffset.value + dampened
-                                    overscrollOffset.snapTo(nextOverscroll)
-                                    if (!isSearchActive &&
-                                        !didTriggerSearchDuringDrag &&
-                                        atTop &&
-                                        dragAmount > 0f &&
-                                        nextOverscroll >= overscrollTriggerPx
-                                    ) {
-                                        didTriggerSearchDuringDrag = true
-                                        onSearchActivated()
-                                    }
-                                    if (!isSearchActive &&
-                                        !didTriggerAppListDuringDrag &&
-                                        atBottom &&
-                                        dragAmount < 0f &&
-                                        nextOverscroll <= -overscrollTriggerPx
-                                    ) {
-                                        didTriggerAppListDuringDrag = true
-                                        onAppListActivated()
-                                    }
-                                }
-                            }
-                        },
-                    )
-                }
-                .verticalScroll(scrollState, enabled = false),
-            verticalArrangement = if (hasScrollableContent || useCleanHomeWidgetLayout) {
-                Arrangement.Top
-            } else {
-                Arrangement.Center
-            },
-        ) {
-            Spacer(
-                modifier = Modifier.height(
-                    if (useCleanHomeWidgetLayout) {
-                        layoutMetrics.cleanHomeWidgetTopPaddingDp.dp
-                    } else {
-                        layoutMetrics.favoritesTopMarginDp.dp
+                        Modifier.combinedClickable(
+                            interactionSource = panelInteractionSource,
+                            indication = null,
+                            onClick = {},
+                            onLongClick = {
+                                showSettingsSheet = false
+                                showPanelMenu = true
+                            },
+                        )
                     },
                 ),
+    ) {
+        Column(
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(
+                        start = layoutMetrics.appListContentStartPaddingDp.dp,
+                        end = layoutMetrics.appListContentEndPaddingDp.dp,
+                    ).offset(
+                        y =
+                            if (hasScrollableContent || useCleanHomeWidgetLayout) {
+                                0.dp
+                            } else {
+                                (-layoutMetrics.favoritesCenterBiasUpDp).dp
+                            },
+                    ).graphicsLayer { translationY = overscrollOffset.value }
+                    .pointerInput(reorderMode, widgetReorderMode) {
+                        if (reorderMode || widgetReorderMode) return@pointerInput
+                        detectVerticalDragGestures(
+                            onDragEnd = {
+                                didTriggerSearchDuringDrag = false
+                                didTriggerAppListDuringDrag = false
+                                scope.launch {
+                                    overscrollOffset.animateTo(
+                                        targetValue = 0f,
+                                        animationSpec =
+                                            spring(
+                                                stiffness = FAVORITES_OVERSCROLL_SPRING_STIFFNESS,
+                                                dampingRatio = FAVORITES_OVERSCROLL_SPRING_DAMPING,
+                                            ),
+                                    )
+                                }
+                            },
+                            onDragCancel = {
+                                didTriggerSearchDuringDrag = false
+                                didTriggerAppListDuringDrag = false
+                                scope.launch {
+                                    overscrollOffset.animateTo(
+                                        targetValue = 0f,
+                                        animationSpec =
+                                            spring(
+                                                stiffness = FAVORITES_OVERSCROLL_SPRING_STIFFNESS,
+                                                dampingRatio = FAVORITES_OVERSCROLL_SPRING_DAMPING,
+                                            ),
+                                    )
+                                }
+                            },
+                            onVerticalDrag = { _, dragAmount ->
+                                val atTop = scrollState.value == 0
+                                val atBottom = scrollState.value == scrollState.maxValue
+
+                                val canNormalScroll =
+                                    when {
+                                        dragAmount < 0 && !atBottom -> true
+                                        dragAmount > 0 && !atTop -> true
+                                        else -> false
+                                    }
+
+                                if (canNormalScroll) {
+                                    scope.launch {
+                                        scrollState.scrollTo(
+                                            (scrollState.value - dragAmount.toInt()).coerceIn(0, scrollState.maxValue),
+                                        )
+                                    }
+                                } else {
+                                    val dampened = dragAmount * FAVORITES_OVERSCROLL_RESISTANCE
+                                    scope.launch {
+                                        val nextOverscroll = overscrollOffset.value + dampened
+                                        overscrollOffset.snapTo(nextOverscroll)
+                                        if (!isSearchActive &&
+                                            !didTriggerSearchDuringDrag &&
+                                            atTop &&
+                                            dragAmount > 0f &&
+                                            nextOverscroll >= overscrollTriggerPx
+                                        ) {
+                                            didTriggerSearchDuringDrag = true
+                                            onSearchActivated()
+                                        }
+                                        if (!isSearchActive &&
+                                            !didTriggerAppListDuringDrag &&
+                                            atBottom &&
+                                            dragAmount < 0f &&
+                                            nextOverscroll <= -overscrollTriggerPx
+                                        ) {
+                                            didTriggerAppListDuringDrag = true
+                                            onAppListActivated()
+                                        }
+                                    }
+                                }
+                            },
+                        )
+                    }.verticalScroll(scrollState, enabled = false),
+            verticalArrangement =
+                if (hasScrollableContent || useCleanHomeWidgetLayout) {
+                    Arrangement.Top
+                } else {
+                    Arrangement.Center
+                },
+        ) {
+            Spacer(
+                modifier =
+                    Modifier.height(
+                        if (useCleanHomeWidgetLayout) {
+                            layoutMetrics.cleanHomeWidgetTopPaddingDp.dp
+                        } else {
+                            layoutMetrics.favoritesTopMarginDp.dp
+                        },
+                    ),
             )
 
             orderedWidgetStacks.forEach { widgetStack ->
@@ -495,35 +460,52 @@ internal fun FavoritesPanel(
                 key(stackId) {
                     val index = orderedWidgetStacks.indexOfFirst { stack -> widgetStackId(stack) == stackId }
                     val activeRowHeight = widgetRowMetrics[activeDragWidgetStackId]?.height.orZero()
-                    val laneShiftY = when {
-                        activeDragWidgetStackId == -1 || index == -1 -> 0f
-                        index == activeDragWidgetStartIndex -> 0f
-                        activeDragWidgetStartIndex < activeDragWidgetTargetIndex &&
-                            index in (activeDragWidgetStartIndex + 1)..activeDragWidgetTargetIndex -> -activeRowHeight
-                        activeDragWidgetStartIndex > activeDragWidgetTargetIndex &&
-                            index in activeDragWidgetTargetIndex until activeDragWidgetStartIndex -> activeRowHeight
-                        else -> 0f
-                    }
+                    val laneShiftY =
+                        when {
+                            activeDragWidgetStackId == null || index == -1 -> 0f
+                            index == activeDragWidgetStartIndex -> 0f
+                            activeDragWidgetStartIndex < activeDragWidgetTargetIndex &&
+                                index in (activeDragWidgetStartIndex + 1)..activeDragWidgetTargetIndex -> -activeRowHeight
+                            activeDragWidgetStartIndex > activeDragWidgetTargetIndex &&
+                                index in activeDragWidgetTargetIndex until activeDragWidgetStartIndex -> activeRowHeight
+                            else -> 0f
+                        }
 
                     if (widgetReorderMode) {
                         ReorderableWidgetStackRow(
                             widgetStack = widgetStack,
                             stackIndex = index,
                             isActiveDrag = activeDragWidgetStackId == stackId,
-                            dragOffsetY = if (activeDragWidgetStackId == stackId) {
-                                activeDragWidgetOffsetY
-                            } else {
-                                0f
-                            },
+                            dragOffsetY =
+                                if (activeDragWidgetStackId == stackId) {
+                                    activeDragWidgetOffsetY
+                                } else {
+                                    0f
+                                },
                             laneShiftY = laneShiftY,
                             createWidgetView = createWidgetView,
                             getWidgetMinHeightDp = getWidgetMinHeightDp,
                             onAddWidgetToStack = onAddWidgetToStack,
                             onRemoveWidget = onRemoveWidget,
-                            onDragStart = {
-                                val freshIndex = orderedWidgetStacks.indexOfFirst { stack ->
-                                    widgetStackId(stack) == stackId
+                            onMoveUp = {
+                                if (index > 0) {
+                                    val moved = orderedWidgetStacks.removeAt(index)
+                                    orderedWidgetStacks.add(index - 1, moved)
+                                    persistWidgetOrder()
                                 }
+                            },
+                            onMoveDown = {
+                                if (index in 0 until orderedWidgetStacks.lastIndex) {
+                                    val moved = orderedWidgetStacks.removeAt(index)
+                                    orderedWidgetStacks.add(index + 1, moved)
+                                    persistWidgetOrder()
+                                }
+                            },
+                            onDragStart = {
+                                val freshIndex =
+                                    orderedWidgetStacks.indexOfFirst { stack ->
+                                        widgetStackId(stack) == stackId
+                                    }
                                 if (freshIndex == -1) return@ReorderableWidgetStackRow
 
                                 activeDragWidgetStackId = stackId
@@ -567,17 +549,19 @@ internal fun FavoritesPanel(
 
             if (showFavoriteApps && favorites.isNotEmpty()) {
                 SectionHeader(
-                    text = "FAVORITES",
-                    topPaddingDp = if (orderedWidgetStacks.isNotEmpty()) {
-                        0f
-                    } else {
-                        null
-                    },
-                    bottomPaddingDp = if (orderedWidgetStacks.isNotEmpty()) {
-                        0f
-                    } else {
-                        null
-                    },
+                    text = stringResource(R.string.favorites).uppercase(),
+                    topPaddingDp =
+                        if (orderedWidgetStacks.isNotEmpty()) {
+                            0f
+                        } else {
+                            null
+                        },
+                    bottomPaddingDp =
+                        if (orderedWidgetStacks.isNotEmpty()) {
+                            0f
+                        } else {
+                            null
+                        },
                     modifier = Modifier.graphicsLayer { alpha = favAlpha },
                 )
 
@@ -585,34 +569,52 @@ internal fun FavoritesPanel(
                     key(favoriteComponentId(app)) {
                         if (reorderMode) {
                             val componentId = favoriteComponentId(app)
-                            val index = orderedFavorites.indexOfFirst {
-                                favoriteComponentId(it) == componentId
-                            }
+                            val index =
+                                orderedFavorites.indexOfFirst {
+                                    favoriteComponentId(it) == componentId
+                                }
                             val activeRowHeight = rowMetrics[activeDragComponentId]?.height.orZero()
-                            val laneShiftY = when {
-                                activeDragComponentId == null || index == -1 -> 0f
-                                index == activeDragStartIndex -> 0f
-                                activeDragStartIndex < activeDragTargetIndex &&
-                                    index in (activeDragStartIndex + 1)..activeDragTargetIndex -> -activeRowHeight
-                                activeDragStartIndex > activeDragTargetIndex &&
-                                    index in activeDragTargetIndex until activeDragStartIndex -> activeRowHeight
-                                else -> 0f
-                            }
+                            val laneShiftY =
+                                when {
+                                    activeDragComponentId == null || index == -1 -> 0f
+                                    index == activeDragStartIndex -> 0f
+                                    activeDragStartIndex < activeDragTargetIndex &&
+                                        index in (activeDragStartIndex + 1)..activeDragTargetIndex -> -activeRowHeight
+                                    activeDragStartIndex > activeDragTargetIndex &&
+                                        index in activeDragTargetIndex until activeDragStartIndex -> activeRowHeight
+                                    else -> 0f
+                                }
 
                             ReorderableFavoriteRow(
                                 app = app,
                                 hideAppIcons = settings.hideAppIcons,
                                 isActiveDrag = activeDragComponentId == componentId,
-                                dragOffsetY = if (activeDragComponentId == componentId) {
-                                    activeDragOffsetY
-                                } else {
-                                    0f
-                                },
+                                dragOffsetY =
+                                    if (activeDragComponentId == componentId) {
+                                        activeDragOffsetY
+                                    } else {
+                                        0f
+                                    },
                                 laneShiftY = laneShiftY,
-                                onDragStart = {
-                                    val freshIndex = orderedFavorites.indexOfFirst {
-                                        favoriteComponentId(it) == componentId
+                                onMoveUp = {
+                                    if (index > 0) {
+                                        val moved = orderedFavorites.removeAt(index)
+                                        orderedFavorites.add(index - 1, moved)
+                                        persistFavoriteOrder()
                                     }
+                                },
+                                onMoveDown = {
+                                    if (index in 0 until orderedFavorites.lastIndex) {
+                                        val moved = orderedFavorites.removeAt(index)
+                                        orderedFavorites.add(index + 1, moved)
+                                        persistFavoriteOrder()
+                                    }
+                                },
+                                onDragStart = {
+                                    val freshIndex =
+                                        orderedFavorites.indexOfFirst {
+                                            favoriteComponentId(it) == componentId
+                                        }
                                     if (freshIndex == -1) return@ReorderableFavoriteRow
 
                                     activeDragComponentId = componentId
@@ -650,23 +652,25 @@ internal fun FavoritesPanel(
                     }
                 }
                 Spacer(
-                    modifier = Modifier.height(
-                        if (hasScrollableContent) {
-                            0.dp
-                        } else {
-                            layoutMetrics.favoritesBottomSpacerDp.dp
-                        },
-                    ),
+                    modifier =
+                        Modifier.height(
+                            if (hasScrollableContent) {
+                                0.dp
+                            } else {
+                                layoutMetrics.favoritesBottomSpacerDp.dp
+                            },
+                        ),
                 )
             } else if (showFavoriteApps && orderedWidgetStacks.isEmpty()) {
                 Text(
-                    text = "No favorites yet. Long-press any app and choose Favorite.",
-                    modifier = Modifier
-                        .padding(
-                            horizontal = layoutMetrics.rowHorizontalPaddingDp.dp,
-                            vertical = layoutMetrics.rowVerticalPaddingDp.dp,
-                        )
-                        .graphicsLayer { alpha = favAlpha * 0.78f },
+                    text = stringResource(R.string.no_favorites),
+                    modifier =
+                        Modifier
+                            .padding(
+                                horizontal = layoutMetrics.rowHorizontalPaddingDp.dp,
+                                vertical = layoutMetrics.rowVerticalPaddingDp.dp,
+                            ).clickable(onClick = onAppListActivated)
+                            .graphicsLayer { alpha = favAlpha * 0.78f },
                     style = MaterialTheme.typography.bodyMedium,
                 )
             }
@@ -733,20 +737,14 @@ internal fun FavoritesPanel(
                 contentColor = MaterialTheme.colorScheme.onSurface,
             ) {
                 SettingsSheet(
-                    settings = settings.copy(
-                        hideStatusBar = hideStatusBarSettingsDraft ?: settings.hideStatusBar,
-                    ),
-                    onHideStatusBarChanged = { enabled ->
-                        hideStatusBarSettingsDraft = enabled
-                        onHideStatusBarChanged(enabled)
-                    },
+                    settings = settings,
+                    onHideStatusBarChanged = onHideStatusBarChanged,
                     onHideAppIconsChanged = onHideAppIconsChanged,
                     onHideSearchButtonChanged = onHideSearchButtonChanged,
                     onCleanHomeScreenChanged = onCleanHomeScreenChanged,
                     onHomeRowClicked = ::openHomeRowSheet,
                     onFontClicked = ::openFontSheet,
                     onResetClicked = {
-                        hideStatusBarSettingsDraft = LauncherSettings().hideStatusBar
                         onResetSettings()
                     },
                     onBackClicked = {
@@ -791,942 +789,3 @@ internal fun FavoritesPanel(
         }
     }
 }
-
-@Composable
-private fun FavoritesOptionsSheet(
-    isHiddenMode: Boolean,
-    reorderMode: Boolean,
-    widgetReorderMode: Boolean,
-    hasFavorites: Boolean,
-    onHiddenModeClicked: () -> Unit,
-    onReorderWidgetsClicked: () -> Unit,
-    onReorderFavoritesClicked: () -> Unit,
-    onSettingsClicked: () -> Unit,
-) {
-    val layoutMetrics = LocalHomeLayoutMetrics.current
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(
-                start = layoutMetrics.sheetHorizontalPaddingDp.dp,
-                end = layoutMetrics.sheetHorizontalPaddingDp.dp,
-                bottom = layoutMetrics.sheetBottomPaddingDp.dp,
-            ),
-    ) {
-        Text(
-            text = "Favorites",
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(bottom = layoutMetrics.sheetTitleBottomPaddingDp.dp),
-        )
-
-        SheetActionRow(
-            icon = if (isHiddenMode) "×" else "◌",
-            title = if (isHiddenMode) "Exit unhide mode" else "Unhide mode",
-            subtitle = if (isHiddenMode) {
-                "Return to normal apps"
-            } else {
-                "Show hidden apps and hide normal apps"
-            },
-            active = isHiddenMode,
-            onClick = onHiddenModeClicked,
-        )
-
-        SheetActionRow(
-            icon = "↕",
-            title = if (widgetReorderMode) "Done editing widgets" else "Edit widgets",
-            subtitle = if (widgetReorderMode) {
-                "Save widget order and removals"
-            } else {
-                "Reorder, remove, or add widgets"
-            },
-            active = widgetReorderMode,
-            onClick = onReorderWidgetsClicked,
-        )
-
-        if (hasFavorites) {
-            SheetActionRow(
-                icon = "↕",
-                title = if (reorderMode) "Done reordering" else "Reorder favorites",
-                subtitle = if (reorderMode) {
-                    "Save the current favorite order"
-                } else {
-                    "Drag favorites into a custom order"
-                },
-                active = reorderMode,
-                onClick = onReorderFavoritesClicked,
-            )
-        }
-
-        SheetActionRow(
-            icon = "⚙",
-            title = "Settings",
-            subtitle = "Launcher settings",
-            onClick = onSettingsClicked,
-        )
-    }
-}
-
-@Composable
-private fun SettingsSheet(
-    settings: LauncherSettings,
-    onHideStatusBarChanged: (Boolean) -> Unit,
-    onHideAppIconsChanged: (Boolean) -> Unit,
-    onHideSearchButtonChanged: (Boolean) -> Unit,
-    onCleanHomeScreenChanged: (Boolean) -> Unit,
-    onHomeRowClicked: () -> Unit,
-    onFontClicked: () -> Unit,
-    onResetClicked: () -> Unit,
-    onBackClicked: () -> Unit,
-) {
-    val layoutMetrics = LocalHomeLayoutMetrics.current
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(
-                start = layoutMetrics.sheetHorizontalPaddingDp.dp,
-                end = layoutMetrics.sheetHorizontalPaddingDp.dp,
-                bottom = layoutMetrics.sheetBottomPaddingDp.dp,
-            ),
-    ) {
-        Text(
-            text = "Settings",
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(bottom = layoutMetrics.sheetTitleBottomPaddingDp.dp),
-        )
-
-        SheetActionRow(
-            icon = "‹",
-            title = "Back",
-            subtitle = "Return to Favorites",
-            onClick = onBackClicked,
-        )
-
-        SettingsToggleRow(
-            title = "Hide the statusbar",
-            subtitle = "Restarts the launcher when Settings closes",
-            checked = settings.hideStatusBar,
-            onCheckedChange = onHideStatusBarChanged,
-        )
-
-        SettingsToggleRow(
-            title = "Hide app icons",
-            subtitle = "Show app names without icons",
-            checked = settings.hideAppIcons,
-            onCheckedChange = onHideAppIconsChanged,
-        )
-
-        SettingsToggleRow(
-            title = "Hide search button",
-            subtitle = "Use app list overscroll to search",
-            checked = settings.hideSearchButton,
-            onCheckedChange = onHideSearchButtonChanged,
-        )
-
-        SettingsToggleRow(
-            title = "Clean home screen",
-            subtitle = "Hide favorites and AZRail on Home",
-            checked = settings.cleanHomeScreen,
-            onCheckedChange = onCleanHomeScreenChanged,
-        )
-
-        SheetActionRow(
-            icon = "⌂",
-            title = "Home row",
-            subtitle = settings.homeRowNavigationMode.displayName,
-            onClick = onHomeRowClicked,
-        )
-
-        SheetActionRow(
-            icon = "Aa",
-            title = "Font",
-            subtitle = settings.font.displayName,
-            onClick = onFontClicked,
-        )
-
-        SheetActionRow(
-            icon = "↺",
-            title = "Reset to default",
-            subtitle = "Restore original launcher settings",
-            onClick = onResetClicked,
-        )
-    }
-}
-
-@Composable
-private fun HomeRowSheet(
-    selectedMode: HomeRowNavigationMode,
-    onModeSelected: (HomeRowNavigationMode) -> Unit,
-    onBackClicked: () -> Unit,
-) {
-    val layoutMetrics = LocalHomeLayoutMetrics.current
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(
-                start = layoutMetrics.sheetHorizontalPaddingDp.dp,
-                end = layoutMetrics.sheetHorizontalPaddingDp.dp,
-                bottom = layoutMetrics.sheetBottomPaddingDp.dp,
-            ),
-    ) {
-        Text(
-            text = "Home row",
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(bottom = layoutMetrics.sheetTitleBottomPaddingDp.dp),
-        )
-
-        SheetActionRow(
-            icon = "‹",
-            title = "Back",
-            subtitle = "Return to Settings",
-            onClick = onBackClicked,
-        )
-
-        HomeRowNavigationMode.entries.forEach { mode ->
-            SheetActionRow(
-                icon = if (mode == selectedMode) "✓" else " ",
-                title = mode.displayName,
-                subtitle = mode.description,
-                active = mode == selectedMode,
-                onClick = { onModeSelected(mode) },
-            )
-        }
-    }
-}
-
-@Composable
-private fun FontSheet(
-    selectedFont: LauncherFont,
-    onFontSelected: (LauncherFont) -> Unit,
-    onBackClicked: () -> Unit,
-) {
-    val layoutMetrics = LocalHomeLayoutMetrics.current
-
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(
-                start = layoutMetrics.sheetHorizontalPaddingDp.dp,
-                end = layoutMetrics.sheetHorizontalPaddingDp.dp,
-                bottom = layoutMetrics.sheetBottomPaddingDp.dp,
-            ),
-    ) {
-        Text(
-            text = "Font",
-            style = MaterialTheme.typography.titleMedium,
-            modifier = Modifier.padding(bottom = layoutMetrics.sheetTitleBottomPaddingDp.dp),
-        )
-
-        SheetActionRow(
-            icon = "‹",
-            title = "Back",
-            subtitle = "Return to Settings",
-            onClick = onBackClicked,
-        )
-
-        LauncherFont.entries.forEach { font ->
-            FontOptionRow(
-                icon = if (font == selectedFont) "✓" else " ",
-                font = font,
-                subtitle = if (font == LauncherFont.System) {
-                    "Use Android's default font"
-                } else {
-                    "Preview in ${font.displayName}"
-                },
-                active = font == selectedFont,
-                onClick = { onFontSelected(font) },
-            )
-        }
-    }
-}
-
-@Composable
-private fun FontOptionRow(
-    icon: String,
-    font: LauncherFont,
-    subtitle: String,
-    active: Boolean = false,
-    onClick: () -> Unit,
-) {
-    val layoutMetrics = LocalHomeLayoutMetrics.current
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = layoutMetrics.sheetRowVerticalPaddingDp.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = icon,
-            color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-            style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.size(layoutMetrics.sheetIconSizeDp.dp),
-        )
-
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .padding(start = layoutMetrics.sheetContentStartPaddingDp.dp),
-        ) {
-            Text(
-                text = font.displayName,
-                color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                style = MaterialTheme.typography.titleMedium.copy(
-                    fontFamily = font.toPreviewFontFamily(),
-                ),
-            )
-            Text(
-                text = subtitle,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        }
-    }
-}
-
-@Composable
-private fun SettingsToggleRow(
-    title: String,
-    subtitle: String,
-    checked: Boolean,
-    onCheckedChange: (Boolean) -> Unit,
-) {
-    val layoutMetrics = LocalHomeLayoutMetrics.current
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onCheckedChange(!checked) }
-            .padding(vertical = layoutMetrics.sheetRowVerticalPaddingDp.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(
-            modifier = Modifier.weight(1f),
-        ) {
-            Text(
-                text = title,
-                color = MaterialTheme.colorScheme.onSurface,
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Text(
-                text = subtitle,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        }
-
-        Switch(
-            checked = checked,
-            onCheckedChange = onCheckedChange,
-        )
-    }
-}
-
-@Composable
-private fun SheetActionRow(
-    icon: String,
-    title: String,
-    subtitle: String,
-    active: Boolean = false,
-    onClick: () -> Unit,
-) {
-    val layoutMetrics = LocalHomeLayoutMetrics.current
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(vertical = layoutMetrics.sheetRowVerticalPaddingDp.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = icon,
-            color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-            style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.size(layoutMetrics.sheetIconSizeDp.dp),
-        )
-
-        Column(
-            modifier = Modifier
-                .weight(1f)
-                .padding(start = layoutMetrics.sheetContentStartPaddingDp.dp),
-        ) {
-            Text(
-                text = title,
-                color = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Text(
-                text = subtitle,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        }
-    }
-}
-
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun WidgetStackRow(
-    widgetStack: WidgetStack,
-    createWidgetView: (Int) -> AppWidgetHostView?,
-    getWidgetMinHeightDp: (Int) -> Int?,
-    modifier: Modifier = Modifier,
-) {
-    WidgetStackContent(
-        widgetStack = widgetStack,
-        createWidgetView = createWidgetView,
-        getWidgetMinHeightDp = getWidgetMinHeightDp,
-        showAddPlaceholder = false,
-        onWidgetHoldRelease = null,
-        modifier = modifier
-            .fillMaxWidth(),
-    )
-}
-
-@Composable
-private fun AddWidgetEditRow(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val layoutMetrics = LocalHomeLayoutMetrics.current
-
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick)
-            .padding(
-                start = layoutMetrics.widgetRowStartPaddingDp.dp,
-                end = layoutMetrics.widgetRowEndPaddingDp.dp,
-                top = layoutMetrics.widgetRowTopPaddingDp.dp,
-                bottom = layoutMetrics.widgetRowBottomPaddingDp.dp,
-            ),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(
-            text = "+",
-            color = MaterialTheme.colorScheme.primary,
-            style = MaterialTheme.typography.headlineSmall,
-            modifier = Modifier.size(layoutMetrics.sheetIconSizeDp.dp),
-        )
-        Column(
-            modifier = Modifier.padding(start = layoutMetrics.sheetContentStartPaddingDp.dp),
-        ) {
-            Text(
-                text = "Add stack",
-                style = MaterialTheme.typography.titleMedium,
-            )
-            Text(
-                text = "Place a new widget stack above Favorites",
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        }
-    }
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun ReorderableWidgetStackRow(
-    widgetStack: WidgetStack,
-    stackIndex: Int,
-    isActiveDrag: Boolean,
-    dragOffsetY: Float,
-    laneShiftY: Float,
-    createWidgetView: (Int) -> AppWidgetHostView?,
-    getWidgetMinHeightDp: (Int) -> Int?,
-    onAddWidgetToStack: (Int) -> Unit,
-    onRemoveWidget: (Int) -> Unit,
-    onDragStart: () -> Unit,
-    onDragDelta: (Float) -> Unit,
-    onDragEnd: () -> Unit,
-    onMeasured: (FavoriteRowMetrics) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val layoutMetrics = LocalHomeLayoutMetrics.current
-    var showContextMenu by remember { mutableStateOf(false) }
-    var dragDistancePx by remember { mutableFloatStateOf(0f) }
-    val pagerState = rememberPagerState(pageCount = { widgetStack.widgetIds.size + 1 })
-    val currentWidgetId = widgetStack.widgetIds.getOrNull(pagerState.currentPage)
-    val density = LocalDensity.current
-    val contextMenuDragThresholdPx = with(density) {
-        layoutMetrics.widgetContextMenuDragThresholdDp.dp.toPx()
-    }
-    val settleSpec = spring<Float>(
-        stiffness = FAVORITES_REORDER_SETTLE_STIFFNESS,
-        dampingRatio = FAVORITES_REORDER_SETTLE_DAMPING,
-    )
-    val activeScale by animateFloatAsState(
-        targetValue = if (isActiveDrag) FAVORITES_REORDER_ACTIVE_SCALE else 1f,
-        animationSpec = settleSpec,
-        label = "widgetReorderScale",
-    )
-    val activeTint by animateFloatAsState(
-        targetValue = if (isActiveDrag) FAVORITES_REORDER_ACTIVE_TINT_ALPHA else 0f,
-        animationSpec = settleSpec,
-        label = "widgetReorderTint",
-    )
-    val animatedTranslationY by animateFloatAsState(
-        targetValue = dragOffsetY + laneShiftY,
-        animationSpec = settleSpec,
-        label = "widgetReorderTranslationY",
-    )
-
-    Box(
-        modifier = modifier
-            .fillMaxWidth()
-            .zIndex(if (isActiveDrag) 1f else 0f)
-            .graphicsLayer {
-                translationY = animatedTranslationY
-                scaleX = activeScale
-                scaleY = activeScale
-                shadowElevation = if (isActiveDrag) {
-                    layoutMetrics.reorderActiveShadowYDp.dp.toPx()
-                } else {
-                    0f
-                }
-            }
-            .onGloballyPositioned { coordinates ->
-                onMeasured(
-                    FavoriteRowMetrics(
-                        topY = coordinates.positionInParent().y,
-                        height = coordinates.size.height.toFloat(),
-                    )
-                )
-            }
-            .pointerInput(widgetStack, currentWidgetId, contextMenuDragThresholdPx) {
-                detectDragGesturesAfterLongPress(
-                    onDragStart = {
-                        dragDistancePx = 0f
-                        onDragStart()
-                    },
-                    onDragEnd = {
-                        if (dragDistancePx < contextMenuDragThresholdPx && currentWidgetId != null) {
-                            showContextMenu = true
-                        }
-                        onDragEnd()
-                    },
-                    onDragCancel = {
-                        onDragEnd()
-                    },
-                    onDrag = { change, dragAmount ->
-                        change.consume()
-                        dragDistancePx += dragAmount.getDistance()
-                        onDragDelta(dragAmount.y)
-                    },
-                )
-            }
-            .background(
-                color = Color.White.copy(alpha = activeTint),
-                shape = MaterialTheme.shapes.medium,
-            )
-            .padding(
-                start = layoutMetrics.widgetRowStartPaddingDp.dp,
-                end = layoutMetrics.widgetRowEndPaddingDp.dp,
-                top = layoutMetrics.widgetRowTopPaddingDp.dp,
-                bottom = layoutMetrics.widgetRowBottomPaddingDp.dp,
-            ),
-    ) {
-        WidgetStackContent(
-            widgetStack = widgetStack,
-            createWidgetView = createWidgetView,
-            getWidgetMinHeightDp = getWidgetMinHeightDp,
-            showAddPlaceholder = true,
-            onAddWidgetToStack = { onAddWidgetToStack(stackIndex) },
-            onWidgetHoldRelease = { showContextMenu = true },
-            pagerState = pagerState,
-            modifier = Modifier.fillMaxWidth(),
-        )
-
-        EditDragHandle(
-            text = "↕",
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(
-                    top = layoutMetrics.widgetDragHandleTopPaddingDp.dp,
-                    end = layoutMetrics.widgetDragHandleEndPaddingDp.dp,
-                ),
-        )
-
-        DropdownMenu(
-            expanded = showContextMenu,
-            onDismissRequest = { showContextMenu = false },
-        ) {
-            DropdownMenuItem(
-                text = { Text("Remove") },
-                onClick = {
-                    showContextMenu = false
-                    currentWidgetId?.let(onRemoveWidget)
-                },
-            )
-        }
-    }
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun WidgetStackContent(
-    widgetStack: WidgetStack,
-    createWidgetView: (Int) -> AppWidgetHostView?,
-    getWidgetMinHeightDp: (Int) -> Int?,
-    showAddPlaceholder: Boolean,
-    onAddWidgetToStack: (() -> Unit)? = null,
-    onWidgetHoldRelease: (() -> Unit)?,
-    modifier: Modifier = Modifier,
-    pagerState: androidx.compose.foundation.pager.PagerState = rememberPagerState(
-        pageCount = { widgetStack.widgetIds.size },
-    ),
-) {
-    val layoutMetrics = LocalHomeLayoutMetrics.current
-    val stackHeightDp = remember(widgetStack, getWidgetMinHeightDp, layoutMetrics.widgetMinHeightDp) {
-        widgetStack.widgetIds
-            .mapNotNull(getWidgetMinHeightDp)
-            .maxOrNull()
-            ?.coerceAtLeast(layoutMetrics.widgetMinHeightDp.toInt())
-            ?: layoutMetrics.widgetMinHeightDp.toInt()
-    }
-
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = modifier.padding(
-            start = layoutMetrics.widgetRowStartPaddingDp.dp,
-            end = layoutMetrics.widgetRowEndPaddingDp.dp,
-            top = layoutMetrics.widgetRowTopPaddingDp.dp,
-            bottom = layoutMetrics.widgetRowBottomPaddingDp.dp,
-        ),
-    ) {
-        HorizontalPager(
-            state = pagerState,
-            modifier = Modifier.fillMaxWidth(),
-        ) { page ->
-            val appWidgetId = widgetStack.widgetIds.getOrNull(page)
-            if (appWidgetId != null) {
-                AndroidView(
-                    factory = { context -> createWidgetView(appWidgetId) ?: FrameLayout(context) },
-                    update = { view ->
-                        installWidgetHoldReleaseMenu(
-                            view = view,
-                            enabled = onWidgetHoldRelease != null,
-                            onHoldRelease = onWidgetHoldRelease,
-                        )
-                    },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(stackHeightDp.dp),
-                )
-            } else if (showAddPlaceholder && onAddWidgetToStack != null) {
-                AddWidgetToStackPlaceholder(
-                    onClick = onAddWidgetToStack,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(stackHeightDp.dp),
-                )
-            }
-        }
-
-        val pageCount = widgetStack.widgetIds.size + if (showAddPlaceholder) 1 else 0
-        if (pageCount > 1) {
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(layoutMetrics.widgetPageIndicatorSpacingDp.dp),
-                modifier = Modifier.padding(top = layoutMetrics.widgetPageIndicatorTopPaddingDp.dp),
-            ) {
-                repeat(pageCount) { index ->
-                    Box(
-                        modifier = Modifier
-                            .size(
-                                if (pagerState.currentPage == index) {
-                                    layoutMetrics.widgetPageIndicatorSelectedSizeDp.dp
-                                } else {
-                                    layoutMetrics.widgetPageIndicatorSizeDp.dp
-                                },
-                            )
-                            .background(
-                                color = Color.White.copy(
-                                    alpha = if (pagerState.currentPage == index) 0.82f else 0.38f,
-                                ),
-                                shape = CircleShape,
-                            ),
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun AddWidgetToStackPlaceholder(
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    Box(
-        contentAlignment = Alignment.Center,
-        modifier = modifier
-            .background(
-                color = Color.White.copy(alpha = 0.08f),
-                shape = MaterialTheme.shapes.medium,
-            )
-            .clickable(onClick = onClick),
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally,
-        ) {
-            Text(
-                text = "+",
-                color = Color.White.copy(alpha = 0.9f),
-                style = MaterialTheme.typography.displaySmall,
-            )
-            Text(
-                text = "Add widget",
-                color = Color.White.copy(alpha = 0.72f),
-                style = MaterialTheme.typography.bodyMedium,
-            )
-        }
-    }
-}
-
-private fun installWidgetHoldReleaseMenu(
-    view: View,
-    enabled: Boolean,
-    onHoldRelease: (() -> Unit)?,
-) {
-    if (!enabled || onHoldRelease == null) {
-        clearWidgetHoldReleaseMenu(view)
-        return
-    }
-
-    view.setOnLongClickListener { true }
-    view.setOnTouchListener(
-        WidgetHoldReleaseTouchListener(
-            onHoldRelease = onHoldRelease,
-        ),
-    )
-
-    if (view is ViewGroup) {
-        for (index in 0 until view.childCount) {
-            installWidgetHoldReleaseMenu(
-                view = view.getChildAt(index),
-                enabled = true,
-                onHoldRelease = onHoldRelease,
-            )
-        }
-    }
-}
-
-private fun clearWidgetHoldReleaseMenu(view: View) {
-    view.setOnLongClickListener(null)
-    view.setOnTouchListener(null)
-
-    if (view is ViewGroup) {
-        for (index in 0 until view.childCount) {
-            clearWidgetHoldReleaseMenu(view.getChildAt(index))
-        }
-    }
-}
-
-private class WidgetHoldReleaseTouchListener(
-    private val onHoldRelease: () -> Unit,
-) : View.OnTouchListener {
-    private var downX = 0f
-    private var downY = 0f
-    private var longPressReached = false
-    private var cancelled = false
-    private var longPressRunnable: Runnable? = null
-
-    override fun onTouch(view: View, event: MotionEvent): Boolean {
-        when (event.actionMasked) {
-            MotionEvent.ACTION_DOWN -> {
-                downX = event.x
-                downY = event.y
-                longPressReached = false
-                cancelled = false
-                longPressRunnable = Runnable {
-                    longPressReached = true
-                }.also { runnable ->
-                    view.postDelayed(runnable, ViewConfiguration.getLongPressTimeout().toLong())
-                }
-                return false
-            }
-
-            MotionEvent.ACTION_MOVE -> {
-                val distance = hypot(
-                    (event.x - downX).toDouble(),
-                    (event.y - downY).toDouble(),
-                ).toFloat()
-                if (distance > view.context.scaledTouchSlopForWidgets()) {
-                    cancelled = true
-                    cancelLongPressRunnable(view)
-                }
-                return longPressReached && !cancelled
-            }
-
-            MotionEvent.ACTION_UP -> {
-                val shouldOpenMenu = longPressReached && !cancelled
-                cancelLongPressRunnable(view)
-                if (shouldOpenMenu) {
-                    onHoldRelease()
-                    return true
-                }
-                return false
-            }
-
-            MotionEvent.ACTION_CANCEL -> {
-                cancelLongPressRunnable(view)
-                return false
-            }
-        }
-
-        return false
-    }
-
-    private fun cancelLongPressRunnable(view: View) {
-        longPressRunnable?.let(view::removeCallbacks)
-        longPressRunnable = null
-    }
-}
-
-private fun android.content.Context.scaledTouchSlopForWidgets(): Float {
-    return ViewConfiguration.get(this).scaledTouchSlop.toFloat()
-}
-
-@Composable
-private fun EditDragHandle(
-    text: String,
-    modifier: Modifier = Modifier,
-) {
-    val layoutMetrics = LocalHomeLayoutMetrics.current
-
-    Text(
-        text = text,
-        color = Color.White.copy(alpha = 0.84f),
-        style = MaterialTheme.typography.headlineMedium,
-        modifier = modifier
-            .padding(horizontal = layoutMetrics.editDragHandleHorizontalPaddingDp.dp),
-    )
-}
-
-@OptIn(ExperimentalFoundationApi::class)
-@Composable
-private fun ReorderableFavoriteRow(
-    app: LauncherApp,
-    hideAppIcons: Boolean,
-    isActiveDrag: Boolean,
-    dragOffsetY: Float,
-    laneShiftY: Float,
-    onDragStart: () -> Unit,
-    onDragDelta: (Float) -> Unit,
-    onDragEnd: () -> Unit,
-    onMeasured: (FavoriteRowMetrics) -> Unit,
-    modifier: Modifier = Modifier,
-) {
-    val layoutMetrics = LocalHomeLayoutMetrics.current
-    val icon = if (hideAppIcons) null else rememberAppIcon(app.packageName)
-
-    val settleSpec = spring<Float>(
-        stiffness = FAVORITES_REORDER_SETTLE_STIFFNESS,
-        dampingRatio = FAVORITES_REORDER_SETTLE_DAMPING,
-    )
-    val activeScale by animateFloatAsState(
-        targetValue = if (isActiveDrag) FAVORITES_REORDER_ACTIVE_SCALE else 1f,
-        animationSpec = settleSpec,
-        label = "reorderScale",
-    )
-    val activeTint by animateFloatAsState(
-        targetValue = if (isActiveDrag) FAVORITES_REORDER_ACTIVE_TINT_ALPHA else 0f,
-        animationSpec = settleSpec,
-        label = "reorderTint",
-    )
-    val animatedTranslationY by animateFloatAsState(
-        targetValue = dragOffsetY + laneShiftY,
-        animationSpec = settleSpec,
-        label = "reorderTranslationY",
-    )
-
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .graphicsLayer {
-                translationY = animatedTranslationY
-                scaleX = activeScale
-                scaleY = activeScale
-                alpha = 1f
-                shadowElevation = if (isActiveDrag) {
-                    layoutMetrics.reorderActiveShadowYDp.dp.toPx()
-                } else {
-                    0f
-                }
-            }
-            .onGloballyPositioned { coordinates ->
-                onMeasured(
-                    FavoriteRowMetrics(
-                        topY = coordinates.positionInParent().y,
-                        height = coordinates.size.height.toFloat(),
-                    )
-                )
-            }
-            .pointerInput(app.packageName, app.activityName) {
-                detectDragGesturesAfterLongPress(
-                    onDragStart = {
-                        onDragStart()
-                    },
-                    onDragEnd = {
-                        onDragEnd()
-                    },
-                    onDragCancel = {
-                        onDragEnd()
-                    },
-                    onDrag = { change, dragAmount ->
-                        change.consume()
-                        onDragDelta(dragAmount.y)
-                    },
-                )
-            }
-            .background(
-                color = Color.White.copy(alpha = activeTint),
-                shape = MaterialTheme.shapes.medium,
-            )
-            .padding(
-                horizontal = layoutMetrics.rowHorizontalPaddingDp.dp,
-                vertical = layoutMetrics.rowVerticalPaddingDp.dp,
-            ),
-        horizontalArrangement = Arrangement.spacedBy(layoutMetrics.rowIconSpacingDp.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        if (icon != null) {
-            androidx.compose.foundation.Image(
-                bitmap = icon,
-                contentDescription = null,
-                modifier = Modifier.size(layoutMetrics.favoriteRowIconSizeDp.dp),
-            )
-        }
-
-        Text(
-            text = app.label,
-            style = MaterialTheme.typography.headlineSmall.copy(
-                fontSize = MaterialTheme.typography.headlineSmall.fontSize * HOME_ROW_TEXT_SCALE,
-            ),
-            modifier = Modifier.weight(1f),
-        )
-
-        EditDragHandle(
-            text = "↕",
-        )
-    }
-}
-
-private data class FavoriteRowMetrics(
-    val topY: Float,
-    val height: Float,
-) {
-    val centerY: Float
-        get() = topY + (height / 2f)
-}
-
-private fun favoriteComponentId(app: LauncherApp): String = "${app.packageName}/${app.activityName}"
-
-private fun widgetStackId(stack: WidgetStack): Int = stack.widgetIds.firstOrNull() ?: -1
-
-private fun Float?.orZero(): Float = this ?: 0f

@@ -15,6 +15,14 @@ Waterfall Launcher is a small Android home screen focused on fast app access, re
 - App details and uninstall actions from app-row menus.
 - Live app-list refresh when packages are installed, removed, changed, or replaced.
 
+## Using Waterfall
+
+- Tap the settings button on Favorites, or long-press an empty part of the home screen, to customize the launcher.
+- Use the A–Z rail to move between Favorites and app sections. In clean-home mode the hidden rail remains active at the right edge.
+- Search filters as you type; tap a result or submit the keyboard search action to launch the highlighted match.
+- Long-press an app for favorite, hide, app-info, and uninstall actions.
+- Hidden-app mode has a visible exit banner and can also be closed with Back.
+
 ## Requirements
 
 - Android 8.0 or newer.

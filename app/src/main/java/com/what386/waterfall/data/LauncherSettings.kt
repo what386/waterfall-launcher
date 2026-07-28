@@ -23,11 +23,10 @@ enum class HomeRowNavigationMode(
         storageValue = "hidden",
         displayName = "Hidden",
         description = "Hide navigation buttons",
-    );
+    ),
+    ;
 
     companion object {
-        fun fromStorageValue(value: String?): HomeRowNavigationMode {
-            return entries.firstOrNull { it.storageValue == value } ?: Shown
-        }
+        fun fromStorageValue(value: String?): HomeRowNavigationMode = entries.firstOrNull { it.storageValue == value } ?: Shown
     }
 }

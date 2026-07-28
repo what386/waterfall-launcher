@@ -33,18 +33,20 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
+import com.what386.waterfall.R
 import com.what386.waterfall.ui.home.LocalHomeLayoutMetrics
 import com.what386.waterfall.ui.model.LauncherApp
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 @Composable
 internal fun SectionHeader(
     text: String,
+    modifier: Modifier = Modifier,
     topPaddingDp: Float? = null,
     bottomPaddingDp: Float? = null,
-    modifier: Modifier = Modifier,
 ) {
     val layoutMetrics = LocalHomeLayoutMetrics.current
     val resolvedTopPaddingDp = topPaddingDp ?: layoutMetrics.sectionHeaderTopPaddingDp
@@ -53,14 +55,16 @@ internal fun SectionHeader(
     Text(
         text = text,
         style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.primary.copy(
-            alpha = HOME_LIST_SECTION_HEADER_ALPHA,
-        ),
-        modifier = modifier.padding(
-            start = layoutMetrics.sectionHeaderStartPaddingDp.dp,
-            top = resolvedTopPaddingDp.dp,
-            bottom = resolvedBottomPaddingDp.dp,
-        ),
+        color =
+            MaterialTheme.colorScheme.primary.copy(
+                alpha = HOME_LIST_SECTION_HEADER_ALPHA,
+            ),
+        modifier =
+            modifier.padding(
+                start = layoutMetrics.sectionHeaderStartPaddingDp.dp,
+                top = resolvedTopPaddingDp.dp,
+                bottom = resolvedBottomPaddingDp.dp,
+            ),
     )
 }
 
@@ -74,15 +78,19 @@ internal fun AppRow(
     onHideApp: (LauncherApp) -> Unit,
     onUnhideApp: (LauncherApp) -> Unit,
     hideAppIcons: Boolean,
-    isHighlighted: Boolean = false,
     modifier: Modifier = Modifier,
+    isHighlighted: Boolean = false,
 ) {
     val layoutMetrics = LocalHomeLayoutMetrics.current
     val context = LocalContext.current
-    val icon = if (hideAppIcons) null else rememberAppIcon(app.packageName)
+    val icon = if (hideAppIcons) null else rememberAppIcon(app)
     var showMenu by remember { mutableStateOf(false) }
     var isLaunching by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
+    val appActionsLabel = stringResource(R.string.app_actions)
+    val unableToLaunchMessage = stringResource(R.string.unable_to_launch, app.label)
+    val unableToOpenSettingsMessage = stringResource(R.string.unable_to_open_settings, app.label)
+    val unableToUninstallMessage = stringResource(R.string.unable_to_uninstall, app.label)
 
     val rowScale by animateFloatAsState(
         targetValue = if (isLaunching) HOME_ROW_PRESS_SCALE else 1f,
@@ -90,73 +98,76 @@ internal fun AppRow(
         label = "rowScale",
     )
     val rowTintAlpha by animateFloatAsState(
-        targetValue = when {
-            isLaunching -> HOME_ROW_PRESS_TINT_ALPHA
-            isHighlighted -> HOME_ROW_HIGHLIGHT_TINT_ALPHA
-            else -> 0f
-        },
+        targetValue =
+            when {
+                isLaunching -> HOME_ROW_PRESS_TINT_ALPHA
+                isHighlighted -> HOME_ROW_HIGHLIGHT_TINT_ALPHA
+                else -> 0f
+            },
         animationSpec = spring(),
         label = "rowTintAlpha",
     )
 
     Box(modifier = modifier.fillMaxWidth()) {
         Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .graphicsLayer {
-                    scaleX = rowScale
-                    scaleY = rowScale
-                }
-                .background(
-                    color = Color.White.copy(alpha = rowTintAlpha),
-                    shape = MaterialTheme.shapes.medium,
-                )
-                .combinedClickable(
-                    onClick = {
-                        if (isLaunching) return@combinedClickable
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .graphicsLayer {
+                        scaleX = rowScale
+                        scaleY = rowScale
+                    }.background(
+                        color = Color.White.copy(alpha = rowTintAlpha),
+                        shape = MaterialTheme.shapes.medium,
+                    ).combinedClickable(
+                        onLongClickLabel = appActionsLabel,
+                        onClick = {
+                            if (isLaunching) return@combinedClickable
 
-                        isLaunching = true
-                        scope.launch {
-                            delay(HOME_ROW_PRESS_LAUNCH_DELAY_MS)
+                            isLaunching = true
+                            scope.launch {
+                                delay(HOME_ROW_PRESS_LAUNCH_DELAY_MS)
 
-                            val intent = Intent(Intent.ACTION_MAIN).apply {
-                                addCategory(Intent.CATEGORY_LAUNCHER)
-                                component = ComponentName(app.packageName, app.activityName)
-                                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                val intent =
+                                    Intent(Intent.ACTION_MAIN).apply {
+                                        addCategory(Intent.CATEGORY_LAUNCHER)
+                                        component = ComponentName(app.packageName, app.activityName)
+                                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                                    }
+
+                                try {
+                                    context.startActivity(intent)
+                                } catch (_: Exception) {
+                                    Toast
+                                        .makeText(
+                                            context,
+                                            unableToLaunchMessage,
+                                            Toast.LENGTH_SHORT,
+                                        ).show()
+                                } finally {
+                                    isLaunching = false
+                                }
                             }
-
-                            try {
-                                context.startActivity(intent)
-                            } catch (_: Exception) {
-                                Toast.makeText(
-                                    context,
-                                    "Unable to launch ${app.label}",
-                                    Toast.LENGTH_SHORT,
-                                ).show()
-                            } finally {
-                                isLaunching = false
-                            }
-                        }
-                    },
-                    onLongClick = { showMenu = true },
-                )
-                .padding(
-                    horizontal = layoutMetrics.rowHorizontalPaddingDp.dp,
-                    vertical = layoutMetrics.rowVerticalPaddingDp.dp,
-                ),
+                        },
+                        onLongClick = { showMenu = true },
+                    ).padding(
+                        horizontal = layoutMetrics.rowHorizontalPaddingDp.dp,
+                        vertical = layoutMetrics.rowVerticalPaddingDp.dp,
+                    ),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (icon != null) {
                 Image(
                     bitmap = icon,
                     contentDescription = null,
-                    modifier = Modifier.size(
-                        if (isFavorite) {
-                            layoutMetrics.favoriteRowIconSizeDp.dp
-                        } else {
-                            layoutMetrics.appRowIconSizeDp.dp
-                        },
-                    ),
+                    modifier =
+                        Modifier.size(
+                            if (isFavorite) {
+                                layoutMetrics.favoriteRowIconSizeDp.dp
+                            } else {
+                                layoutMetrics.appRowIconSizeDp.dp
+                            },
+                        ),
                 )
 
                 Spacer(modifier = Modifier.width(layoutMetrics.rowIconSpacingDp.dp))
@@ -164,15 +175,16 @@ internal fun AppRow(
 
             Text(
                 text = app.label,
-                style = if (isFavorite) {
-                    MaterialTheme.typography.headlineSmall.copy(
-                        fontSize = MaterialTheme.typography.headlineSmall.fontSize * HOME_ROW_TEXT_SCALE,
-                    )
-                } else {
-                    MaterialTheme.typography.titleLarge.copy(
-                        fontSize = MaterialTheme.typography.titleLarge.fontSize * HOME_ROW_TEXT_SCALE,
-                    )
-                },
+                style =
+                    if (isFavorite) {
+                        MaterialTheme.typography.headlineSmall.copy(
+                            fontSize = MaterialTheme.typography.headlineSmall.fontSize * HOME_ROW_TEXT_SCALE,
+                        )
+                    } else {
+                        MaterialTheme.typography.titleLarge.copy(
+                            fontSize = MaterialTheme.typography.titleLarge.fontSize * HOME_ROW_TEXT_SCALE,
+                        )
+                    },
             )
         }
 
@@ -181,7 +193,13 @@ internal fun AppRow(
             onDismissRequest = { showMenu = false },
         ) {
             DropdownMenuItem(
-                text = { Text(if (app.isFavorite) "Unfavorite" else "Favorite") },
+                text = {
+                    Text(
+                        stringResource(
+                            if (app.isFavorite) R.string.unfavorite else R.string.favorite,
+                        ),
+                    )
+                },
                 onClick = {
                     showMenu = false
                     onToggleFavorite(app)
@@ -189,51 +207,57 @@ internal fun AppRow(
             )
 
             DropdownMenuItem(
-                text = { Text("App Info") },
+                text = { Text(stringResource(R.string.app_info)) },
                 onClick = {
                     showMenu = false
 
-                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
-                        data = Uri.fromParts("package", app.packageName, null)
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    }
+                    val intent =
+                        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                            data = Uri.fromParts("package", app.packageName, null)
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
 
                     try {
                         context.startActivity(intent)
                     } catch (_: Exception) {
-                        Toast.makeText(
-                            context,
-                            "Unable to open settings for ${app.label}",
-                            Toast.LENGTH_SHORT,
-                        ).show()
+                        Toast
+                            .makeText(
+                                context,
+                                unableToOpenSettingsMessage,
+                                Toast.LENGTH_SHORT,
+                            ).show()
                     }
                 },
             )
 
             DropdownMenuItem(
-                text = { Text("Uninstall") },
+                text = { Text(stringResource(R.string.uninstall)) },
                 onClick = {
                     showMenu = false
 
-                    val intent = Intent(Intent.ACTION_UNINSTALL_PACKAGE).apply {
-                        data = Uri.fromParts("package", app.packageName, null)
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    }
+                    val intent =
+                        Intent(Intent.ACTION_DELETE).apply {
+                            data = Uri.fromParts("package", app.packageName, null)
+                            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        }
 
                     try {
                         context.startActivity(intent)
                     } catch (_: Exception) {
-                        Toast.makeText(
-                            context,
-                            "Unable to uninstall ${app.label}",
-                            Toast.LENGTH_SHORT,
-                        ).show()
+                        Toast
+                            .makeText(
+                                context,
+                                unableToUninstallMessage,
+                                Toast.LENGTH_SHORT,
+                            ).show()
                     }
                 },
             )
 
             DropdownMenuItem(
-                text = { Text(if (isHiddenMode) "Unhide" else "Hide") },
+                text = {
+                    Text(stringResource(if (isHiddenMode) R.string.unhide else R.string.hide))
+                },
                 onClick = {
                     showMenu = false
                     if (isHiddenMode) {

@@ -2,9 +2,7 @@ package com.what386.waterfall.ui.home.azrail
 
 private const val FavoritesRailItem = '★'
 
-fun buildRailLetters(letterJumpTargets: Map<Char, Int>): List<Char> {
-    return listOf(FavoritesRailItem) + letterJumpTargets.keys.toList()
-}
+fun buildRailLetters(letterJumpTargets: Map<Char, Int>): List<Char> = listOf(FavoritesRailItem) + letterJumpTargets.keys.toList()
 
 fun isFavoritesRailItem(item: Char): Boolean = item == FavoritesRailItem
 

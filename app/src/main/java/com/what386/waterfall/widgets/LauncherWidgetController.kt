@@ -9,12 +9,13 @@ import android.view.ViewGroup
 import android.widget.FrameLayout
 import androidx.activity.ComponentActivity
 import androidx.activity.result.contract.ActivityResultContracts
+import com.what386.waterfall.data.LauncherPreferencesRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import com.what386.waterfall.data.LauncherPreferencesRepository
 
 class LauncherWidgetController(
     private val activity: ComponentActivity,
@@ -24,58 +25,75 @@ class LauncherWidgetController(
     private val appWidgetManager = AppWidgetManager.getInstance(activity)
     private val appWidgetHost = AppWidgetHost(activity.applicationContext, WidgetHostId)
 
-    val widgetIds: StateFlow<List<Int>> = preferencesRepository.widgetIds.stateIn(
-        scope = scope,
-        started = SharingStarted.Eagerly,
-        initialValue = emptyList(),
-    )
-
-    val widgetStacks: StateFlow<List<WidgetStack>> = preferencesRepository.widgetStacks.stateIn(
-        scope = scope,
-        started = SharingStarted.Eagerly,
-        initialValue = emptyList(),
-    )
-
-    private val configureWidgetLauncher = activity.registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult(),
-    ) { result ->
-        val appWidgetId = pendingConfigureWidgetId ?: return@registerForActivityResult
-        pendingConfigureWidgetId = null
-        if (result.resultCode == Activity.RESULT_OK) {
-            persistPickedWidget(appWidgetId)
-        } else {
-            pendingWidgetStackIndex = null
-            appWidgetHost.deleteAppWidgetId(appWidgetId)
+    init {
+        scope.launch {
+            val storedStacks = preferencesRepository.widgetStacks.first()
+            val validStacks =
+                storedStacks
+                    .map { stack ->
+                        stack.copy(
+                            widgetIds =
+                                stack.widgetIds.filter { appWidgetId ->
+                                    appWidgetManager.getAppWidgetInfo(appWidgetId) != null
+                                },
+                        )
+                    }.filter { it.widgetIds.isNotEmpty() }
+            if (validStacks != storedStacks) {
+                preferencesRepository.setWidgetStacks(validStacks)
+            }
         }
     }
 
-    private val pickWidgetLauncher = activity.registerForActivityResult(
-        ActivityResultContracts.StartActivityForResult(),
-    ) { result ->
-        val fallbackWidgetId = pendingPickWidgetId ?: return@registerForActivityResult
-        val appWidgetId = result.data?.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, fallbackWidgetId)
-            ?: fallbackWidgetId
-        pendingPickWidgetId = null
+    val widgetStacks: StateFlow<List<WidgetStack>> =
+        preferencesRepository.widgetStacks.stateIn(
+            scope = scope,
+            started = SharingStarted.Eagerly,
+            initialValue = emptyList(),
+        )
 
-        if (result.resultCode != Activity.RESULT_OK) {
-            pendingWidgetStackIndex = null
-            appWidgetHost.deleteAppWidgetId(appWidgetId)
-            return@registerForActivityResult
+    private val configureWidgetLauncher =
+        activity.registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult(),
+        ) { result ->
+            val appWidgetId = pendingConfigureWidgetId ?: return@registerForActivityResult
+            pendingConfigureWidgetId = null
+            if (result.resultCode == Activity.RESULT_OK) {
+                persistPickedWidget(appWidgetId)
+            } else {
+                pendingWidgetStackIndex = null
+                appWidgetHost.deleteAppWidgetId(appWidgetId)
+            }
         }
 
-        val providerInfo = appWidgetManager.getAppWidgetInfo(appWidgetId)
-        if (providerInfo?.configure != null) {
-            pendingConfigureWidgetId = appWidgetId
-            configureWidgetLauncher.launch(
-                Intent(AppWidgetManager.ACTION_APPWIDGET_CONFIGURE).apply {
-                    component = providerInfo.configure
-                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
-                },
-            )
-        } else {
-            persistPickedWidget(appWidgetId)
+    private val pickWidgetLauncher =
+        activity.registerForActivityResult(
+            ActivityResultContracts.StartActivityForResult(),
+        ) { result ->
+            val fallbackWidgetId = pendingPickWidgetId ?: return@registerForActivityResult
+            val appWidgetId =
+                result.data?.getIntExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, fallbackWidgetId)
+                    ?: fallbackWidgetId
+            pendingPickWidgetId = null
+
+            if (result.resultCode != Activity.RESULT_OK) {
+                pendingWidgetStackIndex = null
+                appWidgetHost.deleteAppWidgetId(appWidgetId)
+                return@registerForActivityResult
+            }
+
+            val providerInfo = appWidgetManager.getAppWidgetInfo(appWidgetId)
+            if (providerInfo?.configure != null) {
+                pendingConfigureWidgetId = appWidgetId
+                configureWidgetLauncher.launch(
+                    Intent(AppWidgetManager.ACTION_APPWIDGET_CONFIGURE).apply {
+                        component = providerInfo.configure
+                        putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
+                    },
+                )
+            } else {
+                persistPickedWidget(appWidgetId)
+            }
         }
-    }
 
     private var pendingPickWidgetId: Int? = null
     private var pendingConfigureWidgetId: Int? = null
@@ -87,10 +105,6 @@ class LauncherWidgetController(
 
     fun stopListening() {
         appWidgetHost.stopListening()
-    }
-
-    fun addWidget() {
-        addWidgetToNewStack()
     }
 
     fun addWidgetToNewStack() {
@@ -132,12 +146,6 @@ class LauncherWidgetController(
         }
     }
 
-    fun reorderWidgets(appWidgetIds: List<Int>) {
-        scope.launch {
-            preferencesRepository.setWidgetIds(appWidgetIds)
-        }
-    }
-
     fun reorderWidgetStacks(stacks: List<WidgetStack>) {
         scope.launch {
             preferencesRepository.setWidgetStacks(stacks)
@@ -148,16 +156,15 @@ class LauncherWidgetController(
         val providerInfo = appWidgetManager.getAppWidgetInfo(appWidgetId) ?: return null
         return appWidgetHost.createView(activity, appWidgetId, providerInfo).apply {
             setAppWidget(appWidgetId, providerInfo)
-            layoutParams = FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-            )
+            layoutParams =
+                FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                )
         }
     }
 
-    fun getWidgetMinHeightDp(appWidgetId: Int): Int? {
-        return appWidgetManager.getAppWidgetInfo(appWidgetId)?.minHeight
-    }
+    fun getWidgetMinHeightDp(appWidgetId: Int): Int? = appWidgetManager.getAppWidgetInfo(appWidgetId)?.minHeight
 
     companion object {
         private const val WidgetHostId = 2048

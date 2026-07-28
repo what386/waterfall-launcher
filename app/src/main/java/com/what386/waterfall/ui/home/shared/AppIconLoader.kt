@@ -1,6 +1,6 @@
 package com.what386.waterfall.ui.home.shared
 
-import android.graphics.drawable.Drawable
+import android.content.ComponentName
 import android.util.LruCache
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.produceState
@@ -8,43 +8,41 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.graphics.drawable.toBitmap
-import kotlinx.coroutines.Deferred
+import com.what386.waterfall.ui.model.LauncherApp
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.async
-import java.util.concurrent.ConcurrentHashMap
+import kotlinx.coroutines.withContext
 
-private const val MaxCachedAppIcons = 128
+private const val MaxCachedAppIconBytes = 16 * 1024 * 1024
 
-private val appIconCache = object : LruCache<String, ImageBitmap>(MaxCachedAppIcons) {}
-private val inFlightIconLoads = ConcurrentHashMap<String, Deferred<ImageBitmap?>>()
+private val appIconCache =
+    object : LruCache<String, ImageBitmap>(MaxCachedAppIconBytes) {
+        override fun sizeOf(
+            key: String,
+            value: ImageBitmap,
+        ): Int = value.width * value.height * 4
+    }
 
 @Composable
-fun rememberAppIcon(packageName: String): ImageBitmap? {
+fun rememberAppIcon(app: LauncherApp): ImageBitmap? {
     val packageManager = LocalContext.current.applicationContext.packageManager
-    return produceState<ImageBitmap?>(initialValue = appIconCache.get(packageName), key1 = packageName) {
+    return produceState<ImageBitmap?>(initialValue = appIconCache.get(app.componentId), key1 = app.componentId) {
         if (value != null) {
             return@produceState
         }
 
-        val newLoad = async(Dispatchers.IO) {
-            try {
-                val drawable: Drawable = packageManager.getApplicationIcon(packageName)
-                drawable.toBitmap().asImageBitmap().also { icon ->
-                    appIconCache.put(packageName, icon)
+        value =
+            withContext(Dispatchers.IO) {
+                try {
+                    val drawable =
+                        packageManager.getActivityIcon(
+                            ComponentName(app.packageName, app.activityName),
+                        )
+                    drawable.toBitmap().asImageBitmap().also { icon ->
+                        appIconCache.put(app.componentId, icon)
+                    }
+                } catch (_: Exception) {
+                    null
                 }
-            } catch (_: Exception) {
-                null
             }
-        }
-        val load = inFlightIconLoads.putIfAbsent(packageName, newLoad) ?: newLoad
-        if (load !== newLoad) {
-            newLoad.cancel()
-        }
-
-        value = try {
-            load.await()
-        } finally {
-            inFlightIconLoads.remove(packageName, load)
-        }
     }.value
 }

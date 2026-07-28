@@ -13,12 +13,13 @@ internal fun buildAppListLayout(
     favoriteOrder: List<String>,
 ): AppListLayout {
     val favoriteApps = apps.filter { it.isFavorite }
-    val favoritesById = favoriteApps.associateBy(::componentId)
-    val orderedFavorites = favoriteOrder
-        .mapNotNull(favoritesById::get)
+    val favoritesById = favoriteApps.associateBy { it.componentId }
+    val orderedFavorites =
+        favoriteOrder
+            .mapNotNull(favoritesById::get)
     val orderedFavoriteIds = favoriteOrder.toSet()
 
-    val appendedFavorites = favoriteApps.filter { componentId(it) !in orderedFavoriteIds }
+    val appendedFavorites = favoriteApps.filter { it.componentId !in orderedFavoriteIds }
     val favorites = orderedFavorites + appendedFavorites
     val appListStartIndex = 1 // category_pin_spacer
 
@@ -38,5 +39,3 @@ internal fun buildAppListLayout(
         letterJumpTargets = jumpTargets,
     )
 }
-
-private fun componentId(app: LauncherApp): String = "${app.packageName}/${app.activityName}"

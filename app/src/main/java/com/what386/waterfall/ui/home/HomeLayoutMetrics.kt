@@ -71,14 +71,15 @@ internal data class HomeLayoutMetrics(
     val azRailRightPullSetpointDp: Float,
 )
 
-internal val LocalHomeLayoutMetrics = staticCompositionLocalOf {
-    calculateHomeLayoutMetrics(
-        screenWidthDp = BASELINE_SCREEN_WIDTH_DP,
-        screenHeightDp = BASELINE_USABLE_HEIGHT_DP,
-        statusBarTopDp = 0f,
-        navigationBarBottomDp = 0f,
-    )
-}
+internal val LocalHomeLayoutMetrics =
+    staticCompositionLocalOf {
+        calculateHomeLayoutMetrics(
+            screenWidthDp = BASELINE_SCREEN_WIDTH_DP,
+            screenHeightDp = BASELINE_USABLE_HEIGHT_DP,
+            statusBarTopDp = 0f,
+            navigationBarBottomDp = 0f,
+        )
+    }
 
 internal fun calculateHomeLayoutMetrics(
     screenWidthDp: Float,
@@ -87,18 +88,21 @@ internal fun calculateHomeLayoutMetrics(
     navigationBarBottomDp: Float,
 ): HomeLayoutMetrics {
     val safeWidthDp = screenWidthDp.coerceAtLeast(MIN_SCREEN_WIDTH_DP)
-    val usableHeightDp = (screenHeightDp - statusBarTopDp - navigationBarBottomDp)
-        .coerceAtLeast(MIN_USABLE_HEIGHT_DP)
+    val usableHeightDp =
+        (screenHeightDp - statusBarTopDp - navigationBarBottomDp)
+            .coerceAtLeast(MIN_USABLE_HEIGHT_DP)
     val heightScale = (usableHeightDp / BASELINE_USABLE_HEIGHT_DP).coerceIn(0.78f, 1.18f)
     val widthScale = (safeWidthDp / BASELINE_SCREEN_WIDTH_DP).coerceIn(0.86f, 1.14f)
     val visualScale = sqrt(widthScale * heightScale).coerceIn(0.86f, 1.12f)
     val spacingScale = ((visualScale * 0.62f) + (heightScale * 0.38f)).coerceIn(0.82f, 1.16f)
     val horizontalScale = ((visualScale * 0.4f) + (widthScale * 0.6f)).coerceIn(0.84f, 1.14f)
     val touchScale = visualScale.coerceIn(0.9f, 1.12f)
-    val railHeightDp = (usableHeightDp * BASELINE_RAIL_HEIGHT_FRACTION)
-        .coerceIn(300f, 440f)
-    val homeRailHitHeightDp = (usableHeightDp * BASELINE_HOME_RAIL_HIT_HEIGHT_FRACTION)
-        .coerceIn(92f, 150f)
+    val railHeightDp =
+        (usableHeightDp * BASELINE_RAIL_HEIGHT_FRACTION)
+            .coerceIn(300f, 440f)
+    val homeRailHitHeightDp =
+        (usableHeightDp * BASELINE_HOME_RAIL_HIT_HEIGHT_FRACTION)
+            .coerceIn(92f, 150f)
 
     return HomeLayoutMetrics(
         categoryPinOffsetDp = scaleDp(340f, heightScale, min = 260f, max = 410f),
@@ -114,14 +118,16 @@ internal fun calculateHomeLayoutMetrics(
         appListContentEndPaddingDp = scaleDp(40f, widthScale, min = 32f, max = 48f),
         appListContentTopPaddingDp = scaleDp(16f, heightScale, min = 12f, max = 22f),
         appListContentBottomPaddingDp = scaleDp(24f, heightScale, min = 18f, max = 32f),
-        appListSearchTopPaddingDp = maxOf(
-            scaleDp(96f, heightScale, min = 76f, max = 116f),
-            statusBarTopDp + 56f,
-        ),
-        appListSearchBottomPaddingDp = maxOf(
-            scaleDp(80f, heightScale, min = 62f, max = 104f),
-            navigationBarBottomDp + 44f,
-        ),
+        appListSearchTopPaddingDp =
+            maxOf(
+                scaleDp(96f, heightScale, min = 76f, max = 116f),
+                statusBarTopDp + 56f,
+            ),
+        appListSearchBottomPaddingDp =
+            maxOf(
+                scaleDp(80f, heightScale, min = 62f, max = 104f),
+                navigationBarBottomDp + 44f,
+            ),
         favoritesTopMarginDp = scaleDp(88f, heightScale, min = 52f, max = 112f),
         favoritesCenterBiasUpDp = scaleDp(44f, heightScale, min = 26f, max = 56f),
         favoritesBottomSpacerDp = scaleDpByRatio(24f, spacingScale),

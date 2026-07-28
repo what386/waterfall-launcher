@@ -7,12 +7,13 @@ import org.junit.Test
 class HomeLayoutMetricsTest {
     @Test
     fun baselineScreenKeepsCurrentLayoutValues() {
-        val metrics = calculateHomeLayoutMetrics(
-            screenWidthDp = 360f,
-            screenHeightDp = 800f,
-            statusBarTopDp = 0f,
-            navigationBarBottomDp = 0f,
-        )
+        val metrics =
+            calculateHomeLayoutMetrics(
+                screenWidthDp = 360f,
+                screenHeightDp = 800f,
+                statusBarTopDp = 0f,
+                navigationBarBottomDp = 0f,
+            )
 
         assertEquals(340f, metrics.categoryPinOffsetDp, FLOAT_DELTA)
         assertEquals(120f, metrics.railYOffsetDp, FLOAT_DELTA)
@@ -27,12 +28,13 @@ class HomeLayoutMetricsTest {
 
     @Test
     fun shortScreenCompactsVerticalAnchors() {
-        val metrics = calculateHomeLayoutMetrics(
-            screenWidthDp = 360f,
-            screenHeightDp = 640f,
-            statusBarTopDp = 24f,
-            navigationBarBottomDp = 24f,
-        )
+        val metrics =
+            calculateHomeLayoutMetrics(
+                screenWidthDp = 360f,
+                screenHeightDp = 640f,
+                statusBarTopDp = 24f,
+                navigationBarBottomDp = 24f,
+            )
 
         assertTrue(metrics.categoryPinOffsetDp < 340f)
         assertTrue(metrics.railYOffsetDp < 120f)
@@ -44,12 +46,13 @@ class HomeLayoutMetricsTest {
 
     @Test
     fun tallScreenExpandsVerticalAnchorsWithoutRunawayGrowth() {
-        val metrics = calculateHomeLayoutMetrics(
-            screenWidthDp = 360f,
-            screenHeightDp = 960f,
-            statusBarTopDp = 0f,
-            navigationBarBottomDp = 0f,
-        )
+        val metrics =
+            calculateHomeLayoutMetrics(
+                screenWidthDp = 360f,
+                screenHeightDp = 960f,
+                statusBarTopDp = 0f,
+                navigationBarBottomDp = 0f,
+            )
 
         assertTrue(metrics.categoryPinOffsetDp > 340f)
         assertTrue(metrics.categoryPinOffsetDp <= 410f)
@@ -60,12 +63,13 @@ class HomeLayoutMetricsTest {
 
     @Test
     fun wideScreenExpandsHorizontalPaddingWithinBounds() {
-        val metrics = calculateHomeLayoutMetrics(
-            screenWidthDp = 480f,
-            screenHeightDp = 800f,
-            statusBarTopDp = 0f,
-            navigationBarBottomDp = 0f,
-        )
+        val metrics =
+            calculateHomeLayoutMetrics(
+                screenWidthDp = 480f,
+                screenHeightDp = 800f,
+                statusBarTopDp = 0f,
+                navigationBarBottomDp = 0f,
+            )
 
         assertTrue(metrics.appListContentStartPaddingDp > 28f)
         assertTrue(metrics.appListContentEndPaddingDp > 40f)

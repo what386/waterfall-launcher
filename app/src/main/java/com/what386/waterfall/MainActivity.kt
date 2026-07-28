@@ -1,19 +1,14 @@
 package com.what386.waterfall
 
+import android.content.Intent
 import android.os.Build
 import android.os.Bundle
-import android.content.Intent
-import android.view.WindowManager
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.launch
 import com.what386.waterfall.data.AppRepository
 import com.what386.waterfall.data.HomeRowNavigationMode
 import com.what386.waterfall.data.LauncherPreferencesRepository
@@ -21,6 +16,10 @@ import com.what386.waterfall.domain.LauncherInteractor
 import com.what386.waterfall.ui.home.LauncherHomeRoute
 import com.what386.waterfall.ui.theme.LauncherTheme
 import com.what386.waterfall.widgets.LauncherWidgetController
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     private lateinit var widgetController: LauncherWidgetController
@@ -32,20 +31,16 @@ class MainActivity : ComponentActivity() {
 
         enableEdgeToEdge()
 
-        window.navigationBarColor = android.graphics.Color.TRANSPARENT
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             window.isNavigationBarContrastEnforced = false
         }
 
-
-        setHighRefreshRate()
-
-        val appRepository = AppRepository(
-            context = applicationContext,
-            packageManager = packageManager,
-            selfPackageName = packageName,
-        )
+        val appRepository =
+            AppRepository(
+                context = applicationContext,
+                packageManager = packageManager,
+                selfPackageName = packageName,
+            )
 
         val preferencesRepository = LauncherPreferencesRepository(applicationContext)
         lifecycleScope.launch {
@@ -58,17 +53,18 @@ class MainActivity : ComponentActivity() {
                 }
         }
 
-        val interactor = LauncherInteractor(
-            appRepository = appRepository,
-            preferencesRepository = preferencesRepository,
-        )
+        val interactor =
+            LauncherInteractor(
+                appRepository = appRepository,
+                preferencesRepository = preferencesRepository,
+            )
 
-
-        widgetController = LauncherWidgetController(
-            activity = this,
-            preferencesRepository = preferencesRepository,
-            scope = lifecycleScope,
-        )
+        widgetController =
+            LauncherWidgetController(
+                activity = this,
+                preferencesRepository = preferencesRepository,
+                scope = lifecycleScope,
+            )
 
         setContent {
             LauncherTheme {
@@ -117,25 +113,6 @@ class MainActivity : ComponentActivity() {
             }
             systemBarsBehavior =
                 WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
-        }
-    }
-
-    /**
-     * Finds the highest refresh rate supported by the display and requests it.
-     */
-    private fun setHighRefreshRate() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            val display = display ?: return
-            val maxMode = display.supportedModes.maxByOrNull { it.refreshRate }
-
-            if (maxMode != null) {
-                val params = window.attributes
-                params.preferredDisplayModeId = maxMode.modeId
-                window.attributes = params
-            }
-        } else {
-            @Suppress("DEPRECATION")
-            window.addFlags(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS)
         }
     }
 }

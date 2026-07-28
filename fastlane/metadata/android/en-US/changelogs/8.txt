@@ -1,0 +1,2 @@
+Search launches automatically for unambiguous matches, with improved ranking and safer matching.
+Added hidden-mode exit, empty states, undo feedback, accessibility improvements, improved navigation, and more reliable widget/app loading.

@@ -5,4 +5,7 @@ data class LauncherApp(
     val packageName: String,
     val activityName: String,
     val isFavorite: Boolean = false,
-)
+) {
+    val componentId: String
+        get() = "$packageName/$activityName"
+}
