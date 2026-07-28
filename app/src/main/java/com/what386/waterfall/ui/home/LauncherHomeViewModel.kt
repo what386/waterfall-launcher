@@ -10,6 +10,7 @@ import com.what386.waterfall.domain.LauncherInteractor
 import com.what386.waterfall.ui.home.applist.AppListLayout
 import com.what386.waterfall.ui.home.applist.buildAppListLayout
 import com.what386.waterfall.ui.model.LauncherApp
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,6 +18,7 @@ import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
@@ -53,7 +55,7 @@ class LauncherHomeViewModel(
                 isHiddenMode = hiddenMode,
                 listLayout = listLayout,
             )
-        }
+        }.flowOn(Dispatchers.Default)
 
     val uiState: StateFlow<LauncherHomeUiState> =
         combine(

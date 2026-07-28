@@ -6,8 +6,10 @@ import com.what386.waterfall.data.LauncherFont
 import com.what386.waterfall.data.LauncherPreferencesRepository
 import com.what386.waterfall.data.LauncherSettings
 import com.what386.waterfall.ui.model.LauncherApp
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.onEach
 
 class LauncherInteractor(
@@ -50,7 +52,7 @@ class LauncherInteractor(
                         { app -> app.componentId },
                     ),
                 ).toList()
-        }
+        }.flowOn(Dispatchers.Default)
     }
 
     suspend fun toggleFavorite(app: LauncherApp) {

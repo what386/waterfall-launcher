@@ -4,6 +4,7 @@ import android.app.Activity
 import android.appwidget.AppWidgetHost
 import android.appwidget.AppWidgetHostView
 import android.appwidget.AppWidgetManager
+import android.appwidget.AppWidgetProviderInfo
 import android.content.Intent
 import android.view.ViewGroup
 import android.widget.FrameLayout
@@ -24,6 +25,7 @@ class LauncherWidgetController(
 ) {
     private val appWidgetManager = AppWidgetManager.getInstance(activity)
     private val appWidgetHost = AppWidgetHost(activity.applicationContext, WidgetHostId)
+    private val widgetInfoCache = mutableMapOf<Int, AppWidgetProviderInfo?>()
 
     init {
         scope.launch {
@@ -34,7 +36,7 @@ class LauncherWidgetController(
                         stack.copy(
                             widgetIds =
                                 stack.widgetIds.filter { appWidgetId ->
-                                    appWidgetManager.getAppWidgetInfo(appWidgetId) != null
+                                    getWidgetInfo(appWidgetId) != null
                                 },
                         )
                     }.filter { it.widgetIds.isNotEmpty() }
@@ -81,7 +83,7 @@ class LauncherWidgetController(
                 return@registerForActivityResult
             }
 
-            val providerInfo = appWidgetManager.getAppWidgetInfo(appWidgetId)
+            val providerInfo = getWidgetInfo(appWidgetId)
             if (providerInfo?.configure != null) {
                 pendingConfigureWidgetId = appWidgetId
                 configureWidgetLauncher.launch(
@@ -141,6 +143,7 @@ class LauncherWidgetController(
 
     fun removeWidget(appWidgetId: Int) {
         appWidgetHost.deleteAppWidgetId(appWidgetId)
+        widgetInfoCache.remove(appWidgetId)
         scope.launch {
             preferencesRepository.removeWidgetId(appWidgetId)
         }
@@ -153,7 +156,7 @@ class LauncherWidgetController(
     }
 
     fun createWidgetView(appWidgetId: Int): AppWidgetHostView? {
-        val providerInfo = appWidgetManager.getAppWidgetInfo(appWidgetId) ?: return null
+        val providerInfo = getWidgetInfo(appWidgetId) ?: return null
         return appWidgetHost.createView(activity, appWidgetId, providerInfo).apply {
             setAppWidget(appWidgetId, providerInfo)
             layoutParams =
@@ -164,7 +167,17 @@ class LauncherWidgetController(
         }
     }
 
-    fun getWidgetMinHeightDp(appWidgetId: Int): Int? = appWidgetManager.getAppWidgetInfo(appWidgetId)?.minHeight
+    fun getWidgetMinHeightDp(appWidgetId: Int): Int? = getWidgetInfo(appWidgetId)?.minHeight
+
+    private fun getWidgetInfo(appWidgetId: Int): AppWidgetProviderInfo? {
+        if (widgetInfoCache.containsKey(appWidgetId)) {
+            return widgetInfoCache[appWidgetId]
+        }
+
+        return appWidgetManager.getAppWidgetInfo(appWidgetId).also { providerInfo ->
+            widgetInfoCache[appWidgetId] = providerInfo
+        }
+    }
 
     companion object {
         private const val WidgetHostId = 2048

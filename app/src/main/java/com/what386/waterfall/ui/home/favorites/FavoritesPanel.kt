@@ -455,10 +455,9 @@ internal fun FavoritesPanel(
                     ),
             )
 
-            orderedWidgetStacks.forEach { widgetStack ->
+            orderedWidgetStacks.forEachIndexed { index, widgetStack ->
                 val stackId = widgetStackId(widgetStack)
                 key(stackId) {
-                    val index = orderedWidgetStacks.indexOfFirst { stack -> widgetStackId(stack) == stackId }
                     val activeRowHeight = widgetRowMetrics[activeDragWidgetStackId]?.height.orZero()
                     val laneShiftY =
                         when {
@@ -565,14 +564,10 @@ internal fun FavoritesPanel(
                     modifier = Modifier.graphicsLayer { alpha = favAlpha },
                 )
 
-                orderedFavorites.forEach { app ->
+                orderedFavorites.forEachIndexed { index, app ->
                     key(favoriteComponentId(app)) {
                         if (reorderMode) {
                             val componentId = favoriteComponentId(app)
-                            val index =
-                                orderedFavorites.indexOfFirst {
-                                    favoriteComponentId(it) == componentId
-                                }
                             val activeRowHeight = rowMetrics[activeDragComponentId]?.height.orZero()
                             val laneShiftY =
                                 when {
