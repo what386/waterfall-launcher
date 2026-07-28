@@ -52,9 +52,10 @@ fun rememberAppIcon(app: LauncherApp): ImageBitmap? {
                             width = iconDecodeSizePx,
                             height = iconDecodeSizePx,
                             config = Bitmap.Config.ARGB_8888,
-                        ).asImageBitmap().also { icon ->
-                        appIconCache.put(cacheKey, icon)
-                    }
+                        ).asImageBitmap()
+                        .also { icon ->
+                            appIconCache.put(cacheKey, icon)
+                        }
                 } catch (_: Exception) {
                     null
                 }
