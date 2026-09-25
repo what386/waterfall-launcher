@@ -17,6 +17,8 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.WindowInsets
@@ -32,11 +34,16 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Snackbar
+import androidx.compose.material3.SnackbarData
+import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.SnackbarResult
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -51,6 +58,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalResources
@@ -61,6 +70,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -83,6 +93,8 @@ import com.what386.waterfall.widgets.WidgetStack
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlin.math.abs
+import kotlin.math.roundToInt
 
 @Composable
 fun LauncherHomeRoute(
@@ -311,7 +323,8 @@ private fun LauncherHomeScreen(
                     if (wasFavorite) R.string.favorite_removed else R.string.favorite_added,
                     app.label,
                 )
-            if (snackbarHostState.showSnackbar(message, undoLabel) == SnackbarResult.ActionPerformed) {
+            val result = snackbarHostState.showSnackbar(message, undoLabel, duration = SnackbarDuration.Short)
+            if (result == SnackbarResult.ActionPerformed) {
                 onToggleFavorite(app)
             }
         }
@@ -321,7 +334,8 @@ private fun LauncherHomeScreen(
         onHideApp(app)
         coroutineScope.launch {
             val message = resources.getString(R.string.app_hidden, app.label)
-            if (snackbarHostState.showSnackbar(message, undoLabel) == SnackbarResult.ActionPerformed) {
+            val result = snackbarHostState.showSnackbar(message, undoLabel, duration = SnackbarDuration.Short)
+            if (result == SnackbarResult.ActionPerformed) {
                 onUnhideApp(app)
             }
         }
@@ -592,10 +606,46 @@ private fun LauncherHomeScreen(
                         Modifier
                             .align(Alignment.BottomCenter)
                             .windowInsetsPadding(WindowInsets.navigationBars),
-                )
+                ) { data ->
+                    SwipeDismissSnackbar(data)
+                }
             }
         }
     }
+}
+
+@Composable
+private fun SwipeDismissSnackbar(data: SnackbarData) {
+    val colors = if (isSystemInDarkTheme()) darkColorScheme() else lightColorScheme()
+    var offsetPx by remember(data) { mutableStateOf(0f) }
+    var widthPx by remember(data) { mutableIntStateOf(0) }
+
+    Snackbar(
+        snackbarData = data,
+        containerColor = colors.surfaceContainerHigh,
+        contentColor = colors.onSurface,
+        actionContentColor = colors.primary,
+        modifier =
+            Modifier
+                .onSizeChanged { widthPx = it.width }
+                .offset { IntOffset(offsetPx.roundToInt(), 0) }
+                .pointerInput(data) {
+                    detectHorizontalDragGestures(
+                        onHorizontalDrag = { change, dragAmount ->
+                            change.consume()
+                            offsetPx += dragAmount
+                        },
+                        onDragEnd = {
+                            if (widthPx > 0 && abs(offsetPx) >= widthPx * 0.25f) {
+                                data.dismiss()
+                            } else {
+                                offsetPx = 0f
+                            }
+                        },
+                        onDragCancel = { offsetPx = 0f },
+                    )
+                },
+    )
 }
 
 private const val FirstHomeContentIndex = 1
