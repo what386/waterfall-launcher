@@ -46,7 +46,6 @@ import com.what386.waterfall.data.HomeRowNavigationMode
 import com.what386.waterfall.data.LauncherFont
 import com.what386.waterfall.data.LauncherSettings
 import com.what386.waterfall.ui.home.HomeLayoutMetrics
-import com.what386.waterfall.ui.home.shared.AppRow
 import com.what386.waterfall.ui.home.shared.SectionHeader
 import com.what386.waterfall.ui.model.LauncherApp
 import com.what386.waterfall.widgets.WidgetStack
@@ -101,7 +100,6 @@ internal fun FavoritesPanel(
     var showSettingsSheet by remember { mutableStateOf(false) }
     var showFontSheet by remember { mutableStateOf(false) }
     var showHomeRowSheet by remember { mutableStateOf(false) }
-    var reorderMode by remember { mutableStateOf(false) }
     var widgetReorderMode by remember { mutableStateOf(false) }
     var didTriggerSearchDuringDrag by remember { mutableStateOf(false) }
     var didTriggerAppListDuringDrag by remember { mutableStateOf(false) }
@@ -319,14 +317,7 @@ internal fun FavoritesPanel(
             modifier
                 .fillMaxSize()
                 .then(
-                    if (reorderMode) {
-                        Modifier.pointerInput(reorderMode) {
-                            detectTapGestures {
-                                reorderMode = false
-                                commitDragReorderIfNeeded()
-                            }
-                        }
-                    } else if (widgetReorderMode) {
+                    if (widgetReorderMode) {
                         Modifier.pointerInput(widgetReorderMode) {
                             detectTapGestures {
                                 widgetReorderMode = false
@@ -361,8 +352,8 @@ internal fun FavoritesPanel(
                                 (-layoutMetrics.favoritesCenterBiasUpDp).dp
                             },
                     ).graphicsLayer { translationY = overscrollOffset.value }
-                    .pointerInput(reorderMode, widgetReorderMode) {
-                        if (reorderMode || widgetReorderMode) return@pointerInput
+                    .pointerInput(widgetReorderMode) {
+                        if (widgetReorderMode) return@pointerInput
                         detectVerticalDragGestures(
                             onDragEnd = {
                                 didTriggerSearchDuringDrag = false
@@ -566,84 +557,59 @@ internal fun FavoritesPanel(
 
                 orderedFavorites.forEachIndexed { index, app ->
                     key(favoriteComponentId(app)) {
-                        if (reorderMode) {
-                            val componentId = favoriteComponentId(app)
-                            val activeRowHeight = rowMetrics[activeDragComponentId]?.height.orZero()
-                            val laneShiftY =
-                                when {
-                                    activeDragComponentId == null || index == -1 -> 0f
-                                    index == activeDragStartIndex -> 0f
-                                    activeDragStartIndex < activeDragTargetIndex &&
-                                        index in (activeDragStartIndex + 1)..activeDragTargetIndex -> -activeRowHeight
-                                    activeDragStartIndex > activeDragTargetIndex &&
-                                        index in activeDragTargetIndex until activeDragStartIndex -> activeRowHeight
-                                    else -> 0f
+                        val componentId = favoriteComponentId(app)
+                        val activeRowHeight = rowMetrics[activeDragComponentId]?.height.orZero()
+                        val laneShiftY =
+                            when {
+                                activeDragComponentId == null || index == -1 -> 0f
+                                index == activeDragStartIndex -> 0f
+                                activeDragStartIndex < activeDragTargetIndex &&
+                                    index in (activeDragStartIndex + 1)..activeDragTargetIndex -> -activeRowHeight
+                                activeDragStartIndex > activeDragTargetIndex &&
+                                    index in activeDragTargetIndex until activeDragStartIndex -> activeRowHeight
+                                else -> 0f
+                            }
+
+                        ReorderableFavoriteRow(
+                            app = app,
+                            hideAppIcons = settings.hideAppIcons,
+                            onToggleFavorite = onToggleFavorite,
+                            onHideApp = onHideApp,
+                            isActiveDrag = activeDragComponentId == componentId,
+                            dragOffsetY =
+                                if (activeDragComponentId == componentId) {
+                                    activeDragOffsetY
+                                } else {
+                                    0f
+                                },
+                            laneShiftY = laneShiftY,
+                            onDragStart = {
+                                val freshIndex =
+                                    orderedFavorites.indexOfFirst {
+                                        favoriteComponentId(it) == componentId
+                                    }
+                                if (freshIndex == -1) return@ReorderableFavoriteRow
+
+                                activeDragComponentId = componentId
+                                activeDragStartIndex = freshIndex
+                                activeDragTargetIndex = freshIndex
+                                activeDragOffsetY = 0f
+                            },
+                            onDragDelta = { deltaY ->
+                                if (activeDragComponentId != componentId) return@ReorderableFavoriteRow
+                                activeDragOffsetY += deltaY
+                                updateDragTarget(componentId)
+                            },
+                            onDragEnd = {
+                                if (activeDragComponentId == componentId) {
+                                    commitDragReorderIfNeeded()
                                 }
-
-                            ReorderableFavoriteRow(
-                                app = app,
-                                hideAppIcons = settings.hideAppIcons,
-                                isActiveDrag = activeDragComponentId == componentId,
-                                dragOffsetY =
-                                    if (activeDragComponentId == componentId) {
-                                        activeDragOffsetY
-                                    } else {
-                                        0f
-                                    },
-                                laneShiftY = laneShiftY,
-                                onMoveUp = {
-                                    if (index > 0) {
-                                        val moved = orderedFavorites.removeAt(index)
-                                        orderedFavorites.add(index - 1, moved)
-                                        persistFavoriteOrder()
-                                    }
-                                },
-                                onMoveDown = {
-                                    if (index in 0 until orderedFavorites.lastIndex) {
-                                        val moved = orderedFavorites.removeAt(index)
-                                        orderedFavorites.add(index + 1, moved)
-                                        persistFavoriteOrder()
-                                    }
-                                },
-                                onDragStart = {
-                                    val freshIndex =
-                                        orderedFavorites.indexOfFirst {
-                                            favoriteComponentId(it) == componentId
-                                        }
-                                    if (freshIndex == -1) return@ReorderableFavoriteRow
-
-                                    activeDragComponentId = componentId
-                                    activeDragStartIndex = freshIndex
-                                    activeDragTargetIndex = freshIndex
-                                    activeDragOffsetY = 0f
-                                },
-                                onDragDelta = { deltaY ->
-                                    if (activeDragComponentId != componentId) return@ReorderableFavoriteRow
-                                    activeDragOffsetY += deltaY
-                                    updateDragTarget(componentId)
-                                },
-                                onDragEnd = {
-                                    if (activeDragComponentId == componentId) {
-                                        commitDragReorderIfNeeded()
-                                    }
-                                },
-                                onMeasured = { metrics ->
-                                    rowMetrics[componentId] = metrics
-                                },
-                                modifier = Modifier.graphicsLayer { alpha = favAlpha },
-                            )
-                        } else {
-                            AppRow(
-                                app = app,
-                                isFavorite = true,
-                                isHiddenMode = false,
-                                onToggleFavorite = onToggleFavorite,
-                                onHideApp = onHideApp,
-                                onUnhideApp = {},
-                                hideAppIcons = settings.hideAppIcons,
-                                modifier = Modifier.graphicsLayer { alpha = favAlpha },
-                            )
-                        }
+                            },
+                            onMeasured = { metrics ->
+                                rowMetrics[componentId] = metrics
+                            },
+                            modifier = Modifier.graphicsLayer { alpha = favAlpha },
+                        )
                     }
                 }
                 Spacer(
@@ -679,15 +645,9 @@ internal fun FavoritesPanel(
             ) {
                 FavoritesOptionsSheet(
                     isHiddenMode = isHiddenMode,
-                    reorderMode = reorderMode,
                     widgetReorderMode = widgetReorderMode,
-                    hasFavorites = showFavoriteApps && orderedFavorites.isNotEmpty(),
                     onHiddenModeClicked = {
                         showPanelMenu = false
-                        if (reorderMode) {
-                            reorderMode = false
-                            commitDragReorderIfNeeded()
-                        }
                         if (widgetReorderMode) {
                             widgetReorderMode = false
                             commitWidgetDragReorderIfNeeded()
@@ -696,26 +656,10 @@ internal fun FavoritesPanel(
                     },
                     onReorderWidgetsClicked = {
                         showPanelMenu = false
-                        if (reorderMode) {
-                            reorderMode = false
-                            commitDragReorderIfNeeded()
-                        }
                         val nextMode = !widgetReorderMode
                         widgetReorderMode = nextMode
                         if (!nextMode) {
                             commitWidgetDragReorderIfNeeded()
-                        }
-                    },
-                    onReorderFavoritesClicked = {
-                        showPanelMenu = false
-                        if (widgetReorderMode) {
-                            widgetReorderMode = false
-                            commitWidgetDragReorderIfNeeded()
-                        }
-                        val nextMode = !reorderMode
-                        reorderMode = nextMode
-                        if (!nextMode) {
-                            commitDragReorderIfNeeded()
                         }
                     },
                     onSettingsClicked = {

@@ -52,8 +52,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.zIndex
 import com.what386.waterfall.R
 import com.what386.waterfall.ui.home.LocalHomeLayoutMetrics
-import com.what386.waterfall.ui.home.shared.HOME_ROW_TEXT_SCALE
-import com.what386.waterfall.ui.home.shared.rememberAppIcon
+import com.what386.waterfall.ui.home.shared.AppRow
 import com.what386.waterfall.ui.model.LauncherApp
 import com.what386.waterfall.widgets.WidgetStack
 import kotlin.math.hypot
@@ -543,11 +542,11 @@ internal fun EditDragHandle(
 internal fun ReorderableFavoriteRow(
     app: LauncherApp,
     hideAppIcons: Boolean,
+    onToggleFavorite: (LauncherApp) -> Unit,
+    onHideApp: (LauncherApp) -> Unit,
     isActiveDrag: Boolean,
     dragOffsetY: Float,
     laneShiftY: Float,
-    onMoveUp: () -> Unit,
-    onMoveDown: () -> Unit,
     onDragStart: () -> Unit,
     onDragDelta: (Float) -> Unit,
     onDragEnd: () -> Unit,
@@ -555,7 +554,6 @@ internal fun ReorderableFavoriteRow(
     modifier: Modifier = Modifier,
 ) {
     val layoutMetrics = LocalHomeLayoutMetrics.current
-    val icon = if (hideAppIcons) null else rememberAppIcon(app)
 
     val settleSpec =
         spring<Float>(
@@ -578,7 +576,17 @@ internal fun ReorderableFavoriteRow(
         label = "reorderTranslationY",
     )
 
-    Row(
+    AppRow(
+        app = app,
+        isFavorite = true,
+        isHiddenMode = false,
+        onToggleFavorite = onToggleFavorite,
+        onHideApp = onHideApp,
+        onUnhideApp = {},
+        hideAppIcons = hideAppIcons,
+        onDragStart = onDragStart,
+        onDragDelta = onDragDelta,
+        onDragEnd = onDragEnd,
         modifier =
             modifier
                 .fillMaxWidth()
@@ -600,54 +608,11 @@ internal fun ReorderableFavoriteRow(
                             height = coordinates.size.height.toFloat(),
                         ),
                     )
-                }.pointerInput(app.packageName, app.activityName) {
-                    detectDragGesturesAfterLongPress(
-                        onDragStart = {
-                            onDragStart()
-                        },
-                        onDragEnd = {
-                            onDragEnd()
-                        },
-                        onDragCancel = {
-                            onDragEnd()
-                        },
-                        onDrag = { change, dragAmount ->
-                            change.consume()
-                            onDragDelta(dragAmount.y)
-                        },
-                    )
                 }.background(
                     color = Color.White.copy(alpha = activeTint),
                     shape = MaterialTheme.shapes.medium,
-                ).padding(
-                    horizontal = layoutMetrics.rowHorizontalPaddingDp.dp,
-                    vertical = layoutMetrics.rowVerticalPaddingDp.dp,
                 ),
-        horizontalArrangement = Arrangement.spacedBy(layoutMetrics.rowIconSpacingDp.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        if (icon != null) {
-            androidx.compose.foundation.Image(
-                bitmap = icon,
-                contentDescription = null,
-                modifier = Modifier.size(layoutMetrics.favoriteRowIconSizeDp.dp),
-            )
-        }
-
-        Text(
-            text = app.label,
-            style =
-                MaterialTheme.typography.headlineSmall.copy(
-                    fontSize = MaterialTheme.typography.headlineSmall.fontSize * HOME_ROW_TEXT_SCALE,
-                ),
-            modifier = Modifier.weight(1f),
-        )
-
-        ReorderButtons(
-            onMoveUp = onMoveUp,
-            onMoveDown = onMoveDown,
-        )
-    }
+    )
 }
 
 @Composable

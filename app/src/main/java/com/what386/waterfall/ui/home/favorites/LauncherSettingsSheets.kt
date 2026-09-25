@@ -30,12 +30,9 @@ import com.what386.waterfall.ui.theme.toPreviewFontFamily
 @Composable
 internal fun FavoritesOptionsSheet(
     isHiddenMode: Boolean,
-    reorderMode: Boolean,
     widgetReorderMode: Boolean,
-    hasFavorites: Boolean,
     onHiddenModeClicked: () -> Unit,
     onReorderWidgetsClicked: () -> Unit,
-    onReorderFavoritesClicked: () -> Unit,
     onSettingsClicked: () -> Unit,
 ) {
     val layoutMetrics = LocalHomeLayoutMetrics.current
@@ -84,24 +81,6 @@ internal fun FavoritesOptionsSheet(
             active = widgetReorderMode,
             onClick = onReorderWidgetsClicked,
         )
-
-        if (hasFavorites) {
-            SheetActionRow(
-                icon = "↕",
-                title =
-                    stringResource(
-                        if (reorderMode) R.string.done_reordering else R.string.reorder_favorites,
-                    ),
-                subtitle =
-                    if (reorderMode) {
-                        stringResource(R.string.save_favorite_order)
-                    } else {
-                        stringResource(R.string.reorder_favorites_summary)
-                    },
-                active = reorderMode,
-                onClick = onReorderFavoritesClicked,
-            )
-        }
 
         SheetActionRow(
             icon = "⚙",

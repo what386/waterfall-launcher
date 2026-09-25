@@ -63,8 +63,4 @@
     <string name="edit_widgets">Edit widgets</string>
     <string name="save_widget_order">Save widget order and removals</string>
     <string name="edit_widgets_summary">Reorder, remove, or add widgets</string>
-    <string name="done_reordering">Done reordering</string>
-    <string name="reorder_favorites">Reorder favorites</string>
-    <string name="save_favorite_order">Save the current favorite order</string>
-    <string name="reorder_favorites_summary">Drag favorites into a custom order</string>
 </resources>
