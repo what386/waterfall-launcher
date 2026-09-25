@@ -56,6 +56,10 @@ run-release:
     just install-release
     just start-app
 
+refresh-debug:
+    just build-debug
+    just install-debug
+
 refresh-release:
     just build-release
     just install-release
