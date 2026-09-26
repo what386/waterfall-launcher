@@ -1,13 +1,13 @@
 # Changelog — Untitled
 
-*Generated on 2026-09-26*
+_Generated on 2026-09-26_
 
 ## 1.8.0 — 2026-09-26
 
 ### Changes
 
 - improve favorites reordering: drag to reorder, no seperate mode
-
+- make toast messages swipable to dismiss + fix duration
 
 ## 1.7.0 — 2026-07-28
 
@@ -17,13 +17,11 @@
 - Added hidden-mode exit, empty states, undo feedback, accessibility actions, and improved launcher navigation.
 - Improved app loading, widget-stack identity, large-screen support, and Android build/CI compatibility.
 
-
 ## 1.6.0 — 2026-06-22
 
 ### Changes
 
 - Disabled dependency metadata when building APKs and bundles.
-
 
 ## 1.5.0 — 2026-06-19
 
@@ -32,5 +30,3 @@
 - Updated release metadata, README, and repository templates for Waterfall Launcher.
 - Prepared F-Droid-facing metadata for the next public release.
 - Renamed the Android package to com.what386.waterfall.
-
-
