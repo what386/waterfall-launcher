@@ -1,7 +1,7 @@
 # TODO — waterfall
 
 @created: 2026-05-08
-@modified: 2026-09-25
+@modified: 2026-09-26
 
 
 ## Tasks
@@ -14,11 +14,4 @@
 
 - [ ] make toast messages swipable to dismiss + fix duration
       @created 2026-09-25 23:59
-
-
-## Completed
-
-- [x] improve favorites reordering: drag to reorder, no seperate mode
-      @created 2026-09-25 22:59
-      @completed 2026-09-25 22:59
 
